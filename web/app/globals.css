@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+:root {
+  /* 
+    4. COLOR HIERARCHY (60-30-10 Rule) 
+    Using specialized HSL values for "Professional" feel.
+  */
+
+  /* CORE PALETTE */
+  --light-canvas: 210 20% 98%;
+  /* #f8f9fa - Soft Blue/Grey White */
+  --dark-canvas: 220 15% 10%;
+  /* #16181d - Deep Gunmetal */
+
+  --brand-navy: 222 47% 11%;
+  /* #0f172a - Authoritative Navy */
+  --brand-slate: 215 25% 27%;
+  /* #334155 - Professional Slate */
+
+  --accent-electric: 217 91% 60%;
+  /* #3b82f6 - Vibrant Blue */
+  --accent-amber: 45 93% 47%;
+  /* #d97706 - Warning/Attention */
+  --accent-red: 0 84% 60%;
+  /* #ef4444 - Destructive */
+  --accent-green: 142 71% 45%;
+  /* #22c55e - Success */
+
+  /* DEFAULT: LIGHT MODE SEMANTICS */
+  --background: var(--light-canvas);
+  --foreground: var(--brand-navy);
+
+  --card: 0 0% 100%;
+  --card-foreground: var(--brand-navy);
+
+  --popover: 0 0% 100%;
+  --popover-foreground: var(--brand-navy);
+
+  --primary: var(--accent-electric);
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: var(--brand-navy);
+
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215 16% 47%;
+
+  --accent: 210 40% 96.1%;
+  --accent-foreground: var(--brand-navy);
+
+  --destructive: var(--accent-red);
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: var(--accent-electric);
+
+  --radius-lg: 0.5rem;
+  --radius-md: 0.375rem;
+  --radius-sm: 0.25rem;
+}
+
+.dark {
+  /* DARK MODE SEMANTICS (Previous values) */
+  --background: var(--dark-canvas);
+  --foreground: 210 40% 98%;
+
+  --card: 222 15% 13%;
+  --card-foreground: 210 40% 98%;
+
+  --popover: var(--dark-canvas);
+  --popover-foreground: 210 40% 98%;
+
+  --primary: var(--accent-electric);
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 217 19% 27%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 217 19% 27%;
+  --muted-foreground: 215 20% 65%;
+
+  --accent: var(--brand-slate);
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: var(--accent-red);
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 217 19% 27%;
+  --input: 217 19% 27%;
+  --ring: var(--accent-electric);
+}
+
+@theme {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --radius-lg: var(--radius-lg);
+  --radius-md: var(--radius-md);
+  --radius-sm: var(--radius-sm);
+}
+
+/* Global Polish */
+body {
+  @apply bg-background text-foreground antialiased transition-colors duration-300;
+  /* subtle texture/gradient that works for both but is optimized for "Glass" feel */
+}
