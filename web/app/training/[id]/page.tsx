@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -17,11 +17,11 @@ import {
     FileText,
     PlayCircle,
     HelpCircle,
-    ChevronDown,
     UserCheck,
     Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 // Types
 type Course = {
@@ -68,9 +68,7 @@ export default function CourseDetailPage() {
     const [error, setError] = useState<string | null>(null);
     const [enrolling, setEnrolling] = useState(false);
     const [enrollmentStatus, setEnrollmentStatus] = useState<'idle' | 'success' | 'pending_approval' | 'error' | 'already_enrolled'>('idle');
-
-    // Hardcoded for MVP
-    const FAKE_USER_ID = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12';
+    const [userId, setUserId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -79,6 +77,15 @@ export default function CourseDetailPage() {
             try {
                 setLoading(true);
                 setError(null);
+
+                // Get authenticated user
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    setError('Please log in to view courses');
+                    setLoading(false);
+                    return;
+                }
+                setUserId(user.id);
 
                 // 1. Fetch Course
                 const { data: courseData, error: courseError } = await supabase
@@ -94,8 +101,8 @@ export default function CourseDetailPage() {
                 const { data: modulesData, error: modulesError } = await supabase
                     .from('modules')
                     .select(`
-            *,
-            items:course_items(*)
+    *,
+    items: course_items(*)
           `)
                     .eq('course_id', id)
                     .eq('is_published', true)
@@ -115,7 +122,7 @@ export default function CourseDetailPage() {
                     .from('enrollments')
                     .select('status')
                     .eq('course_id', id)
-                    .eq('user_id', FAKE_USER_ID)
+                    .eq('user_id', user.id)
                     .maybeSingle();
 
                 if (enrollment) {
@@ -135,7 +142,7 @@ export default function CourseDetailPage() {
     }, [id]);
 
     const handleEnroll = async () => {
-        if (!course) return;
+        if (!course || !userId) return;
         setEnrolling(true);
 
         // Simulate network delay for effect
@@ -146,7 +153,7 @@ export default function CourseDetailPage() {
         const { error } = await supabase
             .from('enrollments')
             .insert({
-                user_id: FAKE_USER_ID,
+                user_id: userId,
                 course_id: course.id,
                 status: newStatus
             });
@@ -215,10 +222,10 @@ export default function CourseDetailPage() {
                         {/* Header */}
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                             <div className="flex flex-wrap items-center gap-3">
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase border flex items-center gap-2 ${course.enrollment_mode === 'manual'
+                                <span className={`px - 3 py - 1 rounded - full text - xs font - bold tracking - wider uppercase border flex items - center gap - 2 ${course.enrollment_mode === 'manual'
                                     ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                     : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                    }`}>
+                                    } `}>
                                     {course.enrollment_mode === 'manual' ? (
                                         <><Lock className="h-3 w-3" /> Restricted Access</>
                                     ) : (
@@ -278,14 +285,14 @@ export default function CourseDetailPage() {
                                                     const isUnlocked = enrollmentStatus === 'success' || enrollmentStatus === 'already_enrolled';
 
                                                     return (
-                                                        <div key={item.id} className={`p-4 flex items-center gap-4 transition-colors group ${isUnlocked ? 'hover:bg-white/5 cursor-pointer' : 'opacity-60 cursor-not-allowed'
-                                                            }`}>
-                                                            <div className={`p-2 rounded-lg ${isUnlocked ? 'bg-blue-500/10 text-blue-400' : 'bg-secondary text-gray-600'}`}>
+                                                        <div key={item.id} className={`p - 4 flex items - center gap - 4 transition - colors group ${isUnlocked ? 'hover:bg-white/5 cursor-pointer' : 'opacity-60 cursor-not-allowed'
+                                                            } `}>
+                                                            <div className={`p - 2 rounded - lg ${isUnlocked ? 'bg-blue-500/10 text-blue-400' : 'bg-secondary text-gray-600'} `}>
                                                                 {isUnlocked ? <Icon className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                                             </div>
 
                                                             <div className="flex-1">
-                                                                <p className={`text-sm font-medium ${isUnlocked ? 'text-gray-300' : 'text-gray-500'}`}>
+                                                                <p className={`text - sm font - medium ${isUnlocked ? 'text-gray-300' : 'text-gray-500'} `}>
                                                                     {item.title}
                                                                 </p>
                                                                 <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{item.content_type}</span>
@@ -404,10 +411,10 @@ export default function CourseDetailPage() {
                                             animate={{ opacity: 1 }}
                                             onClick={handleEnroll}
                                             disabled={enrolling}
-                                            className={`w-full py-4 text-white font-bold rounded-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 border-t border-white/10 ${course.enrollment_mode === 'manual'
+                                            className={`w - full py - 4 text - white font - bold rounded - xl shadow - xl transition - all active: scale - 95 flex items - center justify - center gap - 2 border - t border - white / 10 ${course.enrollment_mode === 'manual'
                                                 ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 shadow-amber-900/20'
                                                 : 'bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 shadow-blue-900/20'
-                                                }`}
+                                                } `}
                                         >
                                             {enrolling ? (
                                                 <Loader2 className="animate-spin h-5 w-5 text-white" />

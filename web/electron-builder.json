@@ -1,0 +1,45 @@
+{
+    "appId": "com.ernam.digitaltwin",
+    "productName": "ERNAM Digital Twin",
+    "directories": {
+        "output": "dist",
+        "buildResources": "build"
+    },
+    "files": [
+        "out/**/*",
+        "electron/**/*",
+        "public/**/*",
+        "package.json"
+    ],
+    "win": {
+        "target": [
+            {
+                "target": "nsis",
+                "arch": [
+                    "x64"
+                ]
+            },
+            {
+                "target": "portable",
+                "arch": [
+                    "x64"
+                ]
+            }
+        ],
+        "icon": "public/logos/logo.jpg",
+        "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true,
+        "createDesktopShortcut": true,
+        "createStartMenuShortcut": true,
+        "shortcutName": "ERNAM Digital Twin"
+    },
+    "portable": {
+        "artifactName": "${productName}-Portable.${ext}"
+    },
+    "extraMetadata": {
+        "main": "electron/main.js"
+    }
+}

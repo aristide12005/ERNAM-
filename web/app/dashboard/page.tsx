@@ -90,7 +90,7 @@ function StatusBadge({ status }: { status: string }) {
     const defaultStyle = "bg-muted text-muted-foreground border-border";
 
     return (
-        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${styles[status] || defaultStyle}`}>
+        <span className={`px-2.5 py-1 rounded-full text-xs font-medium uppercase tracking-wide border ${styles[status] || defaultStyle}`}>
             {status}
         </span>
     );
@@ -111,8 +111,8 @@ function KpiCard({ title, value, sub, icon: Icon, color }: any) {
         >
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h3 className="text-muted-foreground text-xs font-bold uppercase tracking-wider">{title}</h3>
-                    <div className="text-2xl font-bold text-foreground mt-1">{value}</div>
+                    <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">{title}</h3>
+                    <div className="text-2xl font-semibold text-foreground mt-1">{value}</div>
                 </div>
                 <div className={`p-2 rounded-md ${colors[color]}`}>
                     <Icon className="h-5 w-5" />
@@ -144,7 +144,7 @@ function DashboardHeader({ title, subtitle }: { title: string, subtitle: string 
     return (
         <div className="flex justify-between items-center mb-10">
             <div>
-                <h1 className="text-3xl font-bold text-foreground tracking-tight">{title}</h1>
+                <h1 className="text-2xl font-semibold text-foreground tracking-tight">{title}</h1>
                 <p className="text-muted-foreground">{subtitle}</p>
             </div>
 
@@ -294,11 +294,11 @@ function TraineeDashboard() {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="space-y-8"
                             >
-                                <h1 className="text-3xl font-bold text-slate-900">Welcome, {profile?.full_name?.split(' ')[0] || 'Trainee'}.</h1>
+                                <h1 className="text-2xl font-semibold text-gray-900">Welcome back, {profile?.full_name?.split(' ')[0] || 'Trainee'}</h1>
 
                                 {/* Stats Grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6">
+                                    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
                                         <div className="relative h-20 w-20">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <RePieChart>
@@ -319,12 +319,12 @@ function TraineeDashboard() {
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Overall Progress</p>
-                                            <h4 className="text-xl font-bold text-slate-900 italic underline decoration-blue-200 underline-offset-4">Advanced Level</h4>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Overall Progress</p>
+                                            <h4 className="text-lg font-semibold text-gray-900">Advanced Level</h4>
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-900 p-6 rounded-[32px] text-white flex items-center gap-6 border border-slate-800 shadow-xl shadow-blue-500/10">
+                                    <div className="bg-gray-900 p-6 rounded-lg text-white flex items-center gap-4 border border-gray-800 shadow-sm">
                                         <div className="h-14 w-14 bg-white/10 rounded-2xl flex items-center justify-center border border-white/5">
                                             <div className="text-center">
                                                 <div className="text-lg font-black leading-none">02</div>
@@ -332,12 +332,12 @@ function TraineeDashboard() {
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Next Exam</p>
+                                            <p className="text-xs font-medium text-blue-400 uppercase tracking-wide mb-1">Next Exam</p>
                                             <h4 className="text-lg font-bold">Meteorology Adv.</h4>
                                         </div>
                                     </div>
 
-                                    <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6">
+                                    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
                                         <div className="h-14 w-14 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100">
                                             <div className="text-center">
                                                 <div className="text-lg font-black text-emerald-600 leading-none">{stats.attendance}%</div>
@@ -345,7 +345,7 @@ function TraineeDashboard() {
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance Rate</p>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Attendance Rate</p>
                                             <h4 className="text-lg font-bold text-slate-900">Good Standing</h4>
                                         </div>
                                     </div>
@@ -354,19 +354,19 @@ function TraineeDashboard() {
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                     <div className="lg:col-span-2 space-y-6">
                                         <div className="flex justify-between items-center px-4">
-                                            <h3 className="text-sm font-black text-slate-500 uppercase tracking-wider italic">My Current Courses</h3>
+                                            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">My Current Courses</h3>
                                             <button onClick={() => setActiveView('learning')} className="text-xs font-bold text-blue-600 hover:underline">View Catalog</button>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {myCourses.map((course) => (
-                                                <div key={course.id} className="bg-white border border-slate-100 p-5 rounded-3xl hover:shadow-xl hover:shadow-blue-500/5 transition-all group">
+                                                <div key={course.id} className="bg-white border border-gray-200 p-6 rounded-lg hover:shadow-md hover:border-gray-300 transition-all group">
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div className="h-12 w-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-500">
                                                             <BookOpen className="h-6 w-6" />
                                                         </div>
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{course.progress}% Completed</span>
+                                                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{course.progress}% Completed</span>
                                                     </div>
-                                                    <h4 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-4 italic underline decoration-transparent group-hover:decoration-blue-200 underline-offset-4">{course.title}</h4>
+                                                    <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors mb-4">{course.title}</h4>
                                                     <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
                                                         <div className="h-full bg-blue-600 rounded-full transition-all duration-1000" style={{ width: `${course.progress}%` }} />
                                                     </div>
@@ -377,9 +377,9 @@ function TraineeDashboard() {
 
                                     <div className="space-y-6">
                                         <div className="px-4">
-                                            <h3 className="text-sm font-black text-slate-500 uppercase tracking-wider italic">Upcoming Schedule</h3>
+                                            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Upcoming Schedule</h3>
                                         </div>
-                                        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-4">
+                                        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm space-y-4">
                                             {upcomingSchedule.map((item, idx) => (
                                                 <div key={item.id} className="flex gap-4 group">
                                                     <div className="flex flex-col items-center gap-1">
@@ -387,15 +387,15 @@ function TraineeDashboard() {
                                                         {idx !== upcomingSchedule.length - 1 && <div className="w-0.5 flex-1 bg-slate-100" />}
                                                     </div>
                                                     <div className="pb-6">
-                                                        <p className="text-[10px] font-black text-blue-600 uppercase mb-1">{item.time}</p>
+                                                        <p className="text-xs font-medium text-blue-600 uppercase mb-1">{item.time}</p>
                                                         <h5 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</h5>
-                                                        <div className="flex items-center gap-2 mt-2 text-[9px] font-bold text-slate-400 uppercase">
+                                                        <div className="flex items-center gap-2 mt-2 text-xs font-medium text-gray-500">
                                                             <MapPin className="h-3 w-3" /> {item.location}
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
-                                            <button onClick={() => setActiveView('schedule')} className="w-full py-4 bg-slate-50 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all">Full Calendar</button>
+                                            <button onClick={() => setActiveView('schedule')} className="w-full py-3 bg-gray-50 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-900 hover:text-white transition-colors">View Full Calendar</button>
                                         </div>
                                     </div>
                                 </div>
@@ -561,7 +561,7 @@ function TrainerDashboard() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="mb-8"
                                 >
-                                    <h1 className="text-3xl font-bold text-foreground">Welcome back, {profile?.full_name?.split(' ')[0] || 'Teacher'}.</h1>
+                                    <h1 className="text-2xl font-semibold text-foreground">Welcome back, {profile?.full_name?.split(' ')[0] || 'Teacher'}</h1>
                                 </motion.div>
 
                                 {/* Stats Row */}
@@ -626,7 +626,7 @@ function TrainerDashboard() {
                                     {/* Main Column: Active Courses (Shortcut) */}
                                     <div className="lg:col-span-2">
                                         <div className="flex justify-between items-center mb-6">
-                                            <h2 className="text-xl font-bold text-foreground">Recent Classes</h2>
+                                            <h2 className="text-xl font-semibold text-foreground">Recent Classes</h2>
                                             <button onClick={() => setActiveView('my-classes')} className="text-sm text-primary font-bold hover:underline">View All</button>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -641,7 +641,7 @@ function TrainerDashboard() {
                                     {/* Right Sidebar: Needs Attention */}
                                     <div className="lg:col-span-1">
                                         <div className="bg-card rounded-xl shadow-sm border border-border p-6 h-full min-h-[500px]">
-                                            <h2 className="text-xl font-bold text-foreground mb-6">Needs Attention</h2>
+                                            <h2 className="text-xl font-semibold text-foreground mb-6">Needs Attention</h2>
                                             <div className="space-y-6">
                                                 {notifications.length === 0 ? (
                                                     <div className="text-center py-10 opacity-50">
@@ -850,17 +850,36 @@ function AdminDashboard() {
     }, []);
 
     const handleApprove = async (id: string) => {
-        const { error } = await supabase.from('profiles').update({ status: 'approved' }).eq('id', id);
+        if (!profile?.id) return;
+
+        const { error } = await supabase.rpc('approve_user_transaction', {
+            target_user_id: id,
+            admin_id: profile.id
+        });
+
         if (!error) {
             setPendingUsers(prev => prev.filter(u => u.id !== id));
-            await supabase.from('audit_logs').insert({ action: 'User Approved', target_resource: 'User ID: ' + id });
+            // Audit log is now handled by the RPC
+        } else {
+            console.error("Approval Failed:", error);
+            alert("Failed to approve user. Check console.");
         }
     };
 
     const handleReject = async (id: string) => {
-        const { error } = await supabase.from('profiles').update({ status: 'rejected' }).eq('id', id);
+        if (!profile?.id) return;
+
+        const { error } = await supabase.rpc('reject_user_transaction', {
+            target_user_id: id,
+            admin_id: profile.id,
+            reason: 'Rejected from Dashboard Widget'
+        });
+
         if (!error) {
             setPendingUsers(prev => prev.filter(u => u.id !== id));
+        } else {
+            console.error("Rejection Failed:", error);
+            alert("Failed to reject user.");
         }
     };
 
@@ -1060,8 +1079,22 @@ function AdminDashboard() {
                             <MessagingSystem />
                         </motion.div>
                     )}
-                    {activeView === 'finance' && <Finance />}
-                    {activeView === 'audit' && <AuditLogs />}
+                    {activeView === 'my-classes' && (
+                        <motion.div key="my-classes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <MyClasses
+                                instructorId={user?.id || ''}
+                                onManageClass={(id) => {
+                                    // Admins can manage, maybe redirect to manage view if needed
+                                    // For now just show basics or handle if MyClasses supports it
+                                    console.log("Admin manage class", id);
+                                }}
+                                showCreateModal={false} // Admins usually don't create from here, or enable if desired
+                                setShowCreateModal={() => { }}
+                            />
+                        </motion.div>
+                    )}
+                    {activeView === 'finances' && <Finance />}
+                    {activeView === 'audit-logs' && <AuditLogs />}
                     {activeView === 'settings' && <AdminSettings />}
                 </div>
             </div>

@@ -40,7 +40,7 @@ export default function MyLearning() {
             const { data: allCourses } = await supabase
                 .from('courses')
                 .select('*')
-                .in('status', ['active', 'upcoming']);
+                .eq('course_status', 'published');
 
             setCatalog(allCourses?.filter(c => !enrolledIds.includes(c.id)) || []);
         } catch (error) {

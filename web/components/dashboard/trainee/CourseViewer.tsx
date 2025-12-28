@@ -40,11 +40,29 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
         // Fetch course details
         const { data: courseData } = await supabase
             .from('courses')
-            .select('*, instructor:profiles!instructor_id(full_name)')
+            .select('*')
             .eq('id', courseId)
             .single();
 
-        if (courseData) setCourse(courseData);
+        let instructorName = 'TBA';
+
+        // Fetch instructor from staff
+        const { data: staffData } = await supabase
+            .from('course_staff')
+            .select('profiles(full_name)')
+            .eq('course_id', courseId)
+            .in('role', ['owner', 'trainer'])
+            .limit(1)
+            .maybeSingle();
+
+        if (staffData?.profiles) {
+            // @ts-ignore
+            instructorName = staffData.profiles.full_name || 'TBA';
+        }
+
+        if (courseData) {
+            setCourse({ ...courseData, instructor: { full_name: instructorName } });
+        }
 
         // Fetch enrollment status
         const { data: enrollData } = await supabase
@@ -156,14 +174,14 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
                                         key={module.id}
                                         onClick={() => setSelectedModule(module)}
                                         className={`w-full text-left p-4 rounded-xl transition-all ${selectedModule?.id === module.id
-                                                ? 'bg-blue-50 border-2 border-blue-500'
-                                                : 'bg-slate-50 border-2 border-transparent hover:border-slate-200'
+                                            ? 'bg-blue-50 border-2 border-blue-500'
+                                            : 'bg-slate-50 border-2 border-transparent hover:border-slate-200'
                                             }`}
                                     >
                                         <div className="flex items-start gap-3">
                                             <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedModule?.id === module.id
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-slate-200 text-slate-600'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-slate-200 text-slate-600'
                                                 }`}>
                                                 <span className="text-sm font-bold">{idx + 1}</span>
                                             </div>

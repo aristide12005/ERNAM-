@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Plus, Search, MoreHorizontal, Settings, BookOpen, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Search, MoreHorizontal, Settings, BookOpen, Eye, EyeOff } from 'lucide-react';
+import { motion } from 'framer-motion';
+import CourseCreationWizard from './CourseCreationWizard';
 
 interface Course {
     id: string;
@@ -32,34 +33,42 @@ export default function MyClasses({
     const [searchQuery, setSearchQuery] = useState('');
     const [internalShowModal, setInternalShowModal] = useState(false);
 
+    // Sync external and internal modal state
     const showCreateModal = externalShowModal !== undefined ? externalShowModal : internalShowModal;
     const setShowCreateModal = setExternalShowModal !== undefined ? setExternalShowModal : setInternalShowModal;
 
-    const [isCreating, setIsCreating] = useState(false);
-    const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-
-    // Form State
-    const [formData, setFormData] = useState({
-        title_en: '',
-        title_fr: '',
-        description_en: '',
-        description_fr: '',
-        max_capacity: 30,
-        status: 'upcoming' as 'upcoming' | 'active' | 'completed',
-        thumbnail_url: ''
-    });
-
     const fetchCourses = async () => {
         setLoading(true);
-        const { data: coursesData, error } = await supabase
-            .from('courses')
-            .select('*')
-            .eq('instructor_id', instructorId);
 
-        if (coursesData) {
-            const enrichedCourses = coursesData.map(c => ({
+        // PRODUCTION LAYER 3: Data Access via RPC
+        // "Get courses where I am staff (or Admin)"
+        const { data: coursesData, error } = await supabase
+            .rpc('get_manageable_courses');
+
+        if (error) {
+            console.error('Error fetching manageable courses:', error);
+            // Fallback for dev/migration lag: Try direct select if RPC fails or doesn't exist yet
+            // This ensures the UI doesn't break if SQL isn't run yet.
+            const { data: staffAssignments } = await supabase
+                .from('course_staff')
+                .select('course_id')
+                .eq('user_id', instructorId);
+
+            if (staffAssignments && staffAssignments.length > 0) {
+                const courseIds = staffAssignments.map(s => s.course_id);
+                const { data: fallbackData } = await supabase
+                    .from('courses')
+                    .select('*')
+                    .in('id', courseIds);
+
+                if (fallbackData) {
+                    setCourses(fallbackData.map(c => ({ ...c, enrollment_count: 0 })));
+                }
+            }
+        } else if (coursesData) {
+            const enrichedCourses = coursesData.map((c: any) => ({
                 ...c,
-                enrollment_count: 0 // Fetch real enrollment count here if available
+                enrollment_count: 0 // Placeholder until we hook up the enrollment aggregate
             }));
             setCourses(enrichedCourses);
         }
@@ -70,54 +79,23 @@ export default function MyClasses({
         if (instructorId) fetchCourses();
     }, [instructorId]);
 
-    const handleCreateCourse = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formData.title_en || !formData.title_fr) return;
+    const handleCourseCreated = () => {
+        fetchCourses();
+    };
 
-        setIsCreating(true);
+    const handlePublishToggle = async (courseId: string, currentStatus: string) => {
+        const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
+        const { error } = await supabase
+            .from('courses')
+            .update({ course_status: newStatus })
+            .eq('id', courseId);
 
-        let finalThumbnailUrl = formData.thumbnail_url;
-        if (thumbnailFile) {
-            const fileExt = thumbnailFile.name.split('.').pop();
-            const fileName = `${Date.now()}.${fileExt}`;
-            const { data, error: uploadError } = await supabase.storage
-                .from('course-thumbnails')
-                .upload(fileName, thumbnailFile);
-
-            if (uploadError) {
-                console.error('Thumbnail upload error:', uploadError);
-                alert('Thumbnail upload failed, but course will still be created.');
-            } else if (data) {
-                const { data: urlData } = supabase.storage.from('course-thumbnails').getPublicUrl(fileName);
-                finalThumbnailUrl = urlData.publicUrl;
-            }
-        }
-
-        const { error } = await supabase.from('courses').insert({
-            ...formData,
-            thumbnail_url: finalThumbnailUrl,
-            instructor_id: instructorId
-        });
-
-        if (!error) {
-            setShowCreateModal(false);
-            setFormData({
-                title_en: '',
-                title_fr: '',
-                description_en: '',
-                description_fr: '',
-                max_capacity: 30,
-                status: 'upcoming',
-                thumbnail_url: ''
-            });
-            setThumbnailFile(null);
-            fetchCourses();
-            if (setExternalShowModal) setExternalShowModal(false);
+        if (error) {
+            console.error('Error updating course status:', error);
+            alert('Failed to update course status');
         } else {
-            console.error('Error creating course:', error);
-            alert(`Failed to create course: ${error.message}`);
+            fetchCourses(); // Refresh
         }
-        setIsCreating(false);
     };
 
     const filteredCourses = courses.filter(c =>
@@ -126,7 +104,15 @@ export default function MyClasses({
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {/* WIZARD COMPONENT */}
+            <CourseCreationWizard
+                isOpen={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                instructorId={instructorId}
+                onSuccess={handleCourseCreated}
+            />
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">My Courses</h1>
@@ -180,10 +166,16 @@ export default function MyClasses({
                                     className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                 />
                                 <div className="absolute top-3 right-3 flex gap-2">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border ${course.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                        }`}>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handlePublishToggle(course.id, course.status); }}
+                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border flex items-center gap-1 hover:scale-105 transition-transform ${course.status === 'published'
+                                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                            : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                            }`}
+                                    >
+                                        {course.status === 'published' ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                                         {course.status}
-                                    </span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -216,147 +208,6 @@ export default function MyClasses({
                     ))}
                 </div>
             )}
-
-            {/* CREATE COURSE MODAL */}
-            <AnimatePresence>
-                {showCreateModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-card border border-border w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden"
-                        >
-                            <div className="p-6 border-b border-border flex justify-between items-center bg-muted/30">
-                                <div>
-                                    <h2 className="text-xl font-bold text-foreground">Create New Course</h2>
-                                    <p className="text-xs text-muted-foreground">Launch a new training curriculum</p>
-                                </div>
-                                <button
-                                    onClick={() => setShowCreateModal(false)}
-                                    className="p-2 hover:bg-muted rounded-full transition-colors"
-                                >
-                                    <X className="h-5 w-5 text-muted-foreground" />
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleCreateCourse} className="p-6 space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Course Title (EN)</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            placeholder="Aviation Safety 101"
-                                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                            value={formData.title_en}
-                                            onChange={(e) => setFormData({ ...formData, title_en: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Titre du Cours (FR)</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            placeholder="Sécurité Aérienne 101"
-                                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                            value={formData.title_fr}
-                                            onChange={(e) => setFormData({ ...formData, title_fr: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Description (EN)</label>
-                                    <textarea
-                                        rows={3}
-                                        placeholder="Detailed course description in English..."
-                                        className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                                        value={formData.description_en}
-                                        onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Description (FR)</label>
-                                    <textarea
-                                        rows={3}
-                                        placeholder="Description détaillée du cours en Français..."
-                                        className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                                        value={formData.description_fr}
-                                        onChange={(e) => setFormData({ ...formData, description_fr: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Max Capacity</label>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                            value={formData.max_capacity}
-                                            onChange={(e) => setFormData({ ...formData, max_capacity: parseInt(e.target.value) })}
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Initial Status</label>
-                                        <select
-                                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                            value={formData.status}
-                                            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                                        >
-                                            <option value="upcoming">Upcoming</option>
-                                            <option value="active">Active</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Course Thumbnail</label>
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-20 w-32 rounded-xl bg-muted overflow-hidden border border-border flex items-center justify-center">
-                                            {thumbnailFile ? (
-                                                <img src={URL.createObjectURL(thumbnailFile)} className="w-full h-full object-cover" alt="Preview" />
-                                            ) : (
-                                                <BookOpen className="h-6 w-6 text-muted-foreground opacity-20" />
-                                            )}
-                                        </div>
-                                        <label className="flex-1 cursor-pointer">
-                                            <div className="bg-secondary hover:bg-muted border border-border rounded-xl px-4 py-3 text-sm font-bold text-center transition-all">
-                                                {thumbnailFile ? 'Change Image' : 'Upload Thumbnail'}
-                                            </div>
-                                            <input
-                                                type="file"
-                                                className="hidden"
-                                                accept="image/*"
-                                                onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
-                                            />
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCreateModal(false)}
-                                        className="flex-1 px-6 py-3 rounded-xl border border-border font-bold text-sm hover:bg-muted transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isCreating}
-                                        className="flex-1 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                                    >
-                                        {isCreating ? 'Creating...' : 'Create Course'}
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

@@ -63,15 +63,13 @@ export const getStudentDashboard = async (userId: string): Promise<{
         id,
         title_en,
         description_en,
-        thumbnail_url,
-        instructor_id
+        thumbnail_url
       )
     `)
         .eq('user_id', userId);
 
     if (enrollError) {
         console.error('Enrollment fetch error:', enrollError);
-        // Return empty courses if error
         return {
             profile: {
                 id: userId,
@@ -85,24 +83,39 @@ export const getStudentDashboard = async (userId: string): Promise<{
         };
     }
 
-    // 3. Fetch instructor names separately
-    const instructorIds = enrollments?.map((e: any) => e.courses?.instructor_id).filter(Boolean) || [];
-    const { data: instructors } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', instructorIds);
+    // 3. Fetch instructor names via course_staff
+    const courseIds = enrollments?.map((e: any) => e.courses?.id).filter(Boolean) || [];
+    let instructorMap = new Map();
 
-    const instructorMap = new Map(instructors?.map(i => [i.id, i.full_name]) || []);
+    if (courseIds.length > 0) {
+        const { data: staffData } = await supabase
+            .from('course_staff')
+            .select(`
+                course_id,
+                profiles (full_name)
+            `)
+            .in('course_id', courseIds)
+            .in('role', ['owner', 'trainer']);
+
+        if (staffData) {
+            staffData.forEach((s: any) => {
+                // Just take the first trainer/owner found as the "main" instructor
+                if (!instructorMap.has(s.course_id)) {
+                    instructorMap.set(s.course_id, s.profiles?.full_name || 'Staff');
+                }
+            });
+        }
+    }
 
     const activeCourses: StudentCourse[] = enrollments?.map((e: any) => ({
         courseId: e.courses?.id || '',
         title: e.courses?.title_en || 'Untitled Course',
-        instructorName: instructorMap.get(e.courses?.instructor_id) || 'TBA',
-        progress: 0, // In a real app, calculate from module completion
+        instructorName: instructorMap.get(e.courses?.id) || 'TBA',
+        progress: 0,
         status: e.status as EnrollmentStatus,
         thumbnail_url: e.courses?.thumbnail_url,
         description_en: e.courses?.description_en,
-        level: 'Aviation Specialist' // Mocking level for now or fetch from course meta
+        level: 'Aviation Specialist'
     })) || [];
 
     return {

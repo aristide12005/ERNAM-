@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -56,10 +56,11 @@ export default function UserManagement() {
     // UI States
     const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
 
     const fetchProfiles = async () => {
         setLoading(true);
-        let query = supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        let query = supabase.from('profiles').select('id, full_name, email, role, status, created_at').order('created_at', { ascending: false });
 
         const { data, error } = await query;
         if (!error && data) {
@@ -68,29 +69,35 @@ export default function UserManagement() {
         setLoading(false);
     };
 
+    // Realtime Subscription with Ref guard
+    const channelRef = useRef<any>(null);
+
     useEffect(() => {
         fetchProfiles();
 
-        // Set up real-time subscription for profile changes
-        const channel = supabase
-            .channel('profiles-realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'profiles'
-                },
-                (payload) => {
-                    console.log('Profile change detected:', payload);
-                    // Refresh profiles list
-                    fetchProfiles();
-                }
-            )
-            .subscribe();
+        if (!channelRef.current) {
+            channelRef.current = supabase
+                .channel('profiles-realtime')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'profiles'
+                    },
+                    (payload) => {
+                        console.log('Profile change detected:', payload);
+                        fetchProfiles();
+                    }
+                )
+                .subscribe();
+        }
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+            }
         };
     }, []);
 
@@ -100,14 +107,23 @@ export default function UserManagement() {
             if (!confirmed) return;
             const { error } = await supabase.from('profiles').delete().eq('id', id);
             if (!error) fetchProfiles();
+            else alert("Error deleting user: " + error.message);
         } else {
-            let status = action === 'approve' ? 'approved' : 'rejected';
-            const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
-            if (!error) {
-                await supabase.from('audit_logs').insert({
-                    action: `User ${action === 'approve' ? 'Approved' : 'Rejected'}`,
-                    target_resource: `User ID: ${id}`
-                });
+            // Use Atomic RPC
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const rpcName = action === 'approve' ? 'approve_user_transaction' : 'reject_user_transaction';
+
+            const { error } = await supabase.rpc(rpcName, {
+                target_user_id: id,
+                acting_admin_id: user.id
+            });
+
+            if (error) {
+                console.error(`Error executing ${rpcName}:`, error);
+                alert(`Failed to ${action} user. ${error.message}`);
+            } else {
                 fetchProfiles();
             }
         }
@@ -127,6 +143,12 @@ export default function UserManagement() {
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                     <Users className="h-6 w-6 text-blue-500" /> User Management
                 </h2>
+                <button
+                    onClick={() => setCreateModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-blue-600/20"
+                >
+                    <Plus className="h-4 w-4" /> Add User
+                </button>
 
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     <div className="relative flex-1 md:flex-none md:w-64">
@@ -288,6 +310,12 @@ export default function UserManagement() {
                     onUpdate={fetchProfiles}
                 />
             )}
+
+            <CreateUserModal
+                isOpen={createModalOpen}
+                onClose={() => setCreateModalOpen(false)}
+                onSuccess={() => { fetchProfiles(); }}
+            />
         </div>
     );
 }
@@ -612,5 +640,92 @@ function InfoCard({ label, value, icon: Icon, uppercase }: { label: string, valu
             </div>
             <div className={`text-sm font-black text-white ${uppercase ? 'uppercase tracking-wide' : ''}`}>{value}</div>
         </div>
+    );
+}
+
+function CreateUserModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onClose: () => void, onSuccess: () => void }) {
+    const [email, setEmail] = useState('');
+    const [fullName, setFullName] = useState('');
+    const [password, setPassword] = useState('');
+    const [role, setRole] = useState('trainee');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const res = await fetch('/api/admin/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    fullName,
+                    role,
+                    adminId: user?.id
+                })
+            });
+
+            const result = await res.json();
+
+            if (!res.ok) throw new Error(result.error);
+
+            alert("User created successfully!");
+            onSuccess();
+            onClose();
+        } catch (error: any) {
+            alert("Creation failed: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-[#141414] border border-white/10 w-full max-w-lg rounded-2xl shadow-2xl p-6"
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-white">Add New User</h3>
+                            <button onClick={onClose}><X className="h-5 w-5 text-gray-400" /></button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Full Name</label>
+                                <input required type="text" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none" placeholder="John Doe" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Email</label>
+                                <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none" placeholder="john@example.com" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Password</label>
+                                <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none" placeholder="******" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Role</label>
+                                <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                                    <option value="trainee">Trainee</option>
+                                    <option value="trainer">Trainer</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+
+                            <button disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl mt-4 disabled:opacity-50">
+                                {loading ? 'Creating...' : 'Create User'}
+                            </button>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
     );
 }

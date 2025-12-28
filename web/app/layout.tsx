@@ -1,5 +1,6 @@
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import GlobalAssistant from '@/components/GlobalAssistant';
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -33,6 +34,7 @@ export default function RootLayout({
         <ThemeProvider defaultTheme="light" storageKey="ernam-theme">
           <AuthProvider>
             {children}
+            <GlobalAssistant />
           </AuthProvider>
         </ThemeProvider>
       </body>

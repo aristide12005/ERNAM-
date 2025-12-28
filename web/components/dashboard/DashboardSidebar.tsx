@@ -45,6 +45,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
             return [
                 { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
                 { id: 'users', label: 'User Management', icon: Users },
+                { id: 'my-classes', label: 'Courses', icon: BookOpen }, // Added Courses for Admin
                 { id: 'messages', label: 'Messages', icon: MessageSquare },
                 { id: 'finances', label: 'Finances', icon: DollarSign },
                 { id: 'audit-logs', label: 'Audit Logs', icon: ShieldCheck },
@@ -99,7 +100,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
             <div className="px-4 mb-6">
                 <button
                     onClick={onCreateNew}
-                    className={`w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 ${collapsed ? 'px-0' : 'px-4'}`}
+                    className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 ${collapsed ? 'px-0' : 'px-4'}`}
                 >
                     <Plus className="h-5 w-5" />
                     {!collapsed && <span>Create New</span>}
@@ -115,7 +116,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
                         <button
                             key={item.id}
                             onClick={() => setActiveView(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all group relative ${isActive
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md transition-all group relative ${isActive
                                 ? `${itemActiveBg} shadow-sm border ${isTrainee ? 'border-blue-100' : 'border-white/5'}`
                                 : `${itemInactiveColor} hover:text-primary ${isTrainee ? 'hover:bg-gray-50' : 'hover:bg-white/5'}`
                                 }`}
@@ -138,7 +139,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
             <div className={`p-4 border-t border-white/10 space-y-2 ${collapsed ? 'items-center flex flex-col' : ''}`}>
                 <button
                     onClick={signOut}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors ${collapsed ? 'justify-center' : ''}`}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors ${collapsed ? 'justify-center' : ''}`}
                 >
                     <LogOut className="h-5 w-5" />
                     {!collapsed && <span className="font-medium">Sign Out</span>}

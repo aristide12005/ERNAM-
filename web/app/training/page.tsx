@@ -15,41 +15,114 @@ type Course = {
 }
 
 export default function TrainingPage() {
-    const [courses, setCourses] = useState<Course[]>([]);
+    const [enrolledCourses, setEnrolledCourses] = useState<any[]>([]);
+    const [availableCourses, setAvailableCourses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchCourses = async () => {
-            const { data } = await supabase
+        const fetchData = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            // Get all published courses
+            const { data: allCourses, error: coursesError } = await supabase
                 .from('courses')
                 .select('*')
-                .order('start_date', { ascending: true });
+                .eq('course_status', 'published')
+                .order('created_at', { ascending: false });
 
-            if (data) setCourses(data);
+            // Get my enrollments
+            const { data: myEnrollments, error: enrollError } = await supabase
+                .from('enrollments')
+                .select('*')
+                .eq('user_id', user?.id);
+
+            if (coursesError) console.error('Error fetching courses:', coursesError);
+            if (enrollError) console.error('Error fetching enrollments:', enrollError);
+
+            const enrolledCourseIds = new Set(myEnrollments?.map((e: any) => e.course_id) || []);
+
+            // Split courses into enrolled and available
+            const enrolled = (allCourses || []).filter(c => enrolledCourseIds.has(c.id));
+            const available = (allCourses || []).filter(c => !enrolledCourseIds.has(c.id));
+
+            setEnrolledCourses(enrolled);
+            setAvailableCourses(available);
             setLoading(false);
         };
 
-        fetchCourses();
+        fetchData();
     }, []);
 
+    // Reusable Course Card Component
+    const CourseCard = ({ course, isEnrolled }: { course: any, isEnrolled: boolean }) => (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="group relative bg-[#141414] border border-white/5 hover:border-blue-500/50 rounded-2xl p-6 transition-all hover:bg-[#1A1A1A] hover:shadow-2xl hover:-translate-y-1 overflow-hidden flex flex-col h-full"
+        >
+            {/* Background Decor */}
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <Plane className="h-24 w-24 -rotate-12" />
+            </div>
+
+            {/* Status Badge */}
+            <div className="mb-6 flex justify-between items-start">
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${isEnrolled
+                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                    : 'bg-white/5 text-gray-400 border-white/10'
+                    }`}>
+                    {isEnrolled ? 'IN PROGRESS' : 'AVAILABLE'}
+                </span>
+            </div>
+
+            <h3 className="text-xl font-black text-white mb-2 line-clamp-2 min-h-[3.5rem]">
+                {course.title_en || course.title_fr}
+            </h3>
+
+            <p className="text-gray-500 text-sm mb-6 line-clamp-3 font-medium">
+                {course.description_en || course.description_fr || "No description provided."}
+            </p>
+
+            {/* Metadata Footer */}
+            <div className="space-y-3 pt-4 border-t border-white/5 mt-auto">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                    <Calendar className="h-3 w-3 text-blue-500" />
+                    <span>Created: {new Date(course.created_at).toLocaleDateString()}</span>
+                </div>
+            </div>
+
+            {/* Action Button */}
+            <Link
+                href={`/training/${course.id}`}
+                className={`mt-6 w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isEnrolled
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20'
+                    : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/5'
+                    }`}
+            >
+                {isEnrolled ? 'Continue Mission' : 'View Details'}
+                <ArrowRight className="h-3 w-3" />
+            </Link>
+        </motion.div>
+    );
+
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-7xl mx-auto space-y-12">
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-12 flex justify-between items-end"
+                className="flex justify-between items-end border-b border-white/5 pb-8"
             >
                 <div>
-                    <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
-                        Training Hangar
+                    <h1 className="text-4xl font-black text-white tracking-tight">
+                        TRAINING <span className="text-blue-500">HANGAR</span>
                     </h1>
-                    <p className="text-muted-foreground mt-2 text-lg">
+                    <p className="text-gray-500 mt-2 text-lg font-medium">
                         Active missions and upcoming qualifications.
                     </p>
                 </div>
                 <div className="hidden md:block">
-                    <div className="flex items-center gap-2 text-sm text-blue-400 bg-blue-500/10 px-4 py-2 rounded-full border border-blue-500/20">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-400 bg-blue-500/5 px-4 py-2 rounded-full border border-blue-500/20">
                         <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
@@ -59,68 +132,39 @@ export default function TrainingPage() {
                 </div>
             </motion.div>
 
-            {/* Course Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {courses.map((course, index) => (
-                    <motion.div
-                        key={course.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="group relative bg-card border border-border hover:border-blue-500/50 rounded-2xl p-6 transition-all hover:bg-secondary/40 hover:shadow-2xl hover:-translate-y-1 overflow-hidden flex flex-col"
-                    >
-                        {/* Background Decor */}
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Plane className="h-24 w-24 -rotate-12" />
-                        </div>
-
-                        {/* Status Badge */}
-                        <div className="mb-6 flex justify-between items-start">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wider border ${course.status === 'active'
-                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                    : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                }`}>
-                                {course.status.toUpperCase()}
-                            </span>
-                        </div>
-
-                        <h3 className="text-xl font-bold text-white mb-3 line-clamp-2 min-h-[3.5rem]">
-                            {course.title_fr}
-                        </h3>
-
-                        <p className="text-muted-foreground text-sm mb-6 line-clamp-3">
-                            {course.description_fr}
-                        </p>
-
-                        {/* Metadata Footer */}
-                        <div className="space-y-3 pt-4 border-t border-border/50 mt-auto">
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                                <Calendar className="h-4 w-4 text-blue-400" />
-                                <span>Start: {new Date(course.start_date).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                                <Users className="h-4 w-4 text-blue-400" />
-                                <span>24 Enrolled</span>
-                            </div>
-                        </div>
-
-                        {/* Action Button - Updated to Link */}
-                        <Link
-                            href={`/training/${course.id}`}
-                            className="mt-6 w-full py-3 bg-secondary hover:bg-primary/20 hover:text-white border border-border hover:border-primary/50 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 group-hover:bg-primary group-hover:text-white"
-                        >
-                            view_mission_details
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
-                    </motion.div>
-                ))}
-            </div>
-
-            {courses.length === 0 && !loading && (
-                <div className="text-center py-20 text-muted-foreground">
-                    <p>No active courses found.</p>
-                </div>
+            {/* My Learning Section */}
+            {enrolledCourses.length > 0 && (
+                <section>
+                    <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+                        <span className="w-1 h-6 bg-blue-500 rounded-full"></span>
+                        MY ACTIVE MISSIONS
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {enrolledCourses.map((course) => (
+                            <CourseCard key={course.id} course={course} isEnrolled={true} />
+                        ))}
+                    </div>
+                </section>
             )}
+
+            {/* Available Courses Section */}
+            <section>
+                <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+                    <span className="w-1 h-6 bg-gray-700 rounded-full"></span>
+                    AVAILABLE CURRICULUM
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {availableCourses.map((course) => (
+                        <CourseCard key={course.id} course={course} isEnrolled={false} />
+                    ))}
+                </div>
+
+                {availableCourses.length === 0 && enrolledCourses.length === 0 && !loading && (
+                    <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl">
+                        <p className="text-gray-500 font-medium">No courses found in the system.</p>
+                    </div>
+                )}
+            </section>
 
         </div>
     )

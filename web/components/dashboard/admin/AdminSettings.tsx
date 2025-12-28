@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import {
     Settings,
     Shield,
@@ -15,8 +16,22 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+interface SystemSettings {
+    platform_name: string;
+    support_email: string;
+    maintenance_mode: boolean;
+    registration_open: boolean;
+}
+
 export default function AdminSettings() {
     const [activeTab, setActiveTab] = useState('general');
+    const [loading, setLoading] = useState(false);
+    const [settings, setSettings] = useState<SystemSettings>({
+        platform_name: 'ERNAM DIGITAL TWIN',
+        support_email: 'ops@ernam.edu.sn',
+        maintenance_mode: false,
+        registration_open: true
+    });
 
     const tabs = [
         { id: 'general', label: 'Platform Settings', icon: Globe },
@@ -24,6 +39,57 @@ export default function AdminSettings() {
         { id: 'notifications', label: 'Alert Config', icon: Bell },
         { id: 'database', label: 'Data Registry', icon: Database },
     ];
+
+    useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    const fetchSettings = async () => {
+        setLoading(true);
+        const { data, error } = await supabase.from('system_settings').select('*');
+        if (!error && data) {
+            const newSettings: any = { ...settings };
+            data.forEach((row: any) => {
+                if (row.key === 'platform_name') newSettings.platform_name = row.value.value;
+                if (row.key === 'support_email') newSettings.support_email = row.value.value; // Assuming we add this key
+                if (row.key === 'maintenance_mode') newSettings.maintenance_mode = row.value.enabled;
+                if (row.key === 'registration_open') newSettings.registration_open = row.value.enabled;
+            });
+            setSettings(newSettings);
+        }
+        setLoading(false);
+    };
+
+    const handleSave = async () => {
+        setLoading(true);
+        const updates = [
+            { key: 'platform_name', value: { value: settings.platform_name } },
+            { key: 'support_email', value: { value: settings.support_email } }, // Ensure key exists or insert
+            { key: 'maintenance_mode', value: { enabled: settings.maintenance_mode } },
+            { key: 'registration_open', value: { enabled: settings.registration_open } }
+        ];
+
+        for (const update of updates) {
+            await supabase.from('system_settings').upsert({
+                key: update.key,
+                value: update.value,
+                updated_at: new Date().toISOString()
+            });
+        }
+
+        // Audit Log
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('audit_logs').insert({
+                action: 'System Settings Updated',
+                target_resource: 'Global Config',
+                performed_by: user.id
+            });
+        }
+
+        setLoading(false);
+        alert("Settings Saved Successfully");
+    };
 
     return (
         <div className="space-y-6 pb-12">
@@ -41,8 +107,8 @@ export default function AdminSettings() {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${activeTab === tab.id
-                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
                                     }`}
                             >
                                 <Icon className="h-4 w-4" />
@@ -63,7 +129,8 @@ export default function AdminSettings() {
                                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Platform Name</label>
                                     <input
                                         type="text"
-                                        defaultValue="ERNAM DIGITAL TWIN"
+                                        value={settings.platform_name}
+                                        onChange={(e) => setSettings({ ...settings, platform_name: e.target.value })}
                                         className="w-full bg-[#0A0A0A] border border-white/10 rounded-lg py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500 text-white"
                                     />
                                 </div>
@@ -71,7 +138,8 @@ export default function AdminSettings() {
                                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Support Email</label>
                                     <input
                                         type="email"
-                                        defaultValue="ops@ernam.edu.sn"
+                                        value={settings.support_email}
+                                        onChange={(e) => setSettings({ ...settings, support_email: e.target.value })}
                                         className="w-full bg-[#0A0A0A] border border-white/10 rounded-lg py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500 text-white"
                                     />
                                 </div>
@@ -84,7 +152,12 @@ export default function AdminSettings() {
                                         <div className="text-[10px] text-gray-500">Enable to restrict access for scheduled upgrades.</div>
                                     </div>
                                     <div className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" className="sr-only peer" />
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.maintenance_mode}
+                                            onChange={(e) => setSettings({ ...settings, maintenance_mode: e.target.checked })}
+                                            className="sr-only peer"
+                                        />
                                         <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </div>
                                 </div>
@@ -95,7 +168,12 @@ export default function AdminSettings() {
                                         <div className="text-[10px] text-gray-500">Allow new users to sign up without invitations.</div>
                                     </div>
                                     <div className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.registration_open}
+                                            onChange={(e) => setSettings({ ...settings, registration_open: e.target.checked })}
+                                            className="sr-only peer"
+                                        />
                                         <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </div>
                                 </div>
@@ -137,11 +215,19 @@ export default function AdminSettings() {
                     )}
 
                     <div className="flex justify-end gap-3 pt-8 border-t border-white/5">
-                        <button className="flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl text-sm font-bold transition-all">
-                            <RotateCcw className="h-4 w-4" /> RESET
+                        <button
+                            onClick={fetchSettings}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl text-sm font-bold transition-all"
+                            disabled={loading}
+                        >
+                            <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> RESET
                         </button>
-                        <button className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20">
-                            <Save className="h-4 w-4" /> SAVE CHANGES
+                        <button
+                            onClick={handleSave}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                            disabled={loading}
+                        >
+                            <Save className="h-4 w-4" /> {loading ? 'SAVING...' : 'SAVE CHANGES'}
                         </button>
                     </div>
                 </div>

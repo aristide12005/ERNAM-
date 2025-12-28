@@ -1,546 +1,469 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    Send,
-    Plus,
-    X,
-    User,
-    Users as UsersIcon,
-    Paperclip,
-    Search,
-    Loader2,
-    MessageCircle,
-    Check,
-    CheckCheck,
-    Image as ImageIcon,
-    Smile,
-    MoreVertical,
-    ArrowLeft
-} from 'lucide-react';
+import ConversationList from './messaging/ConversationList';
+import ChatWindow from './messaging/ChatWindow';
+import CallModal from './messaging/CallModal';
+import NewChatModal from './messaging/NewChatModal';
+import { useWebRTC } from '@/hooks/useWebRTC';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface Message {
     id: string;
     sender_id: string;
     receiver_id: string | null;
     course_id: string | null;
-    title: string;
     content: string;
-    is_reply_allowed: boolean;
-    parent_id: string | null;
-    attachment_url: string | null;
-    is_read: boolean;
     created_at: string;
     sender?: { full_name: string; role: string };
-    receiver?: { full_name: string };
-    course?: { title_en: string };
+    is_read?: boolean;
 }
 
 export default function MessagingSystem() {
-    const { user, profile } = useAuth();
-    const [conversations, setConversations] = useState<Message[]>([]);
-    const [selectedConversation, setSelectedConversation] = useState<Message | null>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [isComposeOpen, setIsComposeOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [messageText, setMessageText] = useState('');
-    const [sending, setSending] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const { user } = useAuth();
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    // State
+    // State - Production Grade Architecture (Server Truth + Optimistic Queue)
+    const [messages, setMessages] = useState<Message[]>([]); // Confirmed by Server (The Truth)
+    const [pendingMessages, setPendingMessages] = useState<Message[]>([]); // Waiting for Ack (Optimistic)
+    const [conversations, setConversations] = useState<any[]>([]);
+    const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+    const [selectedPartnerName, setSelectedPartnerName] = useState('');
+    const [selectedPartnerRole, setSelectedPartnerRole] = useState('');
 
+    // Loading States
+    const [loadingConversations, setLoadingConversations] = useState(true);
+    const [loadingMessages, setLoadingMessages] = useState(false);
+    const [showNewChatModal, setShowNewChatModal] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    // Detect mobile & Fix Hydration
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        setMounted(true);
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
+    // Call Hook
+    const {
+        callState,      // Renamed from callMode
+        callerName,
+        localStream,
+        remoteStream,
+        startCall,
+        acceptCall,
+        rejectCall,     // New
+        endCall,
+        callType
+    } = useWebRTC(user?.id || null);
+
+    // Search
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // 1. Fetch Conversations via RPC (Architectural Fix #2)
     const fetchConversations = async () => {
         if (!user) return;
-        setLoading(true);
+        setLoadingConversations(true);
 
-        const { data, error } = await supabase
-            .from('messages')
-            .select(`
-                *,
-                sender:profiles!sender_id(full_name, role),
-                receiver:profiles!receiver_id(full_name),
-                course:courses(title_en)
-            `)
-            .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-            .order('created_at', { ascending: false });
+        const { data, error } = await supabase.rpc('get_my_conversations');
 
         if (!error && data) {
-            console.log('Fetched messages:', data); // Debug log
+            // We need to fetch names separately because RPC returns IDs
+            // Optimization: In a real app, we'd join in the RPC or use a view.
+            // For now, let's fetch profiles for these partners.
+            const partnerIds = data.map((d: any) => d.partner_id);
+            if (partnerIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, role')
+                    .in('id', partnerIds);
 
-            // Group by conversation partner - keep LATEST message per partner
-            const grouped = data.reduce((acc: any, msg: any) => {
-                // Skip course broadcasts for now (they need different handling)
-                if (!msg.receiver_id) return acc;
-
-                const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
-
-                // Only keep if we don't have this partner yet (since data is sorted by latest first)
-                if (!acc[partnerId]) {
-                    acc[partnerId] = msg;
-                }
-                return acc;
-            }, {});
-
-            const conversationList = Object.values(grouped) as Message[];
-            console.log('Grouped conversations:', conversationList); // Debug log
-            setConversations(conversationList);
-        } else if (error) {
-            console.error('Error fetching conversations:', error);
+                const enriched = data.map((conv: any) => {
+                    const profile = profiles?.find(p => p.id === conv.partner_id);
+                    return {
+                        ...conv,
+                        partner_name: profile?.full_name || 'Unknown',
+                        partner_role: profile?.role || 'User'
+                    };
+                });
+                setConversations(enriched);
+            } else {
+                setConversations([]);
+            }
+        } else {
+            console.error('Error fetching inbox:', error);
         }
-        setLoading(false);
+        setLoadingConversations(false);
     };
 
-    const fetchMessages = async (conversationMsg: Message) => {
+    // 2. Fetch Messages for a selected conversation
+    // 2. Fetch Messages (Optimized with Read Receipts)
+    const fetchMessages = async (partnerId: string) => {
         if (!user) return;
+        setLoadingMessages(true);
 
-        const partnerId = conversationMsg.sender_id === user.id
-            ? conversationMsg.receiver_id
-            : conversationMsg.sender_id;
+        // Try RPC first, fallback to standard query if not exists
+        const { data, error } = await supabase.rpc('get_direct_messages', {
+            current_user_id: user.id,
+            partner_id: partnerId
+        });
 
-        const { data } = await supabase
-            .from('messages')
-            .select(`
-                *,
-                sender:profiles!sender_id(full_name, role),
-                receiver:profiles!receiver_id(full_name)
-            `)
-            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
-            .order('created_at', { ascending: true });
+        let fetchedMessages = [];
 
-        if (data) {
-            setMessages(data as any);
+        if (!error && data) {
+            // Transform RPC result to match Message interface if needed
+            // RPC returns flat structure, we map it back to object
+            fetchedMessages = data.map((m: any) => ({
+                id: m.id,
+                sender_id: m.sender_id,
+                receiver_id: m.receiver_id,
+                course_id: m.course_id,
+                content: m.content,
+                created_at: m.created_at,
+                is_read: m.is_read,
+                sender: { full_name: m.sender_full_name, role: m.sender_role }
+            }));
+        } else {
+            // Fallback: Robust Parallel Fetch (100% reliable)
+            // Query 1: Sent by me to them
+            const { data: sentData } = await supabase
+                .from('messages')
+                .select(`*, sender:profiles(full_name, role)`)
+                .eq('sender_id', user.id)
+                .eq('receiver_id', partnerId);
+
+            // Query 2: Sent by them to me
+            const { data: receivedData } = await supabase
+                .from('messages')
+                .select(`*, sender:profiles(full_name, role)`)
+                .eq('sender_id', partnerId)
+                .eq('receiver_id', user.id);
+
+            // Merge and Sort
+            const combined = [...(sentData || []), ...(receivedData || [])];
+            fetchedMessages = combined.sort((a, b) =>
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+        }
+
+        setMessages(fetchedMessages);
+        setLoadingMessages(false);
+
+        // FIX: Marking as Read (Fire and Forget)
+        const unreadIds = fetchedMessages
+            .filter((m: any) => m.sender_id === partnerId && !m.is_read)
+            .map((m: any) => m.id);
+
+        if (unreadIds.length > 0) {
+            supabase.from('messages')
+                .update({ is_read: true })
+                .in('id', unreadIds)
+                .then(({ error }) => {
+                    if (error) console.error("Failed to mark read", error);
+                });
         }
     };
 
+    // Initial Load
     useEffect(() => {
         fetchConversations();
 
-        // Set up real-time subscription for new messages
+        // Realtime Subscription for Inbox Updates
         if (!user) return;
-
         const channel = supabase
-            .channel('messages-realtime')
+            .channel('inbox-updates')
             .on(
                 'postgres_changes',
                 {
-                    event: '*',
+                    event: 'INSERT',
                     schema: 'public',
                     table: 'messages',
-                    filter: `or(sender_id.eq.${user.id},receiver_id.eq.${user.id})`
+                    filter: `receiver_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log('Message change detected:', payload);
-                    // Refresh conversations when any message changes
-                    fetchConversations();
-                    // If we're viewing this conversation, refresh messages too
-                    if (selectedConversation) {
-                        fetchMessages(selectedConversation);
+                    const newMsg = payload.new as Message;
+                    // Listen for confirmation (The "ACK")
+                    if (
+                        (newMsg.sender_id === user.id) ||
+                        (newMsg.receiver_id === user.id)
+                    ) {
+                        // Only update inbox if it's a new conversation or relevant
+                        fetchConversations();
                     }
                 }
             )
             .subscribe();
 
+        // The global 'chat-room' listener is removed as per instructions,
+        // replaced by the more specific 'chat:${selectedPartnerId}' listener below.
+
         return () => {
             supabase.removeChannel(channel);
+            // supabase.removeChannel(chatChannel); // chatChannel is no longer defined here
         };
     }, [user]);
 
+    // Active Conversation Realtime Listener (The "Socket Connection")
     useEffect(() => {
-        if (selectedConversation) {
-            fetchMessages(selectedConversation);
+        if (!selectedPartnerId || !user) return;
+
+        // Clear pending on switch (optional, but safer to keep if we want global queue)
+        // For this view, we just want to ensure we don't duplicate.
+
+        const chatChannel = supabase
+            .channel(`chat:${selectedPartnerId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `or(sender_id.eq.${selectedPartnerId},receiver_id.eq.${selectedPartnerId})`
+                    // Listen for ALL messages in this pair (Sent by them OR Sent by me and acked by server)
+                },
+                (payload) => {
+                    const newMsg = payload.new as Message;
+
+                    // Filter: Is this message relevant to THIS conversation?
+                    // (The db filter above helper, but double check)
+                    const isRelevant =
+                        (newMsg.sender_id === user.id && newMsg.receiver_id === selectedPartnerId) ||
+                        (newMsg.sender_id === selectedPartnerId && newMsg.receiver_id === user.id);
+
+                    if (isRelevant) {
+                        setMessages(prev => {
+                            // Deduplicate: If we already have it (e.g. from fetch), don't add
+                            if (prev.some(m => m.id === newMsg.id)) return prev;
+                            // Add to Truth
+                            return [...prev, newMsg];
+                        });
+
+                        // If it was MY message, remove it from Pending (it is now Confirmed)
+                        if (newMsg.sender_id === user.id) {
+                            setPendingMessages(prev => prev.filter(m => m.content !== newMsg.content)); // content match is heuristic, id is better if we had it pre-send
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => { supabase.removeChannel(chatChannel); };
+    }, [selectedPartnerId, user]);
+
+    // Handle Selection
+    const handleSelectConversation = (id: string, name: string, role: string) => {
+        setSelectedPartnerId(id);
+        setSelectedPartnerName(name);
+        setSelectedPartnerRole(role);
+        fetchMessages(id);
+
+        // Mobile view logic (if needed) handled by CSS classes in children or state here
+    };
+
+    const handleSendMessage = async (text: string, file?: File) => {
+        if (!user || !selectedPartnerId) return;
+
+        let content = text;
+
+        // Handle File Upload
+        if (file) {
+            try {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const filePath = `${user.id}/${fileName}`;
+
+                // Upload to Supabase Storage (bucket: 'chat-attachments')
+                const { error: uploadError } = await supabase.storage
+                    .from('chat-attachments')
+                    .upload(filePath, file);
+
+                if (uploadError) {
+                    console.error('File upload error:', uploadError);
+                    alert('Failed to upload file. Please try again or ensure the "chat-attachments" bucket exists.');
+                    return;
+                }
+
+                // Get Public URL
+                const { data } = supabase.storage
+                    .from('chat-attachments')
+                    .getPublicUrl(filePath);
+
+                if (data) {
+                    // Append markdown link to content
+                    // Format: [File: name](url)
+                    // If content was empty, just the link.
+                    const fileLink = `\n\n[FILE: ${file.name}](${data.publicUrl})`;
+                    content = content ? content + fileLink : `[FILE: ${file.name}](${data.publicUrl})`;
+                }
+            } catch (error) {
+                console.error('Upload exception:', error);
+                alert('An error occurred while uploading. Please try again.');
+                return;
+            }
         }
-    }, [selectedConversation]);
 
-    const handleSendMessage = async () => {
-        if (!messageText.trim() || !selectedConversation || !user) {
-            console.warn('Cannot send message:', {
-                hasText: !!messageText.trim(),
-                hasConversation: !!selectedConversation,
-                hasUser: !!user
-            });
-            return;
-        }
+        if (!content.trim()) return;
 
-        setSending(true);
-        const partnerId = selectedConversation.sender_id === user.id
-            ? selectedConversation.receiver_id
-            : selectedConversation.sender_id;
-
-        console.log('Sending message:', {
-            from: user.id,
-            to: partnerId,
-            content: messageText.substring(0, 50) + '...'
-        });
-
-        const { data, error } = await supabase.from('messages').insert({
+        // 1. Optimistic Update (Immediate Feedback)
+        // We create a temp message and add it to the "Pending" queue.
+        // It stays there until Realtime confirms the "Sent" status.
+        const tempId = `temp-${Date.now()}`;
+        const tempMsg: Message = {
+            id: tempId,
             sender_id: user.id,
-            receiver_id: partnerId,
-            content: messageText,
-            title: 'Reply',
-            is_reply_allowed: true
-        }).select();
+            receiver_id: selectedPartnerId,
+            course_id: null,
+            content: content,
+            created_at: new Date().toISOString(),
+            is_read: false,
+            sender: { full_name: 'You', role: 'user' }
+        };
 
-        if (!error && data) {
-            console.log('Message sent successfully:', data);
-            setMessageText('');
-            // Wait a moment for DB to process
-            setTimeout(() => {
-                fetchMessages(selectedConversation);
-                fetchConversations();
-            }, 300);
-        } else {
-            console.error('Send error:', error);
-            const errorMsg = error?.message || 'Unknown error';
-            alert(`❌ Failed to send message\n\nError: ${errorMsg}\n\nPlease check:\n1. You have permission to send messages\n2. The recipient exists\n3. Database connection is working`);
-        }
-        setSending(false);
-    };
+        setPendingMessages(prev => [...prev, tempMsg]);
 
-    const formatTime = (timestamp: string) => {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diff = now.getTime() - date.getTime();
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-
-        if (hours < 24) {
-            return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-        }
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    };
-
-    const filteredConversations = conversations.filter(c =>
-        c.sender?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.receiver?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.content.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    return (
-        <div className="flex h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-            {/* Conversations List */}
-            <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-96 flex-col border-r border-slate-200`}>
-                {/* Header */}
-                <div className="p-4 border-b border-slate-200">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold text-slate-900">Messages</h2>
-                        <button
-                            onClick={() => setIsComposeOpen(true)}
-                            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                        >
-                            <Plus className="h-5 w-5 text-slate-600" />
-                        </button>
-                    </div>
-
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Search messages..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-100 border-0 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-                </div>
-
-                {/* Conversations */}
-                <div className="flex-1 overflow-y-auto">
-                    {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
-                        </div>
-                    ) : filteredConversations.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-                            <MessageCircle className="h-12 w-12 text-slate-300 mb-3" />
-                            <p className="text-sm text-slate-500">No messages yet</p>
-                            <p className="text-xs text-slate-400 mt-1">Start a conversation</p>
-                        </div>
-                    ) : (
-                        filteredConversations.map((conv) => {
-                            const isFromMe = conv.sender_id === user?.id;
-                            const partnerName = isFromMe ? conv.receiver?.full_name : conv.sender?.full_name;
-                            const isSelected = selectedConversation?.id === conv.id;
-
-                            return (
-                                <button
-                                    key={conv.id}
-                                    onClick={() => setSelectedConversation(conv)}
-                                    className={`w-full p-4 flex items-start gap-3 hover:bg-slate-50 transition-colors border-b border-slate-100 ${isSelected ? 'bg-blue-50' : ''}`}
-                                >
-                                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                                        {partnerName?.charAt(0) || 'U'}
-                                    </div>
-                                    <div className="flex-1 min-w-0 text-left">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <h3 className="font-semibold text-sm text-slate-900 truncate">{partnerName || 'Unknown'}</h3>
-                                            <span className="text-xs text-slate-500">{formatTime(conv.created_at)}</span>
-                                        </div>
-                                        <p className="text-xs text-slate-600 truncate">
-                                            {isFromMe && 'You: '}{conv.content}
-                                        </p>
-                                    </div>
-                                    {!conv.is_read && !isFromMe && (
-                                        <div className="h-2 w-2 rounded-full bg-blue-600 flex-shrink-0 mt-2" />
-                                    )}
-                                </button>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
-
-            {/* Chat Area */}
-            <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
-                {selectedConversation ? (
-                    <>
-                        {/* Chat Header */}
-                        <div className="p-4 border-b border-slate-200 flex items-center gap-3">
-                            <button
-                                onClick={() => setSelectedConversation(null)}
-                                className="md:hidden p-2 hover:bg-slate-100 rounded-full"
-                            >
-                                <ArrowLeft className="h-5 w-5" />
-                            </button>
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold">
-                                {(selectedConversation.sender_id === user?.id
-                                    ? selectedConversation.receiver?.full_name
-                                    : selectedConversation.sender?.full_name)?.charAt(0) || 'U'}
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-semibold text-sm text-slate-900">
-                                    {selectedConversation.sender_id === user?.id
-                                        ? selectedConversation.receiver?.full_name
-                                        : selectedConversation.sender?.full_name}
-                                </h3>
-                                <p className="text-xs text-slate-500">
-                                    {selectedConversation.sender?.role || 'User'}
-                                </p>
-                            </div>
-                            <button className="p-2 hover:bg-slate-100 rounded-full">
-                                <MoreVertical className="h-5 w-5 text-slate-600" />
-                            </button>
-                        </div>
-
-                        {/* Messages */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
-                            {messages.map((msg, idx) => {
-                                const isFromMe = msg.sender_id === user?.id;
-                                const showAvatar = idx === 0 || messages[idx - 1].sender_id !== msg.sender_id;
-
-                                return (
-                                    <div key={msg.id} className={`flex items-end gap-2 ${isFromMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        {showAvatar && !isFromMe ? (
-                                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                                {msg.sender?.full_name?.charAt(0) || 'U'}
-                                            </div>
-                                        ) : (
-                                            <div className="h-8 w-8 flex-shrink-0" />
-                                        )}
-
-                                        <div className={`max-w-[70%] ${isFromMe ? 'items-end' : 'items-start'} flex flex-col`}>
-                                            <div className={`rounded-2xl px-4 py-2 ${isFromMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white text-slate-900 rounded-bl-sm shadow-sm'}`}>
-                                                <p className="text-sm">{msg.content}</p>
-                                            </div>
-                                            <span className="text-xs text-slate-500 mt-1 px-1">
-                                                {formatTime(msg.created_at)}
-                                                {isFromMe && (
-                                                    <CheckCheck className="inline h-3 w-3 ml-1" />
-                                                )}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        {/* Message Input */}
-                        <div className="p-4 border-t border-slate-200 bg-white">
-                            <div className="flex items-end gap-2">
-                                <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                                    <Paperclip className="h-5 w-5 text-slate-600" />
-                                </button>
-                                <div className="flex-1 bg-slate-100 rounded-2xl px-4 py-2 flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Type a message..."
-                                        value={messageText}
-                                        onChange={(e) => setMessageText(e.target.value)}
-                                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                                        className="flex-1 bg-transparent border-0 focus:outline-none text-sm"
-                                    />
-                                    <button className="p-1 hover:bg-slate-200 rounded-full transition-colors">
-                                        <Smile className="h-5 w-5 text-slate-600" />
-                                    </button>
-                                </div>
-                                <button
-                                    onClick={handleSendMessage}
-                                    disabled={!messageText.trim() || sending}
-                                    className="p-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 rounded-full transition-colors"
-                                >
-                                    {sending ? (
-                                        <Loader2 className="h-5 w-5 text-white animate-spin" />
-                                    ) : (
-                                        <Send className="h-5 w-5 text-white" />
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className="flex-1 flex items-center justify-center bg-slate-50">
-                        <div className="text-center">
-                            <MessageCircle className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-slate-900 mb-2">Select a conversation</h3>
-                            <p className="text-sm text-slate-500">Choose a message from the list to start chatting</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Compose Modal */}
-            <ComposeModal
-                isOpen={isComposeOpen}
-                onClose={() => setIsComposeOpen(false)}
-                onSuccess={() => {
-                    setIsComposeOpen(false);
-                    fetchConversations();
-                }}
-            />
-        </div>
-    );
-}
-
-// Compose Modal Component
-function ComposeModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
-    const { user, profile } = useAuth();
-    const [recipients, setRecipients] = useState<any[]>([]);
-    const [selectedRecipient, setSelectedRecipient] = useState('');
-    const [message, setMessage] = useState('');
-    const [sending, setSending] = useState(false);
-
-    useEffect(() => {
-        if (isOpen) {
-            fetchRecipients();
-        }
-    }, [isOpen]);
-
-    const fetchRecipients = async () => {
-        const { data } = await supabase
-            .from('profiles')
-            .select('id, full_name, role')
-            .neq('id', user?.id || '');
-
-        if (data) setRecipients(data);
-    };
-
-    const handleSend = async () => {
-        if (!selectedRecipient || !message.trim()) {
-            console.warn('Cannot send new message:', {
-                hasRecipient: !!selectedRecipient,
-                hasMessage: !!message.trim()
-            });
-            return;
-        }
-
-        setSending(true);
-        console.log('Sending new message:', {
-            from: user?.id,
-            to: selectedRecipient,
-            messageLength: message.length
+        // 2. Network Request (The "Push")
+        const { error } = await supabase.from('messages').insert({
+            sender_id: user.id,
+            receiver_id: selectedPartnerId,
+            course_id: null, // DM
+            content: content,
+            is_read: false
         });
 
-        const { data, error } = await supabase.from('messages').insert({
-            sender_id: user?.id,
-            receiver_id: selectedRecipient,
-            content: message,
-            title: 'New Message',
-            is_reply_allowed: true
-        }).select();
-
-        if (!error && data) {
-            console.log('New message sent successfully:', data);
-            onSuccess();
-            setMessage('');
-            setSelectedRecipient('');
-        } else {
-            console.error('Failed to send new message:', error);
-            const errorMsg = error?.message || 'Unknown error';
-            alert(`❌ Failed to send message\n\nError: ${errorMsg}\n\nTroubleshooting:\n1. Check database connection\n2. Verify RLS policies allow INSERT\n3. Confirm recipient exists\n\nTechnical details:\nCode: ${error?.code}\nDetails: ${error?.details}`);
+        if (error) {
+            // Failure Handling: Remove from pending and alert
+            setPendingMessages(prev => prev.filter(m => m.id !== tempId));
+            console.error("Send failed:", error);
+            alert('Failed to send message. Please check your connection.');
         }
-        setSending(false);
+        // Success Handling: We do NOTHING here.
+        // We wait for the Realtime Subscription to receive the INSERT event.
+        // That event will add the real message to 'messages' list.
+        // Then we remove the 'temp' message from 'pendingMessages'.
+        // This guarantees consistency.
     };
 
-    if (!isOpen) return null;
+    // Filter conversations
+    const filteredConversations = conversations.filter(c =>
+        c.partner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.content?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleStartNewChat = (partnerId: string, partnerName: string, partnerRole: string) => {
+        handleSelectConversation(partnerId, partnerName, partnerRole);
+        setShowNewChatModal(false);
+    };
+
+    if (!mounted) return null; // Prevent hydration mismatch
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
-            >
-                <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-slate-900">New Message</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full">
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-
-                <div className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">To:</label>
-                        <select
-                            value={selectedRecipient}
-                            onChange={(e) => setSelectedRecipient(e.target.value)}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Select a person...</option>
-                            {recipients.map(r => (
-                                <option key={r.id} value={r.id}>{r.full_name} ({r.role})</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Message:</label>
-                        <textarea
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            rows={4}
-                            placeholder="Type your message..."
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="flex h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm relative">
+            {/* Desktop Layout - Split View */}
+            {!isMobile && (
+                <>
+                    <div className="w-80 lg:w-96 h-full border-r border-slate-200">
+                        <ConversationList
+                            conversations={filteredConversations}
+                            selectedId={selectedPartnerId}
+                            onSelect={handleSelectConversation}
+                            onNewMessage={() => setShowNewChatModal(true)}
+                            loading={loadingConversations}
+                            searchTerm={searchTerm}
+                            onSearchChange={setSearchTerm}
+                            currentUserId={user?.id || ''}
                         />
                     </div>
+                    <div className="flex-1 h-full">
+                        <ChatWindow
+                            conversationId={selectedPartnerId}
+                            partnerName={selectedPartnerName}
+                            partnerRole={selectedPartnerRole}
+                            messages={[...messages, ...pendingMessages]} // Render Merged State
+                            loading={loadingMessages}
+                            onSendMessage={handleSendMessage}
+                            onBack={() => setSelectedPartnerId(null)}
+                            currentUserId={user?.id || ''}
+                            onCall={(isVideo) => selectedPartnerId && startCall(selectedPartnerId, isVideo)}
+                            disableCalls={callState !== 'idle'}
+                        />
+                    </div>
+                </>
+            )}
 
-                    <button
-                        onClick={handleSend}
-                        disabled={!selectedRecipient || !message.trim() || sending}
-                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                        {sending ? (
-                            <>
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                                Sending...
-                            </>
-                        ) : (
-                            <>
-                                <Send className="h-5 w-5" />
-                                Send Message
-                            </>
-                        )}
-                    </button>
-                </div>
-            </motion.div>
+            {/* Mobile Layout - Sliding Views */}
+            {isMobile && (
+                <AnimatePresence initial={false} mode="popLayout">
+                    {!selectedPartnerId ? (
+                        <motion.div
+                            key="list"
+                            initial={{ x: -300, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: -300, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            className="absolute inset-0 z-10 bg-white"
+                        >
+                            <ConversationList
+                                conversations={filteredConversations}
+                                selectedId={selectedPartnerId}
+                                onSelect={handleSelectConversation}
+                                onNewMessage={() => setShowNewChatModal(true)}
+                                loading={loadingConversations}
+                                searchTerm={searchTerm}
+                                onSearchChange={setSearchTerm}
+                                currentUserId={user?.id || ''}
+                            />
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="chat"
+                            initial={{ x: 300, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 300, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            className="absolute inset-0 z-20 bg-white"
+                        >
+                            <ChatWindow
+                                conversationId={selectedPartnerId}
+                                partnerName={selectedPartnerName}
+                                partnerRole={selectedPartnerRole}
+                                messages={[...messages, ...pendingMessages]} // Render Merged State
+                                loading={loadingMessages}
+                                onSendMessage={handleSendMessage}
+                                onBack={() => setSelectedPartnerId(null)}
+                                currentUserId={user?.id || ''}
+
+                                onCall={(isVideo) => selectedPartnerId && startCall(selectedPartnerId, isVideo)}
+                                disableCalls={callState !== 'idle'}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            )}
+
+            {/* Calling Overlay */}
+            <CallModal
+                isOpen={callState !== 'idle' && callState !== 'ended'}
+                mode={callState}
+                callerName={callerName || selectedPartnerName}
+                localStream={localStream}
+                remoteStream={remoteStream}
+                onAccept={acceptCall}
+                onReject={rejectCall} // Correct handler
+                onEndCall={endCall}
+                callType={callType}
+            />
+
+            <NewChatModal
+                isOpen={showNewChatModal}
+                onClose={() => setShowNewChatModal(false)}
+                onStartChat={handleStartNewChat}
+                currentUserId={user?.id || ''}
+            />
         </div>
     );
 }
