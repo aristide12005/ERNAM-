@@ -2,6 +2,7 @@
 
 import { Search, Plus, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useTranslations } from 'next-intl';
 
 interface Conversation {
     partner_id: string; // The user ID of the other person
@@ -35,17 +36,18 @@ export default function ConversationList({
     onSearchChange,
     currentUserId
 }: ConversationListProps) {
+    const t = useTranslations('Messaging');
 
     return (
         <div className="flex flex-col h-full bg-white border-r border-slate-200 w-full md:w-80 lg:w-96">
             {/* Header */}
             <div className="p-4 border-b border-slate-100 space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-slate-800 tracking-tight">Messages</h2>
+                    <h2 className="text-xl font-bold text-slate-800 tracking-tight">{t('title')}</h2>
                     <button
                         onClick={onNewMessage}
                         className="h-9 w-9 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
-                        title="New Message"
+                        title={t('new_message')}
                     >
                         <Plus className="h-5 w-5" />
                     </button>
@@ -54,10 +56,10 @@ export default function ConversationList({
                 {/* Tabs (Future: Direct | Course) */}
                 <div className="flex gap-2">
                     <button className="flex-1 py-1.5 text-xs font-semibold bg-slate-900 text-white rounded-lg shadow-sm">
-                        Direct
+                        {t('direct')}
                     </button>
                     <button className="flex-1 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 rounded-lg transition-colors">
-                        Done / Archived
+                        {t('archived')}
                     </button>
                 </div>
 
@@ -65,7 +67,7 @@ export default function ConversationList({
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <input
                         type="text"
-                        placeholder="Search chats..."
+                        placeholder={t('search_chats')}
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
@@ -92,15 +94,15 @@ export default function ConversationList({
                         <div className="h-12 w-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
                             <User className="h-6 w-6 text-slate-300" />
                         </div>
-                        <p className="text-sm font-medium text-slate-600">No chats yet</p>
-                        <p className="text-xs text-slate-400 mt-1">Start a new conversation to connect.</p>
+                        <p className="text-sm font-medium text-slate-600">{t('no_chats')}</p>
+                        <p className="text-xs text-slate-400 mt-1">{t('start_conversation')}</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-50">
                         {conversations.map((conv) => {
                             const isSelected = selectedId === conv.partner_id;
                             const isUnread = !conv.is_read && conv.sender_id !== currentUserId;
-                            const displayName = conv.partner_name || 'Unknown User';
+                            const displayName = conv.partner_name || t('unknown_user');
                             const displayRole = conv.partner_role || '';
 
                             return (
@@ -132,11 +134,19 @@ export default function ConversationList({
                                                 {displayName}
                                             </h3>
                                             <span className={`text-[10px] whitespace-nowrap ${isUnread ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
-                                                {formatDistanceToNow(new Date(conv.created_at), { addSuffix: false })}
+                                                {(() => {
+                                                    try {
+                                                        const date = conv.created_at ? new Date(conv.created_at) : new Date();
+                                                        if (isNaN(date.getTime())) return t('recently');
+                                                        return formatDistanceToNow(date, { addSuffix: false });
+                                                    } catch (e) {
+                                                        return t('recently');
+                                                    }
+                                                })()}
                                             </span>
                                         </div>
                                         <p className={`text-xs truncate leading-relaxed ${isUnread ? 'text-slate-800 font-medium' : 'text-slate-500'}`}>
-                                            {conv.sender_id === currentUserId && <span className="text-slate-400 mr-1">You:</span>}
+                                            {conv.sender_id === currentUserId && <span className="text-slate-400 mr-1">{t('you')}:</span>}
                                             {conv.content}
                                         </p>
                                     </div>

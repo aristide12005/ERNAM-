@@ -32,6 +32,7 @@ export interface StudentCourse {
     thumbnail_url?: string;
     description_en?: string;
     level?: string;
+    duration_hours?: number;
 }
 
 // ==========================================
@@ -63,10 +64,29 @@ export const getStudentDashboard = async (userId: string): Promise<{
         id,
         title_en,
         description_en,
-        thumbnail_url
+        thumbnail_url,
+        duration_hours,
+        level
       )
     `)
         .eq('user_id', userId);
+
+    // 2b. Fetch Pending Requests
+    const { data: requests, error: reqError } = await supabase
+        .from('enrollment_requests')
+        .select(`
+            status,
+            courses (
+                id,
+                title_en,
+                description_en,
+                thumbnail_url,
+                duration_hours,
+                level
+            )
+        `)
+        .eq('requester_id', userId)
+        .eq('status', 'pending');
 
     if (enrollError) {
         console.error('Enrollment fetch error:', enrollError);
@@ -84,22 +104,24 @@ export const getStudentDashboard = async (userId: string): Promise<{
     }
 
     // 3. Fetch instructor names via course_staff
-    const courseIds = enrollments?.map((e: any) => e.courses?.id).filter(Boolean) || [];
+    const enrolledCourseIds = enrollments?.map((e: any) => e.courses?.id).filter(Boolean) || [];
+    const requestedCourseIds = requests?.map((r: any) => r.courses?.id).filter(Boolean) || [];
+    const allCourseIds = [...new Set([...enrolledCourseIds, ...requestedCourseIds])];
+
     let instructorMap = new Map();
 
-    if (courseIds.length > 0) {
+    if (allCourseIds.length > 0) {
         const { data: staffData } = await supabase
             .from('course_staff')
             .select(`
                 course_id,
                 profiles (full_name)
             `)
-            .in('course_id', courseIds)
-            .in('role', ['owner', 'trainer']);
+            .in('course_id', allCourseIds)
+            .in('role', ['owner', 'trainer', 'instructor']);
 
         if (staffData) {
             staffData.forEach((s: any) => {
-                // Just take the first trainer/owner found as the "main" instructor
                 if (!instructorMap.has(s.course_id)) {
                     instructorMap.set(s.course_id, s.profiles?.full_name || 'Staff');
                 }
@@ -107,6 +129,7 @@ export const getStudentDashboard = async (userId: string): Promise<{
         }
     }
 
+    // Map Active Enrollments
     const activeCourses: StudentCourse[] = enrollments?.map((e: any) => ({
         courseId: e.courses?.id || '',
         title: e.courses?.title_en || 'Untitled Course',
@@ -115,8 +138,26 @@ export const getStudentDashboard = async (userId: string): Promise<{
         status: e.status as EnrollmentStatus,
         thumbnail_url: e.courses?.thumbnail_url,
         description_en: e.courses?.description_en,
-        level: 'Aviation Specialist'
+        level: e.courses?.level || 'Aviation Specialist',
+        duration_hours: e.courses?.duration_hours || 0
     })) || [];
+
+    // Map Pending Requests (Avoid duplicates if already enrolled)
+    requests?.forEach((r: any) => {
+        if (!activeCourses.find(c => c.courseId === r.courses?.id)) {
+            activeCourses.push({
+                courseId: r.courses?.id || '',
+                title: r.courses?.title_en || 'Untitled Course',
+                instructorName: instructorMap.get(r.courses?.id) || 'TBA',
+                progress: 0,
+                status: 'pending', // Explicitly pending
+                thumbnail_url: r.courses?.thumbnail_url,
+                description_en: r.courses?.description_en,
+                level: r.courses?.level || 'Aviation Specialist',
+                duration_hours: r.courses?.duration_hours || 0
+            });
+        }
+    });
 
     return {
         profile: {
@@ -135,8 +176,21 @@ export const getStudentDashboard = async (userId: string): Promise<{
  * Logic for a student attempting to join a class.
  */
 export const requestEnrollment = async (userId: string, courseId: string) => {
-    const { error } = await supabase.from('enrollments').insert({
-        user_id: userId,
+    // Check if already requested
+    const { data: existing } = await supabase
+        .from('enrollment_requests')
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('requester_id', userId)
+        .eq('status', 'pending')
+        .single();
+
+    if (existing) {
+        return { success: false, message: "⚠️ Request already pending approval." };
+    }
+
+    const { error } = await supabase.from('enrollment_requests').insert({
+        requester_id: userId,
         course_id: courseId,
         status: 'pending'
     });

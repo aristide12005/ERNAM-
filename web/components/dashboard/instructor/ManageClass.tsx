@@ -2,17 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import {
-    ArrowLeft,
-    FileText,
-    Upload,
-    Users,
-    MessageSquare,
-    Plus,
-    Download,
-    Trash2,
-    Send
-} from 'lucide-react';
+import { Trash2, AlertCircle, Calendar, Plus, MessageSquare, Download, Settings, Users, ArrowLeft, Send, Paperclip, Video, FileText, Upload } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const VideoConference = dynamic(() => import('@/components/conference/VideoConference'), {
+    ssr: false,
+    loading: () => <div className="fixed inset-0 bg-black flex items-center justify-center text-white">Loading Conference...</div>
+});
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Material {
@@ -43,13 +39,26 @@ interface ManageClassProps {
     onBack: () => void;
 }
 
+interface EnrollmentRequest {
+    id: string;
+    requester_id: string;
+    status: string;
+    created_at: string;
+    profiles?: {
+        full_name: string;
+        email: string;
+    };
+}
+
 export default function ManageClass({ courseId, userId, onBack }: ManageClassProps) {
     const [activeTab, setActiveTab] = useState<'materials' | 'participants' | 'discussion'>('materials');
     const [materials, setMaterials] = useState<Material[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
+    const [requests, setRequests] = useState<EnrollmentRequest[]>([]);
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
+    const [showConference, setShowConference] = useState(false);
     const [courseTitle, setCourseTitle] = useState('');
 
     const fetchData = async () => {
@@ -75,6 +84,17 @@ export default function ManageClass({ courseId, userId, onBack }: ManageClassPro
                 email: e.profiles.email
             }));
             setStudents(studentList);
+        }
+
+        // Pending Requests
+        const { data: reqs } = await supabase
+            .from('enrollment_requests')
+            .select('*, profiles(full_name, email)')
+            .eq('course_id', courseId)
+            .eq('status', 'pending');
+
+        if (reqs) {
+            setRequests(reqs as any);
         }
 
         // Discussion
@@ -139,16 +159,70 @@ export default function ManageClass({ courseId, userId, onBack }: ManageClassPro
         }
     };
 
+    const handleApproveRequest = async (requestId: string) => {
+        try {
+            const { error } = await supabase.rpc('approve_enrollment', { request_id: requestId });
+            if (error) throw error;
+            fetchData();
+        } catch (error: any) {
+            console.error('Approval Error:', error);
+            if (error.code === '42703' || error.message?.includes('instructor_id')) {
+                alert(`DB Error ${error.code}: ${error.message}\n\nFIX REQUIRED: Run "web/align_db_to_schema.sql" in Supabase to remove legacy columns.`);
+            } else {
+                alert(`Approval failed: ${error.message}`);
+            }
+        }
+    };
+
+    const handleRejectRequest = async (requestId: string) => {
+        try {
+            const { error } = await supabase.rpc('reject_enrollment', { request_id: requestId });
+            if (error) throw error;
+            fetchData();
+        } catch (error: any) {
+            console.error('Rejection Error:', error);
+            alert(`Rejection failed: ${error.message}`);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (showConference) {
+        return (
+            <VideoConference
+                courseId={courseId}
+                userId={userId}
+                userName={requests.find(r => r.requester_id === userId)?.profiles?.full_name || 'Instructor'}
+                onClose={() => setShowConference(false)}
+            />
+        );
+    }
+
     return (
         <div className="space-y-6 pb-20">
-            <div className="flex items-center gap-4">
-                <button onClick={onBack} className="p-2 hover:bg-card rounded-xl border border-border text-muted-foreground transition-all active:scale-95">
-                    <ArrowLeft className="h-5 w-5" />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Manage Class</h1>
-                    <p className="text-sm text-muted-foreground font-medium">{courseTitle}</p>
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="p-2 hover:bg-card rounded-xl border border-border text-muted-foreground transition-all active:scale-95">
+                        <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-black text-foreground tracking-tight">Manage Class</h1>
+                        <p className="text-muted-foreground text-sm">Manage materials, students, and discussions</p>
+                    </div>
                 </div>
+                <button
+                    onClick={() => setShowConference(true)}
+                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-red-500/20 animate-pulse"
+                >
+                    <Video className="h-4 w-4" />
+                    Join Live Class
+                </button>
             </div>
 
             {/* Tabs */}
@@ -216,46 +290,93 @@ export default function ManageClass({ courseId, userId, onBack }: ManageClassPro
                 )}
 
                 {activeTab === 'participants' && (
-                    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                        <table className="w-full text-left">
-                            <thead className="bg-secondary/30 border-b border-border">
-                                <tr>
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Student Name</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Email</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {students.map((student) => (
-                                    <tr key={student.id} className="hover:bg-muted/50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                                                    {student.full_name.charAt(0)}
-                                                </div>
-                                                <span className="text-sm font-bold text-foreground">{student.full_name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-muted-foreground">{student.email}</td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-bold">Enrolled</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="text-xs font-bold text-primary hover:underline">View Progress</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {students.length === 0 && (
+                    <div className="space-y-6">
+                        {/* PENDING REQUESTS SECTION */}
+                        {requests.length > 0 && (
+                            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl overflow-hidden">
+                                <div className="px-6 py-4 border-b border-amber-500/20 bg-amber-500/10">
+                                    <h3 className="text-sm font-bold text-amber-600 uppercase tracking-wide flex items-center gap-2">
+                                        <Users className="h-4 w-4" /> Pending Requests ({requests.length})
+                                    </h3>
+                                </div>
+                                <table className="w-full text-left">
+                                    <tbody className="divide-y divide-amber-500/10">
+                                        {requests.map((req) => (
+                                            <tr key={req.id} className="hover:bg-amber-500/5 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-full bg-amber-500/20 text-amber-600 flex items-center justify-center font-bold text-xs">
+                                                            {req.profiles?.full_name.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-bold text-foreground">{req.profiles?.full_name}</div>
+                                                            <div className="text-xs text-muted-foreground">{new Date(req.created_at).toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right space-x-2">
+                                                    <button
+                                                        onClick={() => handleApproveRequest(req.id)}
+                                                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                                                    >
+                                                        Accept
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRejectRequest(req.id)}
+                                                        className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* EXISTING STUDENT LIST */}
+                        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                            <table className="w-full text-left">
+                                <thead className="bg-secondary/30 border-b border-border">
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-20 text-center">
-                                            <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-20" />
-                                            <p className="text-muted-foreground">No students enrolled yet.</p>
-                                        </td>
+                                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Student Name</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Email</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {students.map((student) => (
+                                        <tr key={student.id} className="hover:bg-muted/50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                                                        {student.full_name.charAt(0)}
+                                                    </div>
+                                                    <span className="text-sm font-bold text-foreground">{student.full_name}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-muted-foreground">{student.email}</td>
+                                            <td className="px-6 py-4">
+                                                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-bold">Enrolled</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="text-xs font-bold text-primary hover:underline">View Progress</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {students.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-20 text-center">
+                                                <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-20" />
+                                                <p className="text-muted-foreground">No students enrolled yet.</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 

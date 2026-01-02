@@ -23,44 +23,52 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useTheme } from '@/components/providers/ThemeProvider';
+import { useTranslations } from 'next-intl';
 
 export default function DashboardSidebar({ activeView, setActiveView, collapsed, setCollapsed, onCreateNew }: any) {
     const { signOut, profile } = useAuth();
     const isTrainee = profile?.role === 'trainee';
+    const t = useTranslations('Sidebar');
+    const tCommon = useTranslations('Common');
 
     // Different menu items per role
     const getMenuItems = () => {
         if (isTrainee) {
             return [
-                { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-                { id: 'my-learning', label: 'My Learning', icon: BookOpen },
-                { id: 'schedule', label: 'Schedule', icon: Calendar },
-                { id: 'messages', label: 'Messages', icon: MessageSquare },
-                { id: 'certificates', label: 'Certificates', icon: Award },
-                { id: 'resources', label: 'Resources', icon: BookOpen },
-                { id: 'profile', label: 'Profile', icon: UserIcon },
+                { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
+                { id: 'my-learning', label: t('my_learning'), icon: BookOpen },
+                { id: 'schedule', label: t('schedule'), icon: Calendar },
+                { id: 'messages', label: t('messages'), icon: MessageSquare },
+                { id: 'certificates', label: t('certificates'), icon: Award },
+                { id: 'results', label: t('exam_results'), icon: FileText },
+                { id: 'resources', label: t('resources'), icon: BookOpen },
+                { id: 'profile', label: t('profile'), icon: UserIcon },
             ];
         }
         if (profile?.role === 'admin') {
             return [
-                { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-                { id: 'users', label: 'User Management', icon: Users },
-                { id: 'my-classes', label: 'Courses', icon: BookOpen }, // Added Courses for Admin
-                { id: 'messages', label: 'Messages', icon: MessageSquare },
-                { id: 'finances', label: 'Finances', icon: DollarSign },
-                { id: 'audit-logs', label: 'Audit Logs', icon: ShieldCheck },
-                { id: 'settings', label: 'System Settings', icon: Settings },
+                { id: 'dashboard', label: t('overview'), icon: LayoutDashboard },
+                { id: 'users', label: t('users'), icon: Users },
+                { id: 'applicants', label: t('applicants'), icon: FileText },
+                { id: 'academics', label: t('academics'), icon: FolderKanban },
+                { id: 'exams', label: t('exams'), icon: Trophy },
+                { id: 'my-classes', label: t('courses'), icon: BookOpen },
+                { id: 'messages', label: t('messages'), icon: MessageSquare },
+                { id: 'finances', label: t('finances'), icon: DollarSign },
+                { id: 'audit-logs', label: t('audit_logs'), icon: ShieldCheck },
+                { id: 'settings', label: t('settings'), icon: Settings },
             ];
         }
         // Trainer (default)
         return [
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'my-classes', label: 'My Courses', icon: BookOpen },
-            { id: 'messages', label: 'Messages', icon: MessageSquare },
-            { id: 'students', label: 'Students', icon: Users },
-            { id: 'schedule', label: 'Schedule', icon: Calendar },
-            { id: 'gradebook', label: 'Gradebook', icon: FileText },
-            { id: 'reports', label: 'Reports', icon: PieChart },
+            { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
+            { id: 'my-classes', label: t('my_classes'), icon: BookOpen },
+            { id: 'messages', label: t('messages'), icon: MessageSquare },
+            { id: 'students', label: t('students'), icon: Users },
+            { id: 'schedule', label: t('schedule'), icon: Calendar },
+            { id: 'exams', label: t('exam_grading'), icon: Trophy },
+            { id: 'gradebook', label: t('assessment'), icon: FileText },
+            { id: 'reports', label: t('reports'), icon: PieChart },
         ];
     };
 
@@ -91,7 +99,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
                     {!collapsed && (
                         <div className="flex flex-col">
                             <span className="text-lg font-black tracking-tighter text-white leading-none">ERNAM</span>
-                            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">Digital Twin</span>
+                            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">{t('digital_twin')}</span>
                         </div>
                     )}
                 </div>
@@ -103,7 +111,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
                     className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 ${collapsed ? 'px-0' : 'px-4'}`}
                 >
                     <Plus className="h-5 w-5" />
-                    {!collapsed && <span>Create New</span>}
+                    {!collapsed && <span>{t('create_new')}</span>}
                 </button>
             </div>
 
@@ -142,7 +150,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors ${collapsed ? 'justify-center' : ''}`}
                 >
                     <LogOut className="h-5 w-5" />
-                    {!collapsed && <span className="font-medium">Sign Out</span>}
+                    {!collapsed && <span className="font-medium">{tCommon('sign_out')}</span>}
                 </button>
             </div>
 

@@ -1,119 +1,50 @@
--- FINAL FIX: RLS Recursion Buster
--- Problem: Policies referencing each other create infinite loops (500 Error).
--- Solution: Use SECURITY DEFINER functions to check permissions without triggering RLS.
+-- FIX INFINITE RECURSION IN RLS (Final)
+-- Problem: 'course_staff' policy queries itself to check ownership, causing an infinite loop.
+-- Solution: Use a SECURITY DEFINER function to check ownership without triggering RLS recursively.
 
--- ============================================================================
--- 1. Helper Functions (Bypass RLS)
--- ============================================================================
-
--- Check if user is Admin
-CREATE OR REPLACE FUNCTION public.is_admin()
+-- 1. Create a Helper Function (Safe Ownership Check)
+CREATE OR REPLACE FUNCTION public.check_is_course_owner(target_course_id UUID)
 RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
+LANGUAGE plpgsql
+SECURITY DEFINER -- Runs as database owner, bypassing RLS
+SET search_path = public -- Security best practice
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid()
-    AND role = 'admin'
-  );
+BEGIN
+    -- Direct check, no RLS triggered here
+    RETURN EXISTS (
+        SELECT 1 
+        FROM public.course_staff 
+        WHERE course_id = target_course_id 
+        AND user_id = auth.uid() 
+        AND role = 'owner'
+    );
+END;
 $$;
 
--- Check if user is Staff for a course (Safe Lookup)
-CREATE OR REPLACE FUNCTION public.is_staff_of(target_course_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER -- Critical: Runs as owner, bypassing RLS recursion
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.course_staff
-    WHERE course_id = target_course_id
-    AND user_id = auth.uid()
-  );
-$$;
+-- 2. Drop the recursive policy on course_staff
+DROP POLICY IF EXISTS "Owners can manage course staff" ON public.course_staff;
 
--- Check if user is Enrolled in a course (Safe Lookup)
-CREATE OR REPLACE FUNCTION public.is_enrolled_in(target_course_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER -- Critical: Runs as owner, bypassing RLS recursion
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.enrollments
-    WHERE course_id = target_course_id
-    AND user_id = auth.uid()
-    AND status = 'active'
-  );
-$$;
-
--- ============================================================================
--- 2. Apply Safe Policies (Using Functions)
--- ============================================================================
-
--- --- COURSES ---
-ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Unified Course Visibility" ON public.courses;
-
-CREATE POLICY "Unified Course Visibility"
-ON public.courses FOR SELECT
+-- 3. Re-create the policy using the safe function
+CREATE POLICY "Owners can manage course staff"
+ON public.course_staff
+FOR ALL -- Applies to SELECT, INSERT, UPDATE, DELETE
 USING (
-  status = 'active' OR
-  -- status = 'published' OR -- REMOVED: Invalid enum value
-  is_admin() OR
-  is_staff_of(id) OR      -- Uses safe function
-  is_enrolled_in(id)      -- Uses safe function
+    -- Allow access if the user is the owner of the course this staff member belongs to
+    check_is_course_owner(course_id)
 );
 
--- --- ENROLLMENTS ---
-ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Users view own enrollments" ON public.enrollments;
-DROP POLICY IF EXISTS "Staff view course enrollments" ON public.enrollments;
-DROP POLICY IF EXISTS "Admins view all enrollments" ON public.enrollments;
--- Drop old/conflicting policies just in case
-DROP POLICY IF EXISTS "Instructors view course enrollments" ON public.enrollments;
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.enrollments;
-DROP POLICY IF EXISTS "Users can enroll themselves" ON public.enrollments;
+-- 4. OPTIONAL: Fix 'courses' update policy to use the same safe check (Optimization)
+DROP POLICY IF EXISTS "Owners can update their courses" ON public.courses;
 
--- Policy 1: Users see their own
-CREATE POLICY "Users view own enrollments"
-ON public.enrollments FOR SELECT
-USING ( user_id = auth.uid() );
-
--- Policy 2: Staff see enrollments for their courses (using safe function)
-CREATE POLICY "Staff view course enrollments"
-ON public.enrollments FOR SELECT
+CREATE POLICY "Owners can update their courses"
+ON public.courses
+FOR UPDATE
 USING (
-  is_staff_of(course_id) OR is_admin()
+    check_is_course_owner(id)
 );
 
--- Policy 3: Creation (Users enrolling themselves)
-CREATE POLICY "Users can enroll themselves"
-ON public.enrollments FOR INSERT
-WITH CHECK ( user_id = auth.uid() );
-
--- Policy 4: Management (Staff/Admin updates)
-DROP POLICY IF EXISTS "Staff manage enrollments" ON public.enrollments;
-CREATE POLICY "Staff manage enrollments"
-ON public.enrollments FOR ALL
-USING (
-  is_staff_of(course_id) OR is_admin()
-);
-
--- --- COURSE STAFF ---
-ALTER TABLE public.course_staff ENABLE ROW LEVEL SECURITY;
+-- 5. Verification: Ensure simple "View Own" policy exists
 DROP POLICY IF EXISTS "Users view own staff roles" ON public.course_staff;
-DROP POLICY IF EXISTS "Unified Staff Visibility" ON public.course_staff;
-
--- Simple visibility: You see records where YOU are the user, or you are admin
 CREATE POLICY "Users view own staff roles"
 ON public.course_staff FOR SELECT
-USING ( user_id = auth.uid() OR is_admin() );
-
--- ============================================================================
--- 3. Cleanup
--- ============================================================================
--- Ensure no old recursive policies remain on related tables
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.courses;
+USING (user_id = auth.uid());

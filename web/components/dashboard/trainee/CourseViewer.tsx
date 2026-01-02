@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -15,6 +15,7 @@ import {
     Download
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 interface CourseViewerProps {
     courseId: string;
@@ -22,6 +23,7 @@ interface CourseViewerProps {
 }
 
 export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
+    const t = useTranslations('TraineeDashboard');
     const { user } = useAuth();
     const [course, setCourse] = useState<any>(null);
     const [modules, setModules] = useState<any[]>([]);
@@ -74,16 +76,53 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
 
         if (enrollData) setEnrollment(enrollData);
 
-        // Fetch modules (if you have a modules table)
+        // Fetch modules with their items
         const { data: modulesData } = await supabase
             .from('modules')
-            .select('*')
+            .select(`
+                *,
+                course_items (
+                    id,
+                    title,
+                    content_type,
+                    file_url,
+                    sort_order
+                )
+            `)
             .eq('course_id', courseId)
-            .order('sort_order', { ascending: true });
+            .order('created_at', { ascending: true });
 
-        if (modulesData) setModules(modulesData);
+        if (modulesData) {
+            // Sort items within modules just to be safe
+            const sortedModules = modulesData.map((m: any) => ({
+                ...m,
+                course_items: m.course_items?.sort((a: any, b: any) => a.sort_order - b.sort_order)
+            }));
+            setModules(sortedModules);
+        }
 
         setLoading(false);
+    };
+
+    const renderContentItem = (item: any) => {
+        const iconClasses = "h-5 w-5 text-blue-500 mr-3";
+        return (
+            <a
+                href={item.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center p-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all group"
+            >
+                {item.content_type === 'video' ? <Play className={iconClasses} /> : <FileText className={iconClasses} />}
+                <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-slate-900 group-hover:text-blue-700">{item.title}</h4>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">{item.content_type}</p>
+                </div>
+                <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center border border-slate-200 group-hover:border-blue-300">
+                    <Download className="h-4 w-4 text-slate-400 group-hover:text-blue-500" />
+                </div>
+            </a>
+        );
     };
 
     if (loading) {
@@ -91,7 +130,7 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
             <div className="flex items-center justify-center h-96">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-slate-600">Loading course...</p>
+                    <p className="text-slate-600">{t('loading_course')}</p>
                 </div>
             </div>
         );
@@ -101,17 +140,17 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
         return (
             <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center">
                 <Lock className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Access Restricted</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">{t('access_restricted')}</h3>
                 <p className="text-slate-600 mb-6">
                     {enrollment?.status === 'pending'
-                        ? 'Your enrollment request is pending approval.'
-                        : 'You need to be enrolled in this course to access the content.'}
+                        ? t('enrollment_pending')
+                        : t('need_enrollment')}
                 </p>
                 <button
                     onClick={onBack}
                     className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                 >
-                    Back to My Learning
+                    {t('back_to_learning')}
                 </button>
             </div>
         );
@@ -126,7 +165,7 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
                     className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
                 >
                     <ArrowLeft className="h-5 w-5" />
-                    <span className="font-medium">Back to My Learning</span>
+                    <span className="font-medium">{t('back_to_learning')}</span>
                 </button>
 
                 <div className="flex items-start gap-6">
@@ -139,15 +178,15 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
                         <div className="flex items-center gap-6 text-sm">
                             <div className="flex items-center gap-2 text-slate-600">
                                 <User className="h-4 w-4" />
-                                <span>Instructor: {course?.instructor?.full_name || 'TBA'}</span>
+                                <span>{t('instructor')}: {course?.instructor?.full_name || 'TBA'}</span>
                             </div>
                             <div className="flex items-center gap-2 text-slate-600">
                                 <Clock className="h-4 w-4" />
-                                <span>{modules.length} modules</span>
+                                <span>{t('modules_count', { count: modules.length })}</span>
                             </div>
                             <div className="flex items-center gap-2 text-green-600">
                                 <CheckCircle className="h-4 w-4" />
-                                <span className="font-semibold">Enrolled</span>
+                                <span className="font-semibold">{t('enrolled')}</span>
                             </div>
                         </div>
                     </div>
@@ -159,13 +198,13 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
                 {/* Modules List */}
                 <div className="lg:col-span-1">
                     <div className="bg-white rounded-3xl border border-slate-200 p-6">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4">Course Modules</h2>
+                        <h2 className="text-lg font-bold text-slate-900 mb-4">{t('course_modules')}</h2>
 
                         {modules.length === 0 ? (
                             <div className="text-center py-8">
                                 <BookOpen className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                                <p className="text-sm text-slate-500">No modules available yet</p>
-                                <p className="text-xs text-slate-400 mt-1">Check back soon!</p>
+                                <p className="text-sm text-slate-500">{t('no_modules')}</p>
+                                <p className="text-xs text-slate-400 mt-1">{t('check_back_soon')}</p>
                             </div>
                         ) : (
                             <div className="space-y-2">
@@ -188,7 +227,7 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-semibold text-sm text-slate-900 mb-1">{module.title}</h3>
                                                 <p className="text-xs text-slate-500">
-                                                    {module.is_published ? 'Available' : 'Coming soon'}
+                                                    {t('lessons_count', { count: module.course_items?.length || 0 })}
                                                 </p>
                                             </div>
                                         </div>
@@ -205,21 +244,29 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
                         {selectedModule ? (
                             <div>
                                 <h2 className="text-2xl font-bold text-slate-900 mb-4">{selectedModule.title}</h2>
-                                <p className="text-slate-600 mb-6">{selectedModule.description || 'Module content will appear here.'}</p>
+                                <p className="text-slate-600 mb-6">{selectedModule.description || t('no_description')}</p>
 
-                                {/* Placeholder for actual content */}
+                                {/* Actual Content */}
                                 <div className="space-y-4">
-                                    <div className="bg-slate-50 rounded-xl p-6 text-center">
-                                        <Play className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                                        <p className="text-sm text-slate-600">Video lessons and materials will be displayed here</p>
-                                    </div>
+                                    {selectedModule.course_items && selectedModule.course_items.length > 0 ? (
+                                        selectedModule.course_items.map((item: any) => (
+                                            <div key={item.id}>
+                                                {renderContentItem(item)}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="bg-slate-50 rounded-xl p-6 text-center">
+                                            <Play className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                                            <p className="text-sm text-slate-500">{t('no_lessons')}</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ) : (
                             <div className="text-center py-20">
                                 <BookOpen className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                                <h3 className="text-lg font-semibold text-slate-900 mb-2">Select a Module</h3>
-                                <p className="text-slate-500">Choose a module from the list to view its content</p>
+                                <h3 className="text-lg font-semibold text-slate-900 mb-2">{t('select_module')}</h3>
+                                <p className="text-slate-500">{t('select_module_desc')}</p>
                             </div>
                         )}
                     </div>

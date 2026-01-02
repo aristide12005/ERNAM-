@@ -15,9 +15,12 @@ import {
     Radio
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslations, useFormatter } from 'next-intl';
 
 export default function TraineeSchedule() {
     const { user } = useAuth();
+    const t = useTranslations('TraineeDashboard');
+    const format = useFormatter();
     const [events, setEvents] = useState<any[]>([]);
     const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -30,23 +33,37 @@ export default function TraineeSchedule() {
         ]);
     }, []);
 
+    // Generate days for the grid (simple logic for now)
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    // Ideally we'd use localized days here too, but for grid headers usually short forms are fixed or we can map them.
+    // Let's rely on standard JS Intl for a cleaner approach if we want fully dynamic, but strict 7-day grid headers are often hardcoded or mapped.
+    // For simplicity I'll keep the logic but translate the headers using a map or just Intl.
+
+    // Better approach for headers:
+    const getWeekDays = () => {
+        const baseDate = new Date(2021, 0, 3); // Sunday
+        return Array.from({ length: 7 }).map((_, i) => {
+            const date = new Date(baseDate);
+            date.setDate(baseDate.getDate() + i);
+            return format.dateTime(date, { weekday: 'short' });
+        });
+    };
+    const localizedDays = getWeekDays();
 
     return (
         <div className="space-y-8 pb-12">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <CalendarIcon className="h-6 w-6 text-blue-600" /> Training Schedule
+                        <CalendarIcon className="h-6 w-6 text-blue-600" /> {t('schedule_title')}
                     </h2>
-                    <p className="text-sm text-slate-500">Track your upcoming simulator sessions and lecture times.</p>
+                    <p className="text-sm text-slate-500">{t('schedule_subtitle')}</p>
                 </div>
 
                 <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
                     <button className="p-2 hover:bg-slate-50 rounded-lg transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-                    <div className="font-bold text-sm text-slate-900 min-w-32 text-center">
-                        {months[currentDate.getMonth()]} {currentDate.getFullYear()}
+                    <div className="font-bold text-sm text-slate-900 min-w-32 text-center capitalize">
+                        {format.dateTime(currentDate, { month: 'long', year: 'numeric' })}
                     </div>
                     <button className="p-2 hover:bg-slate-50 rounded-lg transition-colors"><ChevronRight className="h-4 w-4" /></button>
                 </div>
@@ -57,7 +74,7 @@ export default function TraineeSchedule() {
                 <div className="lg:col-span-2 space-y-4">
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
                         <div className="grid grid-cols-7 gap-1 mb-4">
-                            {days.map(d => (
+                            {localizedDays.map(d => (
                                 <div key={d} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest py-2">
                                     {d}
                                 </div>
@@ -78,9 +95,11 @@ export default function TraineeSchedule() {
 
                     <div className="bg-blue-600 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl shadow-blue-600/20">
                         <div className="relative z-10 space-y-4">
-                            <h3 className="text-lg font-bold">Upcoming Exam Alert</h3>
-                            <p className="text-blue-100 text-sm leading-relaxed max-w-md">Your **Meteorology Advanced Exam** is scheduled for tomorrow at 10:00 AM. Ensure you have your student ID and required calculator.</p>
-                            <button className="bg-white text-blue-600 px-6 py-2 rounded-xl font-bold text-sm hover:shadow-lg transition-all">REVIEW MATERIALS</button>
+                            <h3 className="text-lg font-bold">{t('upcoming_exam_alert')}</h3>
+                            <p className="text-blue-100 text-sm leading-relaxed max-w-md">{t.rich('exam_alert_body', {
+                                b: (chunks) => <strong className="font-bold text-white">{chunks}</strong>
+                            })}</p>
+                            <button className="bg-white text-blue-600 px-6 py-2 rounded-xl font-bold text-sm hover:shadow-lg transition-all">{t('review_materials')}</button>
                         </div>
                         <CalendarIcon className="absolute -right-8 -bottom-8 h-48 w-48 text-white/10 rotate-12" />
                     </div>
@@ -89,7 +108,7 @@ export default function TraineeSchedule() {
                 {/* Vertical Timeline */}
                 <div className="space-y-6">
                     <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2">
-                        Today&apos;s Sequence <div className="flex-1 h-px bg-slate-100" />
+                        {t('todays_sequence')} <div className="flex-1 h-px bg-slate-100" />
                     </h3>
 
                     <div className="space-y-4 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
@@ -120,7 +139,7 @@ export default function TraineeSchedule() {
                     </div>
 
                     <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                        <Video className="h-4 w-4" /> JOIN VIRTUAL CLASS
+                        <Video className="h-4 w-4" /> {t('join_virtual_class')}
                     </button>
                 </div>
             </div>

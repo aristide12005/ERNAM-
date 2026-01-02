@@ -17,9 +17,11 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStudentDashboard, requestEnrollment, StudentCourse } from '@/lib/logic/student';
 import CourseViewer from './CourseViewer';
+import { useTranslations } from 'next-intl';
 
 export default function MyLearning() {
     const { user } = useAuth();
+    const t = useTranslations('TraineeDashboard');
     const [activeTab, setActiveTab] = useState<'my' | 'catalog'>('my');
     const [myCourses, setMyCourses] = useState<any[]>([]);
     const [catalog, setCatalog] = useState<any[]>([]);
@@ -109,15 +111,15 @@ export default function MyLearning() {
                         <div className="p-2 bg-blue-600 rounded-xl">
                             <BookOpen className="h-6 w-6 text-white" />
                         </div>
-                        Academic Portal
+                        {t('portal_title')}
                     </h2>
-                    <p className="text-slate-500 mt-1 font-medium italic">Master your aviation curriculum and unlock new certifications.</p>
+                    <p className="text-slate-500 mt-1 font-medium italic">{t('portal_desc')}</p>
                 </div>
 
                 <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-auto">
                     {[
-                        { id: 'my', label: 'My Learning' },
-                        { id: 'catalog', label: 'Course Catalog' }
+                        { id: 'my', label: t('my_learning') },
+                        { id: 'catalog', label: t('course_catalog') }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -137,7 +139,7 @@ export default function MyLearning() {
             <div className="relative group">
                 <input
                     type="text"
-                    placeholder="Search by course title, module, or certificate..."
+                    placeholder={t('search_placeholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full bg-white border border-slate-100 rounded-3xl py-4 pl-14 pr-6 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all shadow-sm group-hover:shadow-md"
@@ -151,7 +153,7 @@ export default function MyLearning() {
                         <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
                         <Sparkles className="absolute top-0 right-0 h-4 w-4 text-blue-400 animate-pulse" />
                     </div>
-                    <p className="text-slate-900 font-black uppercase tracking-widest text-sm italic">Synchronizing Fleet Data...</p>
+                    <p className="text-slate-900 font-black uppercase tracking-widest text-sm italic">{t('sync_data')}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -164,13 +166,13 @@ export default function MyLearning() {
                                     className="col-span-full py-24 bg-white border-2 border-dashed border-slate-200 rounded-[40px] text-center"
                                 >
                                     <Trophy className="h-16 w-16 text-slate-100 mx-auto mb-6" />
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Your Journey Awaits</h3>
-                                    <p className="text-slate-500 mb-8 max-w-sm mx-auto font-medium">You haven&apos;t enrolled in any courses yet. Explore the catalog to start your training.</p>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{t('journey_awaits')}</h3>
+                                    <p className="text-slate-500 mb-8 max-w-sm mx-auto font-medium">{t('no_enrollments')}</p>
                                     <button
                                         onClick={() => setActiveTab('catalog')}
                                         className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-900 shadow-2xl shadow-blue-500/30 transition-all active:scale-95"
                                     >
-                                        Browse Catalog
+                                        {t('browse_catalog')}
                                     </button>
                                 </motion.div>
                             ) : (
@@ -182,6 +184,7 @@ export default function MyLearning() {
                                         isEnrolled
                                         onClick={() => course.status === 'active' && setSelectedCourseId(course.courseId)}
                                         index={idx}
+                                        t={t}
                                     />
                                 ))
                             )
@@ -189,7 +192,7 @@ export default function MyLearning() {
                             filteredCatalog.length === 0 ? (
                                 <div className="col-span-full py-24 text-center">
                                     <Search className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-                                    <p className="text-slate-500 font-bold italic">No matching courses found in the current fleet.</p>
+                                    <p className="text-slate-500 font-bold italic">{t('no_matching_courses')}</p>
                                 </div>
                             ) : (
                                 filteredCatalog.map((course, idx) => (
@@ -198,6 +201,7 @@ export default function MyLearning() {
                                         course={course}
                                         onEnroll={() => handleEnroll(course.id)}
                                         index={idx}
+                                        t={t}
                                     />
                                 ))
                             )
@@ -209,7 +213,7 @@ export default function MyLearning() {
     );
 }
 
-function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index }: any) {
+function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index, t }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -238,7 +242,7 @@ function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index }: an
 
                 <div className="absolute bottom-4 left-6 right-6">
                     <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">
-                        {course?.level || 'Aviation Specialist'}
+                        {course?.level || t('default_level')}
                     </div>
                     <h3 className="text-lg font-bold text-white leading-tight group-hover:text-blue-300 transition-colors line-clamp-1 italic underline decoration-blue-500/50 underline-offset-4">
                         {course?.title}
@@ -248,12 +252,19 @@ function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index }: an
 
             <div className="p-6 space-y-5 flex-1 flex flex-col">
                 <p className="text-sm text-slate-500 line-clamp-2 font-medium leading-relaxed">
-                    {course?.description_en || 'Professional aviation training module covering advanced theoretical and practical frameworks.'}
+                    {course?.description_en || t('default_desc')}
                 </p>
 
                 <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <div className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> 24 Hours</div>
-                    <div className="flex items-center gap-1.5 text-blue-600"><CheckCircle className="h-3.5 w-3.5" /> 8 modules</div>
+                    <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        {course?.duration_hours ? `${course.duration_hours} ${t('hours')}` : t('flexible_duration')}
+                    </div>
+                    {/* Module count not currently fetched in list view, using generic label */}
+                    <div className="flex items-center gap-1.5 text-blue-600">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        {t('standard_curriculum')}
+                    </div>
                 </div>
 
                 {isEnrolled && (
@@ -278,14 +289,14 @@ function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index }: an
                                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                 }`}
                         >
-                            <Play className="h-3.5 w-3.5" /> Continue Training
+                            <Play className="h-3.5 w-3.5" /> {t('continue_training')}
                         </button>
                     ) : (
                         <button
                             onClick={onEnroll}
                             className="w-full py-4 bg-white border-2 border-slate-100 hover:border-blue-600 text-slate-900 hover:text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 group/btn"
                         >
-                            Request Enrollment <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                            {t('request_enrollment')} <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
                         </button>
                     )}
                 </div>

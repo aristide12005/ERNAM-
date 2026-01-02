@@ -11,6 +11,7 @@ interface NotificationMetadata {
     course_id?: string;
     student_name?: string;
     course_name?: string;
+    request_id?: string; // Critical for new RPC workflow
 }
 
 interface Notification {
@@ -28,9 +29,10 @@ interface NotificationsDialogProps {
     isOpen: boolean;
     onClose: () => void;
     userId: string;
+    onNavigate?: (view: string, context?: any) => void;
 }
 
-export default function NotificationsDialog({ isOpen, onClose, userId }: NotificationsDialogProps) {
+export default function NotificationsDialog({ isOpen, onClose, userId, onNavigate }: NotificationsDialogProps) {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -41,10 +43,23 @@ export default function NotificationsDialog({ isOpen, onClose, userId }: Notific
         const { data, error } = await supabase
             .from('notifications')
             .select('*')
-            .eq('user_id', userId)
+            .eq('recipient_id', userId)
             .order('created_at', { ascending: false });
 
-        if (data) setNotifications(data);
+        if (data) {
+            // Map new schema (payload) to UI interface
+            const mappedNotifications: Notification[] = data.map((n: any) => ({
+                id: n.id,
+                title: n.payload?.title || 'Notification',
+                message: n.payload?.message || '',
+                type: n.type,
+                is_read: n.read || n.is_read || false, // Handle both naming conventions just in case
+                created_at: n.created_at,
+                action_link: n.payload?.action_link,
+                metadata: n.payload // Use payload as metadata source
+            }));
+            setNotifications(mappedNotifications);
+        }
         setLoading(false);
     };
 
@@ -58,16 +73,26 @@ export default function NotificationsDialog({ isOpen, onClose, userId }: Notific
                 .on(
                     'postgres_changes',
                     {
-                        event: 'INSERT', // Only listen for new notifications, not updates
+                        event: 'INSERT',
                         schema: 'public',
                         table: 'notifications',
-                        filter: `user_id=eq.${userId}`
+                        filter: `recipient_id=eq.${userId}`
                     },
                     (payload) => {
                         console.log('New notification received:', payload);
-                        // Add the new notification to the list instead of refetching all
                         if (payload.new) {
-                            setNotifications(prev => [payload.new as Notification, ...prev]);
+                            const newNotif = payload.new as any;
+                            const mapped: Notification = {
+                                id: newNotif.id,
+                                title: newNotif.payload?.title || 'Notification',
+                                message: newNotif.payload?.message || '',
+                                type: newNotif.type,
+                                is_read: newNotif.read || false,
+                                created_at: newNotif.created_at,
+                                action_link: newNotif.payload?.action_link,
+                                metadata: newNotif.payload
+                            };
+                            setNotifications(prev => [mapped, ...prev]);
                         }
                     }
                 )
@@ -82,7 +107,7 @@ export default function NotificationsDialog({ isOpen, onClose, userId }: Notific
     const markAsRead = async (id: string) => {
         const { error } = await supabase
             .from('notifications')
-            .update({ is_read: true })
+            .update({ read: true })
             .eq('id', id);
 
         if (!error) {
@@ -94,48 +119,51 @@ export default function NotificationsDialog({ isOpen, onClose, userId }: Notific
         console.log('=== ENROLLMENT ACTION DEBUG ===');
         console.log('Notification ID:', notificationId);
         console.log('Metadata:', metadata);
-        console.log('Action:', action);
+        // Map 'active' -> 'approve', 'failed' -> 'reject' just for clarity
+        const isApproval = action === 'active';
 
-        if (!metadata.user_id || !metadata.course_id) {
-            console.error('Missing enrollment metadata:', metadata);
-            alert('Error: Missing enrollment information. Please refresh the page.');
+        // Metadata from SQL 'payload' usually has 'request_id'. 
+        // If not present, fallback logic might be needed, but our SQL guarantees strict payload.
+        const requestId = metadata.request_id;
+
+        if (!requestId) {
+            console.error('Missing request_id in metadata:', metadata);
+            alert('Error: Invalid notification data (missing Request ID). Please refresh.');
             return;
         }
 
         setProcessingAction(notificationId);
 
         try {
-            // Update enrollment status
-            console.log('Updating enrollment with:', {
-                user_id: metadata.user_id,
-                course_id: metadata.course_id,
-                status: action
-            });
+            let rpcName = isApproval ? 'approve_enrollment' : 'reject_enrollment';
+            console.log(`Calling RPC: ${rpcName} with request_id: ${requestId}`);
 
-            const { data, error } = await supabase
-                .from('enrollments')
-                .update({ status: action })
-                .eq('user_id', metadata.user_id)
-                .eq('course_id', metadata.course_id)
-                .select();
-
-            console.log('Update result:', { data, error });
+            const { data, error } = await supabase.rpc(rpcName, { request_id: requestId });
 
             if (!error) {
-                console.log('✅ Enrollment updated successfully');
+                console.log(`✅ ${rpcName} successful`);
+
                 // Mark notification as read
                 await markAsRead(notificationId);
-                // Collapse the notification
+
+                // Start animation to collapse
                 setExpandedId(null);
-                // Refresh notifications to show updated state
+
+                // Refresh list
                 await fetchNotifications();
             } else {
-                console.error('❌ Error updating enrollment:', error);
-                alert(`Failed to update enrollment: ${error.message}\n\nDetails: ${error.hint || 'Check console for more info'}`);
+                console.error(`❌ Error calling ${rpcName}:`, error);
+
+                // Specific handling for the "instructor_id" column error
+                if (error.code === '42703' || error.message?.includes('instructor_id')) {
+                    alert('DATABASE ERROR: Legacy schema detected.\n\nThe system is trying to access a deleted column ("instructor_id").\n\nPLEASE RUN "web/align_db_to_schema.sql" IN SUPABASE SQL EDITOR TO FIX THIS.\n\n(This will remove related legacy codes and rebuild logic according to your DB schema).');
+                } else {
+                    alert(`Action failed: ${error.message}`);
+                }
             }
         } catch (err) {
-            console.error('❌ Exception during enrollment update:', err);
-            alert('An unexpected error occurred. Please check the console.');
+            console.error('❌ Exception during RPC:', err);
+            alert('An unexpected error occurred.');
         }
 
         setProcessingAction(null);
@@ -282,36 +310,15 @@ export default function NotificationsDialog({ isOpen, onClose, userId }: Notific
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        handleEnrollmentAction(notif.id, notif.metadata!, 'active');
+                                                                        if (onNavigate && notif.metadata?.course_id) {
+                                                                            onNavigate('manage-class', { courseId: notif.metadata.course_id });
+                                                                            onClose();
+                                                                        }
                                                                     }}
-                                                                    disabled={processingAction === notif.id}
-                                                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white text-sm font-bold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                                                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
                                                                 >
-                                                                    {processingAction === notif.id ? (
-                                                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                                                    ) : (
-                                                                        <>
-                                                                            <UserCheck className="h-4 w-4" />
-                                                                            Accept
-                                                                        </>
-                                                                    )}
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleEnrollmentAction(notif.id, notif.metadata!, 'failed');
-                                                                    }}
-                                                                    disabled={processingAction === notif.id}
-                                                                    className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white text-sm font-bold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                                                >
-                                                                    {processingAction === notif.id ? (
-                                                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                                                    ) : (
-                                                                        <>
-                                                                            <UserX className="h-4 w-4" />
-                                                                            Reject
-                                                                        </>
-                                                                    )}
+                                                                    <UserCheck className="h-4 w-4" />
+                                                                    View Request
                                                                 </button>
                                                             </div>
                                                         </div>

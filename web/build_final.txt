@@ -1,0 +1,27 @@
+
+> web@0.1.0 build
+> next build
+
+▲ Next.js 16.1.1 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 15.8s
+  Running TypeScript ...
+Failed to compile.
+
+./components/dashboard/messaging/ChatWindow.tsx:226:17
+Type error: Type '(content: string, type: "text" | "image" | "file", file?: File | undefined) => Promise<void>' is not assignable to type '(text: string, file?: File | undefined) => Promise<void>'.
+  Types of parameters 'type' and 'file' are incompatible.
+    Type 'File | undefined' is not assignable to type '"text" | "image" | "file"'.
+      Type 'undefined' is not assignable to type '"text" | "image" | "file"'.
+
+[0m [90m 224 |[39m             {[90m/* Input Area */[39m}
+ [90m 225 |[39m             [33m<[39m[33mInputArea[39m
+[31m[1m>[22m[39m[90m 226 |[39m                 onSendMessage[33m=[39m{onSendMessage}
+ [90m     |[39m                 [31m[1m^[22m[39m
+ [90m 227 |[39m                 disabled[33m=[39m{loading}
+ [90m 228 |[39m             [33m/[39m[33m>[39m
+ [90m 229 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m[0m
+Next.js build worker exited with code: 1 and signal: null

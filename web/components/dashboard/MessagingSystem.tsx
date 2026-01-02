@@ -9,6 +9,7 @@ import CallModal from './messaging/CallModal';
 import NewChatModal from './messaging/NewChatModal';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 interface Message {
     id: string;
@@ -23,6 +24,7 @@ interface Message {
 
 export default function MessagingSystem() {
     const { user } = useAuth();
+    const t = useTranslations('Messaging');
 
     // State
     // State - Production Grade Architecture (Server Truth + Optimistic Queue)
@@ -146,9 +148,14 @@ export default function MessagingSystem() {
 
             // Merge and Sort
             const combined = [...(sentData || []), ...(receivedData || [])];
-            fetchedMessages = combined.sort((a, b) =>
-                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
+            fetchedMessages = combined.sort((a, b) => {
+                const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                // Handle invalid dates (NaN)
+                const safeA = isNaN(dateA) ? 0 : dateA;
+                const safeB = isNaN(dateB) ? 0 : dateB;
+                return safeA - safeB;
+            });
         }
 
         setMessages(fetchedMessages);
@@ -284,7 +291,7 @@ export default function MessagingSystem() {
 
                 if (uploadError) {
                     console.error('File upload error:', uploadError);
-                    alert('Failed to upload file. Please try again or ensure the "chat-attachments" bucket exists.');
+                    alert(t('upload_failed'));
                     return;
                 }
 
@@ -302,7 +309,7 @@ export default function MessagingSystem() {
                 }
             } catch (error) {
                 console.error('Upload exception:', error);
-                alert('An error occurred while uploading. Please try again.');
+                alert(t('upload_failed'));
                 return;
             }
         }
@@ -339,7 +346,7 @@ export default function MessagingSystem() {
             // Failure Handling: Remove from pending and alert
             setPendingMessages(prev => prev.filter(m => m.id !== tempId));
             console.error("Send failed:", error);
-            alert('Failed to send message. Please check your connection.');
+            alert(t('send_failed'));
         }
         // Success Handling: We do NOTHING here.
         // We wait for the Realtime Subscription to receive the INSERT event.

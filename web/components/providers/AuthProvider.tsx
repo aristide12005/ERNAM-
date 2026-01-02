@@ -85,8 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (loading) return;
 
-        const isAuthRoute = pathname?.startsWith('/auth');
-        const isPublicRoute = pathname === '/'; // Maybe landing page?
+        // Normalizing path to handle locales (e.g., /en/auth/login -> /auth/login)
+        // Regex removes optional locale prefix of 2 letters
+        const pathRef = pathname?.replace(/^\/[a-z]{2}(\/|$)/, '/') || '/';
+
+        const isAuthRoute = pathRef.startsWith('/auth');
+        const isPublicRoute = pathRef === '/'; // Landing page
 
         if (!user && !isAuthRoute && !isPublicRoute) {
             router.push('/auth/login');

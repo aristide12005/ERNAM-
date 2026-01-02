@@ -65,12 +65,16 @@ export default function Grading({ submissionId, onBack }: GradingProps) {
             }, { onConflict: 'assignment_id,student_id' });
 
         // 3. Notify student
+        // 3. Notify student
         await supabase.from('notifications').insert({
-            user_id: submission.student_id,
-            title: 'New Grade Posted',
-            message: `You received a grade for ${submission.assignments.title}.`,
+            recipient_id: submission.student_id,
             type: 'success',
-            action_link: `/dashboard?view=grades`
+            read: false,
+            payload: {
+                title: 'New Grade Posted',
+                message: `You received a grade for ${submission.assignments.title}.`,
+                action_link: `/dashboard?view=grades`
+            }
         });
 
         setSaving(false);

@@ -10,7 +10,8 @@ interface Course {
     id: string;
     title_en: string;
     title_fr: string;
-    status: string;
+    course_status: string; // The Actual DB column
+    status?: string;       // Fallback/Legacy
     thumbnail_url?: string;
     enrollment_count?: number;
 }
@@ -48,7 +49,6 @@ export default function MyClasses({
         if (error) {
             console.error('Error fetching manageable courses:', error);
             // Fallback for dev/migration lag: Try direct select if RPC fails or doesn't exist yet
-            // This ensures the UI doesn't break if SQL isn't run yet.
             const { data: staffAssignments } = await supabase
                 .from('course_staff')
                 .select('course_id')
@@ -62,13 +62,20 @@ export default function MyClasses({
                     .in('id', courseIds);
 
                 if (fallbackData) {
-                    setCourses(fallbackData.map(c => ({ ...c, enrollment_count: 0 })));
+                    setCourses(fallbackData.map(c => ({
+                        ...c,
+                        enrollment_count: 0,
+                        // Ensure we have correct status field (handle if DB returns status or course_status)
+                        course_status: c.course_status || c.status || 'draft'
+                    })));
                 }
             }
         } else if (coursesData) {
             const enrichedCourses = coursesData.map((c: any) => ({
                 ...c,
-                enrollment_count: 0 // Placeholder until we hook up the enrollment aggregate
+                enrollment_count: 0,
+                // Normalized status
+                course_status: c.course_status || c.status || 'draft'
             }));
             setCourses(enrichedCourses);
         }
@@ -84,7 +91,10 @@ export default function MyClasses({
     };
 
     const handlePublishToggle = async (courseId: string, currentStatus: string) => {
-        const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
+        // Map frontend "course_status" to DB enum: 'draft' <-> 'published'
+        // If current is 'published', make it 'draft', else 'published'
+        const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+
         const { error } = await supabase
             .from('courses')
             .update({ course_status: newStatus })
@@ -92,7 +102,7 @@ export default function MyClasses({
 
         if (error) {
             console.error('Error updating course status:', error);
-            alert('Failed to update course status');
+            alert('Failed to update course status: ' + error.message);
         } else {
             fetchCourses(); // Refresh
         }
@@ -167,14 +177,14 @@ export default function MyClasses({
                                 />
                                 <div className="absolute top-3 right-3 flex gap-2">
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); handlePublishToggle(course.id, course.status); }}
-                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border flex items-center gap-1 hover:scale-105 transition-transform ${course.status === 'published'
+                                        onClick={(e) => { e.stopPropagation(); handlePublishToggle(course.id, course.course_status); }}
+                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border flex items-center gap-1 hover:scale-105 transition-transform ${course.course_status === 'published'
                                             ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                                             : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                                             }`}
                                     >
-                                        {course.status === 'published' ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                                        {course.status}
+                                        {course.course_status === 'published' ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                                        {course.course_status === 'published' ? 'PUBLISHED' : 'DRAFT'}
                                     </button>
                                 </div>
                             </div>

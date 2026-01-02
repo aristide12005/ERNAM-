@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import SimplePeer, { SignalData, Instance as PeerInstance } from 'simple-peer';
+import type { SignalData, Instance as PeerInstance } from 'simple-peer';
 import { supabase } from '@/lib/supabaseClient';
 
 // Production ICE Configuration (STUN mandatory, TURN recommended)
@@ -130,6 +130,9 @@ export function useWebRTC(currentUserId: string | null) {
         }, 30000);
 
         // Initialize Peer (Initiator)
+        // Dynamic Import to avoid SSR/Global issues
+        const SimplePeer = (await import('simple-peer')).default;
+
         const peer = new SimplePeer({
             initiator: true,
             trickle: true, // Enable Trickle ICE
@@ -184,6 +187,8 @@ export function useWebRTC(currentUserId: string | null) {
         if (!stream) return;
 
         updateCallState('connecting');
+
+        const SimplePeer = (await import('simple-peer')).default;
 
         const peer = new SimplePeer({
             initiator: false,

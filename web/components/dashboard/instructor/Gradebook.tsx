@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { useTranslations } from 'next-intl';
 
 interface Assignment {
     id: string;
@@ -34,6 +35,7 @@ interface GradebookProps {
 }
 
 export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) {
+    const t = useTranslations('InstructorDashboard');
     const [activeTab, setActiveTab] = useState<'assignments' | 'grading' | 'analytics'>('assignments');
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [courses, setCourses] = useState<{ id: string, title_en: string }[]>([]);
@@ -47,21 +49,35 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
 
     const fetchData = async () => {
         setLoading(true);
-        // Courses
-        const { data: courseData } = await supabase.from('courses').select('id, title_en').eq('instructor_id', instructorId);
-        if (courseData) setCourses(courseData);
+        // Courses (Fetch via course_staff)
+        // 1. Get course IDs for this instructor
+        const { data: staffData } = await supabase
+            .from('course_staff')
+            .select('course_id, courses(id, title_en)')
+            .eq('user_id', instructorId);
+
+        const myCourses = staffData?.map((item: any) => item.courses) || [];
+        setCourses(myCourses);
 
         // Assignments
         const { data: assignData } = await supabase.from('assignments').select('*, courses(title_en)');
-        if (assignData) setAssignments(assignData);
+        if (assignData) {
+            // Filter assignments to only those from my courses (client side or enhance query)
+            const myCourseIds = myCourses.map(c => c.id);
+            setAssignments(assignData.filter(a => myCourseIds.includes(a.course_id)));
+        }
 
         // Students (Anyone enrolled in instructor's courses)
-        const courseIds = courseData?.map(c => c.id) || [];
-        const { data: enrollData } = await supabase
-            .from('enrollments')
-            .select('user_id, profiles(full_name, email)')
-            .in('course_id', courseIds);
-        if (enrollData) setStudents(enrollData);
+        const courseIds = myCourses.map(c => c.id);
+        if (courseIds.length > 0) {
+            const { data: enrollData } = await supabase
+                .from('enrollments')
+                .select('user_id, profiles(full_name, email)')
+                .in('course_id', courseIds);
+            if (enrollData) setStudents(enrollData);
+        } else {
+            setStudents([]);
+        }
 
         // Grades
         const { data: gradeData } = await supabase.from('grades').select('*');
@@ -127,21 +143,21 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
         <div className="space-y-6 pb-20">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">Gradebook</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Manage assessments and track student performance</p>
+                    <h1 className="text-2xl font-bold text-foreground">{t('gradebook_title')}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">{t('gradebook_desc')}</p>
                 </div>
                 <div className="flex gap-3">
                     <button
                         onClick={exportToExcel}
                         className="bg-secondary hover:bg-muted text-foreground text-sm font-bold px-5 py-2.5 rounded-xl border border-border flex items-center gap-2 transition-all active:scale-95"
                     >
-                        <Download className="h-4 w-4" /> Export
+                        <Download className="h-4 w-4" /> {t('export')}
                     </button>
                     <button
                         onClick={() => setShowNewModal(true)}
                         className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 transition-all active:scale-95"
                     >
-                        <Plus className="h-5 w-5" /> New Assignment
+                        <Plus className="h-5 w-5" /> {t('new_assignment')}
                     </button>
                 </div>
             </div>
@@ -149,9 +165,9 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
             {/* Tabs */}
             <div className="flex gap-2 p-1 bg-card border border-border rounded-xl w-fit">
                 {[
-                    { id: 'assignments', label: 'Assignments', icon: FileText },
-                    { id: 'grading', label: 'Grading Sheet', icon: Users },
-                    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+                    { id: 'assignments', label: t('assignments_tab'), icon: FileText },
+                    { id: 'grading', label: t('grading_tab'), icon: Users },
+                    { id: 'analytics', label: t('analytics_tab'), icon: TrendingUp },
                 ].map((tab) => (
                     <button
                         key={tab.id}
@@ -169,7 +185,7 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
 
             <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden min-h-[500px]">
                 {loading ? (
-                    <div className="p-20 text-center animate-pulse">Loading data...</div>
+                    <div className="p-20 text-center animate-pulse">{t('loading_data')}</div>
                 ) : (
                     <div className="p-6">
                         {activeTab === 'assignments' && (
@@ -183,12 +199,12 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
                                             <span className="text-[10px] font-bold text-muted-foreground uppercase">{a.courses?.title_en}</span>
                                         </div>
                                         <h3 className="font-bold text-foreground mb-1">{a.title}</h3>
-                                        <p className="text-xs text-muted-foreground mb-4">Max Score: {a.max_score} pts</p>
+                                        <p className="text-xs text-muted-foreground mb-4">{t('max_score')}: {a.max_score} pts</p>
 
                                         <div className="flex items-center justify-between pt-4 border-t border-border/50">
                                             <div className="flex items-center gap-2">
                                                 <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                                <span className="text-xs text-muted-foreground">12/15 Graded</span>
+                                                <span className="text-xs text-muted-foreground">12/15 {t('graded_count')}</span>
                                             </div>
                                             {a.file_url && (
                                                 <a href={a.file_url} target="_blank" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
@@ -201,7 +217,7 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
                                 {assignments.length === 0 && (
                                     <div className="col-span-full py-20 text-center">
                                         <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                                        <p className="text-muted-foreground">No assignments created yet.</p>
+                                        <p className="text-muted-foreground">{t('no_assignments')}</p>
                                     </div>
                                 )}
                             </div>
@@ -212,7 +228,7 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="bg-secondary/30">
-                                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase sticky left-0 bg-secondary">Student</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase sticky left-0 bg-secondary">{t('student_col')}</th>
                                             {assignments.map(a => (
                                                 <th key={a.id} className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase min-w-[150px]">{a.title}</th>
                                             ))}
@@ -252,32 +268,32 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
                             animate={{ opacity: 1, scale: 1 }}
                             className="bg-card border border-border w-full max-w-md rounded-2xl shadow-2xl p-6"
                         >
-                            <h2 className="text-xl font-bold text-foreground mb-6">Create Assignment</h2>
+                            <h2 className="text-xl font-bold text-foreground mb-6">{t('create_assignment')}</h2>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">Title</label>
+                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('title_label')}</label>
                                     <input
                                         type="text"
                                         className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                        placeholder="Enter assignment title"
+                                        placeholder={t('title_placeholder')}
                                         value={newAssign.title}
                                         onChange={e => setNewAssign({ ...newAssign, title: e.target.value })}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">Course</label>
+                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('course_label')}</label>
                                     <select
                                         className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                                         value={newAssign.course_id}
                                         onChange={e => setNewAssign({ ...newAssign, course_id: e.target.value })}
                                     >
-                                        <option value="">Select a course...</option>
+                                        <option value="">{t('select_course')}</option>
                                         {courses.map(c => <option key={c.id} value={c.id}>{c.title_en}</option>)}
                                     </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">Max Score</label>
+                                        <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('max_score')}</label>
                                         <input
                                             type="number"
                                             className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -286,7 +302,7 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">Due Date</label>
+                                        <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('due_date')}</label>
                                         <input
                                             type="date"
                                             className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -296,10 +312,10 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">Attachment (Optional)</label>
+                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('attachment')}</label>
                                     <label className="w-full border-2 border-dashed border-border rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors">
                                         <Upload className="h-6 w-6 text-muted-foreground" />
-                                        <span className="text-xs text-muted-foreground">{newAssign.file ? newAssign.file.name : 'Click to upload PDF or Doc'}</span>
+                                        <span className="text-xs text-muted-foreground">{newAssign.file ? newAssign.file.name : t('upload_placeholder')}</span>
                                         <input type="file" className="hidden" onChange={e => setNewAssign({ ...newAssign, file: e.target.files?.[0] || null })} />
                                     </label>
                                 </div>
@@ -309,13 +325,13 @@ export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) 
                                     onClick={() => setShowNewModal(false)}
                                     className="flex-1 bg-secondary hover:bg-muted text-foreground font-bold py-3 rounded-xl transition-all"
                                 >
-                                    Cancel
+                                    {t('cancel')}
                                 </button>
                                 <button
                                     onClick={handleCreateAssignment}
                                     className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-xl shadow-lg shadow-primary/20 transition-all"
                                 >
-                                    Create
+                                    {t('create')}
                                 </button>
                             </div>
                         </motion.div>

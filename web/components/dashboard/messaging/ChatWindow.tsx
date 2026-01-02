@@ -4,27 +4,29 @@ import { useRef, useEffect, useMemo, useState } from 'react';
 import MessageBubble from './MessageBubble';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 import { Loader2, ArrowLeft, MoreVertical, Phone, Video } from 'lucide-react';
-import { useAuth } from '@/components/providers/AuthProvider';
 import InputArea from './InputArea';
-import { supabase } from '@/lib/supabaseClient';
+import { useTranslations } from 'next-intl';
 
-// Helper for date headers
-const getDateLabel = (date: Date) => {
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    return format(date, 'MMMM d, yyyy');
-};
+interface Message {
+    id: string;
+    sender_id: string;
+    content: string;
+    created_at: string;
+    type: 'text' | 'image' | 'file';
+    file_url?: string;
+    is_read: boolean;
+}
 
 interface ChatWindowProps {
-    conversationId: string | null; // PartnerID for DMs
+    conversationId: string;
     partnerName: string;
     partnerRole: string;
-    messages: any[]; // We'll type this properly
+    messages: Message[];
     loading: boolean;
-    onSendMessage: (text: string, file?: File) => Promise<void>;
-    onBack?: () => void;
+    onSendMessage: (content: string, type: 'text' | 'image' | 'file', file?: File) => Promise<void>;
+    onBack: () => void;
     currentUserId: string;
-    onCall: (isVideo: boolean) => void;
+    onCall: (video: boolean) => void;
     disableCalls?: boolean;
 }
 
@@ -40,8 +42,21 @@ export default function ChatWindow({
     onCall,
     disableCalls = false
 }: ChatWindowProps) {
+    const t = useTranslations('Messaging');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [isTyping, setIsTyping] = useState(false); // Mock for now, can be real-time later
+
+    // Helper for date headers (Moved inside to use translations)
+    const getDateLabel = (date: Date) => {
+        try {
+            if (isNaN(date.getTime())) return t('unknown_date');
+            if (isToday(date)) return t('today');
+            if (isYesterday(date)) return t('yesterday');
+            return format(date, 'MMMM d, yyyy'); // We could use localized format here too if needed
+        } catch (e) {
+            return t('unknown_date');
+        }
+    };
 
     // Scroll to bottom on new messages
     useEffect(() => {
@@ -54,7 +69,16 @@ export default function ChatWindow({
         let currentDate = '';
 
         messages.forEach((msg) => {
-            const date = new Date(msg.created_at);
+            let date = new Date();
+            try {
+                if (msg.created_at) {
+                    const parsed = new Date(msg.created_at);
+                    if (!isNaN(parsed.getTime())) date = parsed;
+                }
+            } catch (e) {
+                // Fallback to now
+            }
+
             const dateLabel = getDateLabel(date);
 
             if (dateLabel !== currentDate) {
@@ -65,7 +89,7 @@ export default function ChatWindow({
         });
 
         return groups;
-    }, [messages]);
+    }, [messages, t]); // Added t dependency
 
     if (!conversationId) {
         return (
@@ -80,9 +104,9 @@ export default function ChatWindow({
                     <div className="text-6xl">💬</div>
                 </div>
                 <div>
-                    <h3 className="text-xl font-bold text-slate-800">Your Messages</h3>
+                    <h3 className="text-xl font-bold text-slate-800">{t('your_messages')}</h3>
                     <p className="text-slate-500 mt-2 max-w-sm">
-                        Select a conversation from the list to start chatting or broadcasting to your courses.
+                        {t('select_conversation')}
                     </p>
                 </div>
             </div>
@@ -199,7 +223,13 @@ export default function ChatWindow({
 
             {/* Input Area */}
             <InputArea
-                onSendMessage={onSendMessage}
+                onSendMessage={async (text, file) => {
+                    let type: 'text' | 'image' | 'file' = 'text';
+                    if (file) {
+                        type = file.type.startsWith('image/') ? 'image' : 'file';
+                    }
+                    await onSendMessage(text, type, file);
+                }}
                 disabled={loading}
             />
         </div>
