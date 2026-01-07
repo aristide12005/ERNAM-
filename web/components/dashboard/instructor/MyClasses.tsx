@@ -5,13 +5,14 @@ import { supabase } from '@/lib/supabaseClient';
 import { Plus, Search, MoreHorizontal, Settings, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CourseCreationWizard from './CourseCreationWizard';
+import { useTranslations } from 'next-intl';
 
 interface Course {
     id: string;
     title_en: string;
     title_fr: string;
-    course_status: string; // The Actual DB column
-    status?: string;       // Fallback/Legacy
+    course_status: string;
+    status?: string;
     thumbnail_url?: string;
     enrollment_count?: number;
 }
@@ -29,26 +30,21 @@ export default function MyClasses({
     showCreateModal: externalShowModal,
     setShowCreateModal: setExternalShowModal
 }: MyClassesProps) {
+    const t = useTranslations('InstructorDashboard.MyClasses');
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [internalShowModal, setInternalShowModal] = useState(false);
 
-    // Sync external and internal modal state
     const showCreateModal = externalShowModal !== undefined ? externalShowModal : internalShowModal;
     const setShowCreateModal = setExternalShowModal !== undefined ? setExternalShowModal : setInternalShowModal;
 
     const fetchCourses = async () => {
         setLoading(true);
-
-        // PRODUCTION LAYER 3: Data Access via RPC
-        // "Get courses where I am staff (or Admin)"
-        const { data: coursesData, error } = await supabase
-            .rpc('get_manageable_courses');
+        const { data: coursesData, error } = await supabase.rpc('get_manageable_courses');
 
         if (error) {
             console.error('Error fetching manageable courses:', error);
-            // Fallback for dev/migration lag: Try direct select if RPC fails or doesn't exist yet
             const { data: staffAssignments } = await supabase
                 .from('course_staff')
                 .select('course_id')
@@ -65,7 +61,6 @@ export default function MyClasses({
                     setCourses(fallbackData.map(c => ({
                         ...c,
                         enrollment_count: 0,
-                        // Ensure we have correct status field (handle if DB returns status or course_status)
                         course_status: c.course_status || c.status || 'draft'
                     })));
                 }
@@ -74,7 +69,6 @@ export default function MyClasses({
             const enrichedCourses = coursesData.map((c: any) => ({
                 ...c,
                 enrollment_count: 0,
-                // Normalized status
                 course_status: c.course_status || c.status || 'draft'
             }));
             setCourses(enrichedCourses);
@@ -91,20 +85,16 @@ export default function MyClasses({
     };
 
     const handlePublishToggle = async (courseId: string, currentStatus: string) => {
-        // Map frontend "course_status" to DB enum: 'draft' <-> 'published'
-        // If current is 'published', make it 'draft', else 'published'
         const newStatus = currentStatus === 'published' ? 'draft' : 'published';
-
         const { error } = await supabase
             .from('courses')
             .update({ course_status: newStatus })
             .eq('id', courseId);
 
         if (error) {
-            console.error('Error updating course status:', error);
             alert('Failed to update course status: ' + error.message);
         } else {
-            fetchCourses(); // Refresh
+            fetchCourses();
         }
     };
 
@@ -115,7 +105,6 @@ export default function MyClasses({
 
     return (
         <div className="space-y-6 relative">
-            {/* WIZARD COMPONENT */}
             <CourseCreationWizard
                 isOpen={showCreateModal}
                 onClose={() => setShowCreateModal(false)}
@@ -125,14 +114,14 @@ export default function MyClasses({
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">My Courses</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Manage your active teaching curriculum</p>
+                    <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">{t('subtitle')}</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center gap-2"
                 >
-                    <Plus className="h-5 w-5" /> Create New Course
+                    <Plus className="h-5 w-5" /> {t('create_new')}
                 </button>
             </div>
 
@@ -141,7 +130,7 @@ export default function MyClasses({
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <input
                         type="text"
-                        placeholder="Search your courses..."
+                        placeholder={t('search_placeholder')}
                         className="w-full bg-background border border-border rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -158,7 +147,7 @@ export default function MyClasses({
             ) : filteredCourses.length === 0 ? (
                 <div className="text-center py-20 bg-card rounded-2xl border border-dashed border-border">
                     <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                    <p className="text-muted-foreground">No courses found matching your criteria.</p>
+                    <p className="text-muted-foreground">{t('no_results')}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -184,7 +173,7 @@ export default function MyClasses({
                                             }`}
                                     >
                                         {course.course_status === 'published' ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                                        {course.course_status === 'published' ? 'PUBLISHED' : 'DRAFT'}
+                                        {course.course_status === 'published' ? t('published') : t('draft')}
                                     </button>
                                 </div>
                             </div>
@@ -201,18 +190,15 @@ export default function MyClasses({
                                             </div>
                                         ))}
                                     </div>
-                                    <span className="text-[10px] font-bold text-muted-foreground">+{course.enrollment_count} Students</span>
+                                    <span className="text-[10px] font-bold text-muted-foreground">{t('students_count', { count: course.enrollment_count })}</span>
                                 </div>
-                                <button className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors">
-                                    <MoreHorizontal className="h-5 w-5" />
-                                </button>
                             </div>
 
                             <button
                                 onClick={() => onManageClass(course.id)}
                                 className="w-full bg-secondary hover:bg-muted text-foreground font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 group-hover:bg-primary group-hover:text-primary-foreground"
                             >
-                                <Settings className="h-4 w-4" /> Manage Class
+                                <Settings className="h-4 w-4" /> {t('manage_class')}
                             </button>
                         </motion.div>
                     ))}

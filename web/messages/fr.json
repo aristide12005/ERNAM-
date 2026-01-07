@@ -1051,6 +1051,47 @@
             "action": "Action"
         }
     },
+    "InstructorDashboard": {
+        "role_instructor": "Instructeur",
+        "hero": {
+            "title": "Ma Journée d'Enseignement",
+            "subtitle": "Voici votre mission du jour.",
+            "active_session": "Session Active",
+            "no_session": "Aucune session active aujourd'hui",
+            "no_session_desc": "Vous n'avez aucune session prévue aujourd'hui. Profitez de votre journée ou consultez votre planning.",
+            "view_schedule": "Voir le Planning",
+            "open_session": "OUVRIR LA SESSION"
+        },
+        "stats": {
+            "participants": "Participants",
+            "pending_assmts": "Éval. en Attente",
+            "materials": "Supports",
+            "messages": "Messages",
+            "files": "Fichiers",
+            "new": "Nouveaux"
+        },
+        "shortcuts": {
+            "schedule": "Mon Planning",
+            "schedule_desc": "Vérifier les dates",
+            "directory": "Annuaire Étudiants",
+            "directory_desc": "Tous les anciens élèves",
+            "repository": "Dépôt de Fichiers",
+            "repository_desc": "Gérer les documents",
+            "profile": "Mon Profil",
+            "profile_desc": "Paramètres & infos"
+        },
+        "MyClasses": {
+            "title": "Mes Cours",
+            "subtitle": "Gérez votre curriculum d'enseignement actif",
+            "create_new": "Créer un Nouveau Cours",
+            "search_placeholder": "Rechercher vos cours...",
+            "no_results": "Aucun cours trouvé correspondant à vos critères.",
+            "students_count": "{count} Étudiants",
+            "manage_class": "Gérer la Classe",
+            "published": "PUBLIÉ",
+            "draft": "BROUILLON"
+        }
+    },
     "Participant": {
         "backToJourney": "Retour à mon parcours",
         "welcome": "Bon retour",
@@ -1084,6 +1125,12 @@
             "schedule": "Votre emploi du temps de formation apparaîtra ici une fois les sessions planifiées.",
             "assessments": "Vos évaluations et résultats d'examens apparaîtront ici.",
             "settings": "Les paramètres du compte arrivent bientôt."
+        },
+        "MyLearning": {
+            "title": "Mon Planning d'Apprentissage",
+            "no_active": "Aucune Session Active",
+            "no_active_desc": "Vous n'êtes inscrit à aucune formation à venir pour le moment.",
+            "access_materials": "Accéder aux Supports"
         },
         "empty": {
             "title": "Aucune Mission Active",

@@ -805,6 +805,47 @@
       "save": "UPDATE CONTACT"
     }
   },
+  "InstructorDashboard": {
+    "role_instructor": "Instructor",
+    "hero": {
+      "title": "My Teaching Day",
+      "subtitle": "Here is your daily mission.",
+      "active_session": "Active Session",
+      "no_session": "No active session today",
+      "no_session_desc": "You have no sessions scheduled for today. Enjoy your day off or check your upcoming schedule.",
+      "view_schedule": "View Schedule",
+      "open_session": "OPEN SESSION"
+    },
+    "stats": {
+      "participants": "Participants",
+      "pending_assmts": "Pending Assmts",
+      "materials": "Materials",
+      "messages": "Messages",
+      "files": "Files",
+      "new": "New"
+    },
+    "shortcuts": {
+      "schedule": "My Schedule",
+      "schedule_desc": "Check upcoming dates",
+      "directory": "Student Directory",
+      "directory_desc": "All past students",
+      "repository": "File Repository",
+      "repository_desc": "Manage all docs",
+      "profile": "My Profile",
+      "profile_desc": "Settings & info"
+    },
+    "MyClasses": {
+      "title": "My Courses",
+      "subtitle": "Manage your active teaching curriculum",
+      "create_new": "Create New Course",
+      "search_placeholder": "Search your courses...",
+      "no_results": "No courses found matching your criteria.",
+      "students_count": "{count} Students",
+      "manage_class": "Manage Class",
+      "published": "PUBLISHED",
+      "draft": "DRAFT"
+    }
+  },
   "Participant": {
     "backToJourney": "Back to My Journey",
     "welcome": "Welcome back",
@@ -838,6 +879,12 @@
       "schedule": "Your training schedule will appear here once sessions are scheduled.",
       "assessments": "Your assessments and exam results will appear here.",
       "settings": "Account settings coming soon."
+    },
+    "MyLearning": {
+      "title": "My Learning Schedule",
+      "no_active": "No Active Sessions",
+      "no_active_desc": "You are not currently enrolled in any upcoming training.",
+      "access_materials": "Access Materials"
     },
     "empty": {
       "title": "No Active Missions",
@@ -897,5 +944,4 @@
       "empty": "No messages yet."
     }
   }
-}
 }

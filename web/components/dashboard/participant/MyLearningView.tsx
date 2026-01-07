@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Calendar, MapPin, Clock } from 'lucide-react';
+import { Calendar, MapPin } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 
 type Session = {
     id: string;
@@ -16,10 +18,12 @@ type Session = {
         code: string;
         title: string;
     };
-    participants_link_status: string; // 'enrolled', 'attended', etc
+    participants_link_status: string;
 };
 
 export default function MyLearningView() {
+    const t = useTranslations('Participant.MyLearning');
+    const locale = useLocale();
     const { user } = useAuth();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
@@ -45,7 +49,7 @@ export default function MyLearningView() {
                 )
             `)
             .eq('participant_id', user?.id)
-            .order('session(start_date)', { ascending: true }); // Need to handle ordering properly if nested
+            .order('session(start_date)', { ascending: true });
 
         if (data) {
             const mapped = data.map((d: any) => ({
@@ -59,7 +63,7 @@ export default function MyLearningView() {
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">My Learning Schedule</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('title')}</h1>
 
             {loading ? (
                 <div className="space-y-4 animate-pulse">
@@ -68,8 +72,8 @@ export default function MyLearningView() {
             ) : sessions.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
                     <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900">No Active Sessions</h3>
-                    <p className="text-gray-500">You are not currently enrolled in any upcoming training.</p>
+                    <h3 className="text-lg font-medium text-gray-900">{t('no_active')}</h3>
+                    <p className="text-gray-500">{t('no_active_desc')}</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -96,7 +100,9 @@ export default function MyLearningView() {
                                 <div className="flex items-center gap-6 mt-3 text-sm text-gray-500">
                                     <div className="flex items-center gap-2">
                                         <Calendar className="h-4 w-4" />
-                                        <span>{new Date(session.start_date).toLocaleDateString()} — {new Date(session.end_date).toLocaleDateString()}</span>
+                                        <span>
+                                            {new Date(session.start_date).toLocaleDateString(locale)} — {new Date(session.end_date).toLocaleDateString(locale)}
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <MapPin className="h-4 w-4" />
@@ -106,7 +112,7 @@ export default function MyLearningView() {
                             </div>
 
                             <button className="mt-4 md:mt-0 w-full md:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors">
-                                Access Materials
+                                {t('access_materials')}
                             </button>
                         </div>
                     ))}
