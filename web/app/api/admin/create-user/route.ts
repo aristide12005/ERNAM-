@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
         // Wait a moment for trigger... OR upsert directly.
         // Better to direct update the profile to set the correct role.
         const { error: profileError } = await supabaseAdmin
-            .from('profiles')
+            .from('users') // FIXED: Target 'users' table
             .update({
                 role: role,
                 full_name: fullName,
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
             // If the trigger hasn't fired yet, this might fail or do nothing.
             // Safety fallback: Insert if not exists (Upsert)
             const { error: upsertError } = await supabaseAdmin
-                .from('profiles')
+                .from('users') // FIXED: Target 'users' table
                 .upsert({
                     id: authData.user.id,
                     email: email,

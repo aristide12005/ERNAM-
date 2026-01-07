@@ -37,7 +37,7 @@ export default function ApplicantReview() {
         setLoading(true);
         // Ensure to select department name if relation exists
         // Note: Supabase join syntax depends on foreign key setup
-        let query = supabase
+        const query = supabase
             .from('applicants')
             .select(`
                 *,

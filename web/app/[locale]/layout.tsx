@@ -1,25 +1,18 @@
 import '@/lib/webrtc-polyfill';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
-import GlobalAssistant from '@/components/GlobalAssistant';
+import NotificationBell from '@/components/NotificationBell';
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Using standard system fonts instead of Google Fonts to avoid network build errors
+const geistSans = { variable: "font-sans" };
+const geistMono = { variable: "font-mono" };
 
 export const metadata: Metadata = {
   title: "ERNAM Digital Twin",
@@ -52,14 +45,14 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`antialiased font-sans`}
       >
-        <NextIntlClientProvider messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider defaultTheme="light" storageKey="ernam-theme">
             <AuthProvider>
               {children}
             </AuthProvider>
-            <GlobalAssistant />
+            <NotificationBell />
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

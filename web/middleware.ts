@@ -5,7 +5,7 @@ export default createMiddleware({
     locales: ['en', 'fr'],
 
     // Used when no locale matches
-    defaultLocale: 'en',
+    defaultLocale: 'fr',
 
     // Always use a prefix (e.g. /en/dashboard) 
     // This is the recommended approach for SEO and clarity.

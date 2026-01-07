@@ -108,7 +108,7 @@ export const getStudentDashboard = async (userId: string): Promise<{
     const requestedCourseIds = requests?.map((r: any) => r.courses?.id).filter(Boolean) || [];
     const allCourseIds = [...new Set([...enrolledCourseIds, ...requestedCourseIds])];
 
-    let instructorMap = new Map();
+    const instructorMap = new Map();
 
     if (allCourseIds.length > 0) {
         const { data: staffData } = await supabase

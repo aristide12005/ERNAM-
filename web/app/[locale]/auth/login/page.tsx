@@ -3,264 +3,183 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { Plane, Lock, Mail, ArrowRight, User, AlertCircle, CheckCircle2, GraduationCap, Medal, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Mail, Lock, Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
 
-type AuthMode = 'login' | 'signup';
-type Role = 'trainer' | 'trainee';
-
-export default function AuthPage() {
-    const t = useTranslations('Auth');
-    const [mode, setMode] = useState<AuthMode>('login');
-    const [role, setRole] = useState<Role | null>(null);
+export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-        fullName: ''
-    });
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const router = useRouter();
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setLoading(true);
 
         try {
-            if (mode === 'login') {
-                const { error } = await supabase.auth.signInWithPassword({
-                    email: formData.email,
-                    password: formData.password,
-                });
-                if (error) throw error;
-                // AuthProvider handles redirect
-            } else {
-                // SIGNUP LOGIC
-                if (!role) throw new Error(t('please_select_role'));
+            const { error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-                // 1. Sign Up causing Trigger to create Profile
-                const { data: authData, error: authError } = await supabase.auth.signUp({
-                    email: formData.email,
-                    password: formData.password,
-                    options: {
-                        data: {
-                            full_name: formData.fullName,
-                            role: role,
-                            status: 'pending'
-                        }
-                    }
-                });
+            if (authError) throw authError;
 
-                if (authError) throw authError;
-                if (!authData.user) throw new Error(t('account_failed'));
+            router.refresh();
+            setTimeout(() => {
+                router.push('/dashboard');
+            }, 500);
 
-                // HYBRID APPROACH:
-                // 1. Wait briefly for Trigger to fire
-                // 2. If profile doesn't exist, Create it manually (Backup)
-
-                const userId = authData.user.id;
-
-                // Small delay to allow trigger to win race
-                await new Promise(r => setTimeout(r, 1000));
-
-                const { data: existingProfile } = await supabase
-                    .from('profiles')
-                    .select('id')
-                    .eq('id', userId)
-                    .single();
-
-                if (!existingProfile) {
-                    console.log("Trigger didn't fire? Attempting manual insert...");
-                    const { error: manualInsertError } = await supabase
-                        .from('profiles')
-                        .insert({
-                            id: userId,
-                            full_name: formData.fullName,
-                            role: role,
-                            status: 'pending'
-                        });
-
-                    if (manualInsertError) {
-                        // Ignore duplicate key error in case of race condition
-                        if (!manualInsertError.message.includes('duplicate key')) {
-                            console.error("Manual fallback failed:", manualInsertError);
-                            // Don't throw, let's see if we can proceed
-                        }
-                    }
-                }
-
-                router.push('/auth/pending');
-            }
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || 'Authentication failed');
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-background relative overflow-hidden p-4">
-            {/* Dynamic Background */}
-            <div className="absolute inset-0 z-0">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
-                <div
-                    className="absolute inset-0 opacity-20 transition-all duration-1000 ease-in-out"
-                    style={{
-                        backgroundImage: mode === 'login'
-                            ? "url('https://images.unsplash.com/photo-1517616186800-ea118c353f2c?q=80&w=2670&auto=format&fit=crop')"
-                            : "url('https://images.unsplash.com/photo-1478860409698-8707f313ee8b?q=80&w=2670&auto=format&fit=crop')",
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                    }}
-                />
-                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
-            </div>
+        <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-[#0b1220] dark:to-[#020617] px-6">
 
-            <motion.div
-                layout
-                className="relative z-10 w-full max-w-md bg-card/80 border border-border backdrop-blur-xl shadow-2xl rounded-2xl overflow-hidden"
-            >
-                {/* Header Toggle */}
-                <div className="flex border-b border-border">
-                    <button
-                        onClick={() => setMode('login')}
-                        className={`flex-1 py-4 text-sm font-bold tracking-wide transition-colors relative ${mode === 'login' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        {t('login')}
-                        {mode === 'login' && <motion.div layoutId="tab-highlight" className="absolute bottom-0 left-0 w-full h-0.5 bg-primary" />}
-                    </button>
-                    <button
-                        onClick={() => setMode('signup')}
-                        className={`flex-1 py-4 text-sm font-bold tracking-wide transition-colors relative ${mode === 'signup' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        {t('register')}
-                        {mode === 'signup' && <motion.div layoutId="tab-highlight" className="absolute bottom-0 left-0 w-full h-0.5 bg-primary" />}
-                    </button>
-                </div>
+            <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.08)] bg-white dark:bg-[#09090b]">
 
-                <div className="p-8">
-                    {/* Brand Header */}
-                    <div className="text-center mb-6">
-                        <div className="inline-flex items-center justify-center p-1 rounded-2xl bg-white/5 border border-white/10 mb-4 shadow-2xl">
-                            <img
-                                src="/logos/logo.jpg"
-                                alt="ERNAM Logo"
-                                className="h-20 w-auto rounded-xl"
-                            />
+                {/* LEFT — Login Card */}
+                <div className="flex flex-col justify-between px-10 py-12 lg:px-14 bg-white dark:bg-[#09090b]">
+
+                    {/* Header */}
+                    <div>
+                        <div className="flex items-center gap-3 mb-10">
+                            <div className="relative w-10 h-10">
+                                <Image
+                                    src="/logos/logo.png"
+                                    alt="ERNAM"
+                                    fill
+                                    className="object-contain dark:invert"
+                                />
+                            </div>
+                            <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white">ERNAM Portal</span>
                         </div>
-                        <h1 className="text-2xl font-black text-foreground tracking-tighter uppercase leading-none">ERNAM</h1>
-                        <p className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.2em] mt-2">{t('digital_twin')}</p>
+
+                        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white tracking-tight">
+                            Secure Sign In
+                        </h1>
+                        <p className="text-sm text-gray-500 mt-2">
+                            Authorized access to the ERNAM Aviation Training Authority
+                        </p>
                     </div>
 
-                    {/* Error Message */}
-                    <AnimatePresence>
+                    {/* Form */}
+                    <form onSubmit={handleLogin} className="flex flex-col gap-5 mt-10">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                            <div className="relative">
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-md px-4 py-3 pl-11 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all"
+                                    placeholder="name@company.com"
+                                    required
+                                />
+                                <Mail className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                            <div className="relative">
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-md px-4 py-3 pl-11 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all"
+                                    placeholder="••••••••"
+                                    required
+                                />
+                                <Lock className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Remember me</span>
+                            </label>
+                            <Link href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                                Forgot password?
+                            </Link>
+                        </div>
+
                         {error && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="mb-6 mx-1 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-xs flex items-center gap-2"
-                            >
-                                <AlertCircle className="h-4 w-4 shrink-0" />
+                            <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-md text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
                                 {error}
-                            </motion.div>
+                            </div>
                         )}
-                    </AnimatePresence>
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <AnimatePresence mode="popLayout">
-                            {mode === 'signup' && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="space-y-4"
-                                >
-                                    {/* Role Selection */}
-                                    <div className="grid grid-cols-2 gap-3 mb-2">
-                                        <div
-                                            onClick={() => setRole('trainee')}
-                                            className={`cursor-pointer border rounded-xl p-3 text-center transition-all ${role === 'trainee' ? 'bg-primary/10 border-primary' : 'bg-secondary/50 border-transparent hover:bg-secondary'}`}
-                                        >
-                                            <GraduationCap className={`h-5 w-5 mx-auto mb-2 ${role === 'trainee' ? 'text-primary' : 'text-muted-foreground'}`} />
-                                            <div className={`text-xs font-bold ${role === 'trainee' ? 'text-foreground' : 'text-muted-foreground'}`}>{t('role_student')}</div>
-                                        </div>
-                                        <div
-                                            onClick={() => setRole('trainer')}
-                                            className={`cursor-pointer border rounded-xl p-3 text-center transition-all ${role === 'trainer' ? 'bg-amber-500/10 border-amber-500' : 'bg-secondary/50 border-transparent hover:bg-secondary'}`}
-                                        >
-                                            <Medal className={`h-5 w-5 mx-auto mb-2 ${role === 'trainer' ? 'text-amber-500' : 'text-muted-foreground'}`} />
-                                            <div className={`text-xs font-bold ${role === 'trainer' ? 'text-foreground' : 'text-muted-foreground'}`}>{t('role_instructor')}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Full Name */}
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{t('full_name')}</label>
-                                        <div className="relative">
-                                            <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <input
-                                                type="text"
-                                                required={mode === 'signup'}
-                                                value={formData.fullName}
-                                                onChange={e => setFormData({ ...formData, fullName: e.target.value })}
-                                                className="w-full bg-secondary/50 border border-input rounded-lg py-2 pl-9 pr-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                                                placeholder="Capt. John Doe"
-                                            />
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{t('email')}</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <input
-                                        type="email"
-                                        required
-                                        value={formData.email}
-                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                        className="w-full bg-secondary/50 border border-input rounded-lg py-2 pl-9 pr-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                                        placeholder="name@ernam.cm"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{t('password')}</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <input
-                                        type="password"
-                                        required
-                                        value={formData.password}
-                                        onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                        className="w-full bg-secondary/50 border border-input rounded-lg py-2 pl-9 pr-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                            </div>
-
-                        </AnimatePresence>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`w-full py-3 mt-4 text-sm font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${loading ? 'opacity-70 cursor-not-allowed' : ''} ${mode === 'login' ? 'bg-primary hover:bg-blue-500 text-primary-foreground' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 rounded-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-2 active:scale-[0.99]"
                         >
-                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                                <>
-                                    {mode === 'login' ? t('access_dashboard') : t('submit_application')}
-                                    <ArrowRight className="h-4 w-4" />
-                                </>
-                            )}
+                            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign in to Dashboard"}
                         </button>
-
                     </form>
+
+                    {/* Footer */}
+                    <div className="flex items-center gap-2 text-xs text-gray-400 mt-10">
+                        <ShieldCheck className="h-4 w-4 text-blue-600" />
+                        <span>ERNAM Certified Secure Access</span>
+                    </div>
                 </div>
-            </motion.div>
+
+                {/* RIGHT — Guidance Panel */}
+                <div className="hidden lg:flex flex-col justify-center px-14 py-12 bg-blue-600 text-white relative overflow-hidden">
+                    {/* Subtle Texture */}
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+
+                    <div className="relative z-10">
+                        <h2 className="text-3xl font-semibold leading-tight mb-6">
+                            Aviation Training,<br />Governed Digitally
+                        </h2>
+
+                        <p className="text-blue-100 leading-relaxed text-lg">
+                            This platform is used by authorized aviation professionals, instructors,
+                            and partner organizations under ERNAM supervision.
+                        </p>
+
+                        <ul className="mt-8 space-y-4 text-sm text-blue-50 font-medium">
+                            <li className="flex items-center gap-3">
+                                <div className="h-1.5 w-1.5 rounded-full bg-white"></div>
+                                ICAO & IATA-aligned training standards
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <div className="h-1.5 w-1.5 rounded-full bg-white"></div>
+                                Instructor-led certification sessions
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <div className="h-1.5 w-1.5 rounded-full bg-white"></div>
+                                Secure participant & organization management
+                            </li>
+                        </ul>
+
+                        <div className="mt-12 pt-8 border-t border-white/20">
+                            <p className="text-sm text-blue-100 mb-2">
+                                Don’t have an ERNAM digital account?
+                            </p>
+                            <Link
+                                href="/apply"
+                                className="inline-flex items-center gap-2 font-medium text-white hover:text-blue-200 transition-colors group"
+                            >
+                                <span className="underline underline-offset-4">Apply for authorization</span>
+                                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     );
 }

@@ -1,9 +1,11 @@
-export type UserRole = 'admin' | 'trainer' | 'trainee';
-export type UserStatus = 'pending' | 'approved' | 'rejected';
+export type UserRole = 'participant' | 'instructor' | 'org_admin' | 'ernam_admin';
+export type UserStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface UserProfile {
     id: string;
-    full_name: string | null;
+    email: string;
+    phone?: string;
+    full_name: string;
     role: UserRole;
     status: UserStatus;
     created_at: string;

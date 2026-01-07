@@ -4,6 +4,7 @@ import {
     LayoutDashboard,
     BookOpen,
     Calendar,
+    Clock,
     Settings,
     LogOut,
     ChevronLeft,
@@ -27,52 +28,161 @@ import { useTranslations } from 'next-intl';
 
 export default function DashboardSidebar({ activeView, setActiveView, collapsed, setCollapsed, onCreateNew }: any) {
     const { signOut, profile } = useAuth();
-    const isTrainee = profile?.role === 'trainee';
+    const isTrainee = profile?.role === 'participant';
     const t = useTranslations('Sidebar');
     const tCommon = useTranslations('Common');
 
     // Different menu items per role
-    const getMenuItems = () => {
-        if (isTrainee) {
+    // Grouped menu structure
+    const getMenuGroups = () => {
+        if (profile?.role === 'participant') {
             return [
-                { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
-                { id: 'my-learning', label: t('my_learning'), icon: BookOpen },
-                { id: 'schedule', label: t('schedule'), icon: Calendar },
-                { id: 'messages', label: t('messages'), icon: MessageSquare },
-                { id: 'certificates', label: t('certificates'), icon: Award },
-                { id: 'results', label: t('exam_results'), icon: FileText },
-                { id: 'resources', label: t('resources'), icon: BookOpen },
-                { id: 'profile', label: t('profile'), icon: UserIcon },
+                {
+                    title: t('sections.overview'),
+                    items: [
+                        { id: 'dashboard', label: t('items.dashboard'), icon: LayoutDashboard },
+                    ]
+                },
+                {
+                    title: t('sections.my_training'),
+                    items: [
+                        { id: 'my-trainings', label: t('items.my_trainings'), icon: BookOpen },
+                        { id: 'schedule', label: t('items.my_schedule'), icon: Calendar },
+                    ]
+                },
+                {
+                    title: t('sections.learning_resources'),
+                    items: [
+                        { id: 'documents', label: t('items.documents'), icon: FolderKanban },
+                        { id: 'assessments', label: t('items.assessments'), icon: FileText },
+                    ]
+                },
+                {
+                    title: t('sections.certification'),
+                    items: [
+                        { id: 'certificates', label: t('items.certificates'), icon: Award },
+                    ]
+                },
+                {
+                    title: t('sections.account'),
+                    items: [
+                        { id: 'profile', label: t('items.profile'), icon: UserIcon },
+                        { id: 'settings', label: t('items.settings'), icon: Settings },
+                    ]
+                }
             ];
         }
-        if (profile?.role === 'admin') {
+        if (profile?.role === 'ernam_admin') {
             return [
-                { id: 'dashboard', label: t('overview'), icon: LayoutDashboard },
-                { id: 'users', label: t('users'), icon: Users },
-                { id: 'applicants', label: t('applicants'), icon: FileText },
-                { id: 'academics', label: t('academics'), icon: FolderKanban },
-                { id: 'exams', label: t('exams'), icon: Trophy },
-                { id: 'my-classes', label: t('courses'), icon: BookOpen },
-                { id: 'messages', label: t('messages'), icon: MessageSquare },
-                { id: 'finances', label: t('finances'), icon: DollarSign },
-                { id: 'audit-logs', label: t('audit_logs'), icon: ShieldCheck },
-                { id: 'settings', label: t('settings'), icon: Settings },
+                {
+                    title: t('sections.overview'),
+                    items: [
+                        { id: 'dashboard', label: t('items.dashboard'), icon: LayoutDashboard },
+                    ]
+                },
+                {
+                    title: t('sections.training_ops'),
+                    items: [
+                        { id: 'standards', label: t('items.standards'), icon: ShieldCheck },
+                        { id: 'sessions', label: t('items.sessions'), icon: Calendar },
+                        { id: 'training_requests', label: t('items.training_requests'), icon: MessageSquare },
+                    ]
+                },
+                {
+                    title: t('sections.administration'),
+                    items: [
+                        { id: 'organizations', label: t('items.organizations'), icon: Users },
+                        { id: 'applications', label: t('items.applications'), icon: FileText },
+                        { id: 'users', label: t('items.users'), icon: Users },
+                        { id: 'audit-logs', label: t('items.audit_logs'), icon: ShieldCheck },
+                    ]
+                },
+                {
+                    title: t('sections.account'),
+                    items: [
+                        { id: 'settings', label: t('items.settings'), icon: Settings },
+                    ]
+                }
             ];
         }
-        // Trainer (default)
+        if (profile?.role === 'org_admin') {
+            return [
+                {
+                    title: t('sections.overview'),
+                    items: [
+                        { id: 'dashboard', label: t('items.dashboard'), icon: LayoutDashboard },
+                    ]
+                },
+                {
+                    title: t('sections.org_mgmt'),
+                    items: [
+                        { id: 'organization', label: t('items.my_org'), icon: Users },
+                        { id: 'participants', label: t('items.staff'), icon: Users }, // Staff (Users) mapped to 'participants' view in OrgAdminDashboard
+                    ]
+                },
+                {
+                    title: t('sections.training_ops'),
+                    items: [
+                        { id: 'sessions', label: t('items.training_sessions'), icon: Calendar },
+                        { id: 'training-requests', label: t('items.participants'), icon: FileText }, // Participants (Assignments) mapped to 'training-requests' or similar? Prompt says: "Participants (Assignments)"
+                    ]
+                },
+                {
+                    title: t('sections.certification'),
+                    items: [
+                        { id: 'certificates', label: t('items.certificates'), icon: Award },
+                        { id: 'validity-tracking', label: t('items.validity_tracking'), icon: Clock },
+                    ]
+                },
+                {
+                    title: t('sections.administration'),
+                    items: [
+                        { id: 'notifications', label: t('items.notifications'), icon: MessageSquare },
+                        { id: 'settings', label: t('items.settings'), icon: Settings },
+                    ]
+                }
+            ];
+        }
+        // Instructor (default)
         return [
-            { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
-            { id: 'my-classes', label: t('my_classes'), icon: BookOpen },
-            { id: 'messages', label: t('messages'), icon: MessageSquare },
-            { id: 'students', label: t('students'), icon: Users },
-            { id: 'schedule', label: t('schedule'), icon: Calendar },
-            { id: 'exams', label: t('exam_grading'), icon: Trophy },
-            { id: 'gradebook', label: t('assessment'), icon: FileText },
-            { id: 'reports', label: t('reports'), icon: PieChart },
+            {
+                title: t('sections.overview'),
+                items: [
+                    { id: 'dashboard', label: t('items.dashboard'), icon: LayoutDashboard },
+                    { id: 'my-schedule', label: t('items.my_schedule'), icon: Calendar },
+                ]
+            },
+            {
+                title: t('sections.training_ops'),
+                items: [
+                    { id: 'sessions', label: t('items.sessions'), icon: Calendar },
+                    { id: 'participants', label: t('items.participants'), icon: Users },
+                ]
+            },
+            {
+                title: t('sections.training_content'),
+                items: [
+                    { id: 'documents', label: t('items.documents'), icon: FolderKanban },
+                    { id: 'planned-activities', label: t('items.planned_activities'), icon: FileText },
+                ]
+            },
+            {
+                title: t('sections.evaluation'),
+                items: [
+                    { id: 'assessments', label: t('items.assessments'), icon: ShieldCheck },
+                ]
+            },
+            {
+                title: t('sections.account'),
+                items: [
+                    { id: 'profile', label: t('items.profile'), icon: UserIcon },
+                    { id: 'settings', label: t('items.settings'), icon: Settings },
+                ]
+            }
         ];
     };
 
-    const menuItems = getMenuItems();
+    const menuGroups = getMenuGroups();
 
     const bgColor = isTrainee ? 'bg-white' : 'bg-[#0B1120]';
     const textColor = isTrainee ? 'text-gray-900' : 'text-white';
@@ -91,9 +201,9 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
                 <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
                     <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-slate-900 border border-white/10 shadow-2xl flex-shrink-0">
                         <img
-                            src="/logos/logo.jpg"
+                            src="/logos/ernam_logo_final.jpg"
                             alt="ERNAM Logo"
-                            className="w-full h-full object-contain p-1"
+                            className="w-full h-full object-contain"
                         />
                     </div>
                     {!collapsed && (
@@ -116,31 +226,43 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-                {menuItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeView === item.id;
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveView(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md transition-all group relative ${isActive
-                                ? `${itemActiveBg} shadow-sm border ${isTrainee ? 'border-blue-100' : 'border-white/5'}`
-                                : `${itemInactiveColor} hover:text-primary ${isTrainee ? 'hover:bg-gray-50' : 'hover:bg-white/5'}`
-                                }`}
-                        >
-                            <Icon className={`h-5 w-5 ${isActive ? 'text-blue-500' : `${itemInactiveColor} group-hover:text-blue-500`}`} />
-                            {!collapsed && (
-                                <span className={`font-medium ${isActive ? (isTrainee ? 'text-blue-600' : 'text-white') : itemInactiveColor}`}>
-                                    {item.label}
-                                </span>
-                            )}
-                            {isActive && !collapsed && (
-                                <div className="absolute right-0 h-6 w-1 bg-blue-500 rounded-l-full" />
-                            )}
-                        </button>
-                    );
-                })}
+            <nav className="flex-1 px-3 space-y-6 overflow-y-auto py-4">
+                {menuGroups.map((group, groupIndex) => (
+                    <div key={groupIndex}>
+                        {!collapsed && group.title && (
+                            <h3 className={`px-4 text-xs font-bold uppercase tracking-wider mb-2 ${isTrainee ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {group.title}
+                            </h3>
+                        )}
+                        <div className="space-y-1">
+                            {group.items.map((item) => {
+                                const Icon = item.icon;
+                                const isActive = activeView === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setActiveView(item.id)}
+                                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md transition-all group relative ${isActive
+                                            ? `${itemActiveBg} shadow-sm border ${isTrainee ? 'border-blue-100' : 'border-white/5'}`
+                                            : `${itemInactiveColor} hover:text-primary ${isTrainee ? 'hover:bg-gray-50' : 'hover:bg-white/5'}`
+                                            }`}
+                                        title={collapsed ? item.label : undefined}
+                                    >
+                                        <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-blue-500' : `${itemInactiveColor} group-hover:text-blue-500`}`} />
+                                        {!collapsed && (
+                                            <span className={`font-medium truncate ${isActive ? (isTrainee ? 'text-blue-600' : 'text-white') : itemInactiveColor}`}>
+                                                {item.label}
+                                            </span>
+                                        )}
+                                        {isActive && !collapsed && (
+                                            <div className="absolute right-0 h-6 w-1 bg-blue-500 rounded-l-full" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
             </nav>
 
             {/* Footer */}
@@ -161,6 +283,6 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
             >
                 {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
             </button>
-        </motion.div>
+        </motion.div >
     );
 }

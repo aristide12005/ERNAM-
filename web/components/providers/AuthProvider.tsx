@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const fetchProfile = async (userId: string) => {
         try {
             const { data, error } = await supabase
-                .from('profiles')
+                .from('users')
                 .select('*')
                 .eq('id', userId)
                 .single();
@@ -86,11 +86,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (loading) return;
 
         // Normalizing path to handle locales (e.g., /en/auth/login -> /auth/login)
-        // Regex removes optional locale prefix of 2 letters
         const pathRef = pathname?.replace(/^\/[a-z]{2}(\/|$)/, '/') || '/';
 
+        console.log(`[AuthProvider] Path: ${pathname}, Normalized: ${pathRef}, User: ${!!user}`);
+
         const isAuthRoute = pathRef.startsWith('/auth');
-        const isPublicRoute = pathRef === '/'; // Landing page
+        // Simple robust check for application portal, bypassing regex complexity
+        const isPublicRoute = pathRef === '/' || pathname?.includes('/apply'); // Landing page or Application Portal
 
         if (!user && !isAuthRoute && !isPublicRoute) {
             router.push('/auth/login');
@@ -105,6 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // If on auth pages, send to dashboard
                 if (isAuthRoute) router.push('/dashboard');
             }
+        } else if (user && !profile) {
+            // GHOST USER STATE: Auth exists, but Profile missing/unreadable.
+            // Redirect to Dashboard, where the "Access Denied" view handles this gracefully.
+            if (isAuthRoute) router.push('/dashboard');
         }
     }, [user, profile, loading, pathname, router]);
 

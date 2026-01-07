@@ -61,6 +61,35 @@
         "enrollment_revenue_trends": "Tendances des inscriptions et des revenus (6 derniers mois)",
         "trainee_origin": "Origine des stagiaires",
         "recent_activity": "Journal d'activité récent",
+        "requests": {
+            "title": "Demandes de Formation",
+            "subtitle": "Gérez les demandes de formation opérationnelles des organisations.",
+            "filters": {
+                "status": "Filtrer par Statut",
+                "org": "Filtrer par Organisation"
+            },
+            "status": {
+                "pending": "En Attente",
+                "approved": "Approuvé",
+                "rejected": "Rejeté"
+            },
+            "table": {
+                "org": "Organisation",
+                "standard": "Standard",
+                "pax": "Pax",
+                "dates": "Dates",
+                "status": "Statut",
+                "actions": "Actions"
+            },
+            "review": {
+                "title": "Examiner la Demande",
+                "approve": "Approuver la Demande",
+                "reject": "Rejeter la Demande",
+                "reject_placeholder": "Raison du rejet...",
+                "confirm_approve": "Êtes-vous sûr de vouloir approuver cette demande ? Idéalement, vous créeriez une session immédiatement après.",
+                "request_details": "Détails de la Demande"
+            }
+        },
         "user": "Utilisateur",
         "action": "Action",
         "module": "Module",
@@ -68,32 +97,121 @@
         "status": "Statut"
     },
     "Sidebar": {
-        "dashboard": "Tableau de bord",
-        "my_learning": "Mon apprentissage",
-        "schedule": "Emploi du temps",
-        "messages": "Messages",
-        "certificates": "Certificats",
-        "exam_results": "Résultats d'examen",
-        "resources": "Ressources",
-        "profile": "Profil",
-        "overview": "Vue d'ensemble",
-        "users": "Gestion des utilisateurs",
-        "applicants": "Candidats",
-        "academics": "Académique",
-        "exams": "Examens et notes",
-        "courses": "Cours",
-        "finances": "Finances",
-        "audit_logs": "Journaux d'audit",
-        "settings": "Paramètres système",
-        "my_classes": "Mes cours",
-        "students": "Étudiants",
-        "exam_grading": "Correction d'examens",
-        "assessment": "Évaluation",
-        "reports": "Rapports",
-        "create_new": "Créer nouveau",
-        "digital_twin": "Jumeau Numérique"
+        "sections": {
+            "overview": "Vue d'ensemble",
+            "training_operations": "Opérations de Formation",
+            "certification": "Certification",
+            "administration": "Administration",
+            "my_training": "Ma Formation",
+            "account": "Compte",
+            "my_learning": "Mon Apprentissage",
+            "organization": "Organisation",
+            "org_mgmt": "Gestion Organisation",
+            "training_ops": "Opérations Formation",
+            "training_content": "Contenu Formation",
+            "evaluation": "Évaluation",
+            "learning_resources": "Ressources Pédagogiques"
+        },
+        "items": {
+            "dashboard": "Tableau de Bord",
+            "standards": "Normes & Standards",
+            "sessions": "Sessions",
+            "instructors": "Instructeurs",
+            "participants": "Participants",
+            "organizations": "Organisations",
+            "certificates": "Certificats",
+            "validity_tracking": "Suivi Validité",
+            "users_roles": "Utilisateurs & Rôles",
+            "system_logs": "Journaux Système",
+            "settings": "Paramètres",
+            "my_dashboard": "Mon Tableau de Bord",
+            "my_trainings": "Mes Formations",
+            "my_schedule": "Mon Planning",
+            "my_sessions": "Mes Sessions",
+            "results_scores": "Résultats & Notes",
+            "profile": "Profil",
+            "resources": "Ressources",
+            "documents": "Documents",
+            "assessments": "Évaluations",
+            "my_certificates": "Mes Certificats",
+            "staff": "Personnel",
+            "training_status": "Statut Formation",
+            "compliance": "Conformité",
+            "my_org": "Mon Organisation",
+            "training_sessions": "Sessions de Formation",
+            "training_requests": "Demandes de Formation",
+            "applications": "Candidatures Individuelles",
+            "notifications": "Notifications",
+            "my_schedule": "Mon Planning",
+            "documents": "Documents",
+            "planned_activities": "Activités Prévues",
+            "assessments": "Évaluations",
+            "my_trainings": "Mes Formations"
+        },
+        "role": {
+            "ernam_admin": "Admin ERNAM",
+            "instructor": "Instructeur",
+            "participant": "Participant",
+            "org_admin": "Admin Org"
+        },
+        "view_profile": "Voir Profil"
     },
     "AdminDashboard": {
+        "welcome": "Bonjour, {name}",
+        "kpi": {
+            "active_sessions": "Sessions Actives",
+            "upcoming_sessions": "Prochaines Sessions",
+            "pending_applications": "Candidatures en Attente",
+            "expiring_certificates": "Certificats Expirants",
+            "total_participants": "Total Participants"
+        },
+        "charts": {
+            "participant_trends": "Tendances des Participants",
+            "app_status": "Statut des Candidatures",
+            "approved": "Approuvé",
+            "pending": "En Attente"
+        },
+        "activity": {
+            "title": "Activités Récentes",
+            "date": "Date",
+            "actor": "Acteur",
+            "action": "Action",
+            "type": "Entité",
+            "status": "Statut"
+        },
+        "quick_actions": {
+            "create_standard": "Créer Standard",
+            "schedule_session": "Planifier Session",
+            "approve_apps": "Approuver Candidatures"
+        },
+        "footer_legal": "ERNAM – Environnement de Réseau Aérien Sécurisé | Tous droits réservés",
+        "Standards": {
+            "title": "Normes de Formation",
+            "create_button": "Créer une Norme",
+            "search_placeholder": "Rechercher par code ou titre...",
+            "table": {
+                "code": "Code",
+                "title": "Titre",
+                "validity": "Validité",
+                "status": "Statut",
+                "actions": "Actions"
+            },
+            "form": {
+                "create_title": "Créer Nouvelle Norme",
+                "edit_title": "Modifier la Norme",
+                "code_label": "Code de la Norme",
+                "code_placeholder": "ex: AVSEC-001",
+                "title_label": "Titre de la Formation",
+                "desc_label": "Description",
+                "validity_label": "Validité (Mois)",
+                "active_label": "Actif",
+                "save": "Enregistrer la Norme",
+                "cancel": "Annuler",
+                "success_create": "Norme créée avec succès",
+                "success_update": "Norme mise à jour avec succès",
+                "error_code_exists": "Ce code existe déjà"
+            }
+        },
         "exam_management_title": "Gestion des Examens",
         "schedule_exam_button": "Planifier un Examen",
         "loading_exams": "Chargement des examens...",
@@ -595,5 +713,431 @@
         "instructor_tips": "Conseils Instructeur",
         "tip_1": "Mettez régulièrement à jour les supports de cours pour garder les étudiants engagés.",
         "tip_2": "Vérifiez le panneau \"Nécessite Attention\" pour les tâches de notation urgentes."
+    },
+    "Finance": {
+        "title": "Analyse Financière",
+        "export_report": "EXPORTER RAPPORT",
+        "kpi": {
+            "total_revenue": "Revenu Total (Annuel)",
+            "pending_collections": "Recouvrements en Attente",
+            "active_invoices": "{count} factures actives",
+            "avg_course_fee": "Frais Moyens de Cours",
+            "this_month": "ce mois-ci",
+            "enrollment_growth": "Croissance des Inscriptions",
+            "target": "Objectif"
+        },
+        "charts": {
+            "revenue_forecast": "Prévision des Revenus vs Réel",
+            "enrollment_mix": "Répartition des Inscriptions"
+        },
+        "transactions": {
+            "title": "Transactions Récentes",
+            "headers": {
+                "trainee": "Stagiaire",
+                "amount": "Montant",
+                "date": "Date",
+                "status": "Statut",
+                "invoice": "Facture"
+            },
+            "status": {
+                "completed": "Complété",
+                "pending": "En Attente",
+                "failed": "Échoué"
+            }
+        }
+    },
+    "AuditLogs": {
+        "title": "Flux de Contrôle Système",
+        "export_logs": "EXPORTER JOURNAUX",
+        "search_placeholder": "Rechercher par action ou ressource...",
+        "filter_range": "Filtrer Plage",
+        "table": {
+            "event_time": "Heure de l'Événement",
+            "actor": "Acteur",
+            "action": "Action",
+            "resource_id": "Identifiant Ressource"
+        },
+        "states": {
+            "streaming": "Flux des événements en cours...",
+            "no_events": "Aucun événement trouvé pour cette période."
+        },
+        "system_internal": "Système/Interne"
+    },
+    "AdminSettings": {
+        "title": "Gouvernance de la Plateforme",
+        "tabs": {
+            "general": "Paramètres Plateforme",
+            "security": "Sécurité & Accès",
+            "notifications": "Config Alertes",
+            "database": "Registre Données"
+        },
+        "general": {
+            "title": "Configuration Générale",
+            "platform_name": "Nom de la Plateforme",
+            "support_email": "Email Support",
+            "maintenance_mode": "Mode Maintenance",
+            "maintenance_desc": "Activer pour restreindre l'accès lors des mises à jour planifiées.",
+            "public_registration": "Inscription Publique",
+            "registration_desc": "Permettre aux nouveaux utilisateurs de s'inscrire sans invitation."
+        },
+        "security": {
+            "title": "Protocoles de Sécurité",
+            "critical_logic": "Logique de Sécurité Critique",
+            "critical_desc": "Toutes les actions administratives sont enregistrées dans le journal d'audit. Le délai d'expiration de session est actuellement réglé sur 30 minutes.",
+            "force_logout": "FORCER DÉCONNEXION TOUTES SESSIONS",
+            "two_factor": "Double Authentification (2FA)",
+            "configure_otp": "CONFIGURER SMS/OTP",
+            "domain_whitelist": "Liste Blanche Domaines",
+            "manage_domains": "GÉRER DOMAINES"
+        },
+        "actions": {
+            "reset": "RÉINITIALISER",
+            "save_changes": "ENREGISTRER",
+            "saving": "ENREGISTREMENT...",
+            "success_message": "Paramètres enregistrés avec succès"
+        }
+    },
+    "OrganizationsView": {
+        "title": "Organisations Enregistrées",
+        "subtitle": "Registre officiel des entités aéronautiques approuvées.",
+        "search_placeholder": "Rechercher dans le registre...",
+        "no_orgs_title": "Aucune organisation trouvée",
+        "no_orgs_desc_search": "Essayez d'ajuster vos termes de recherche.",
+        "no_orgs_desc_empty": "Approuvez les demandes pour remplir le registre.",
+        "org_suffix": "Organisation",
+        "since": "Depuis {date}",
+        "manage": "Gérer"
+    },
+    "ApplicationsView": {
+        "title": "Demandes d'Organisation en Attente",
+        "no_apps_title": "Aucune demande en attente",
+        "no_apps_desc": "Tout est à jour ! Revenez plus tard.",
+        "headers": {
+            "org_name": "Nom de l'Organisation",
+            "applicant": "Candidat",
+            "country": "Pays",
+            "status": "Statut",
+            "action": "Action"
+        },
+        "status": {
+            "pending_review": "Examen en Attente"
+        },
+        "review": "Examiner"
+    },
+    "InstructorsView": {
+        "title": "Corps Enseignant",
+        "subtitle": "Gérez vos instructeurs qualifiés et leurs affectations.",
+        "search_placeholder": "Rechercher un instructeur...",
+        "no_results": "Aucun instructeur trouvé.",
+        "view_profile": "VOIR PROFIL",
+        "assign_course": "AFFECTER COURS"
+    },
+    "ParticipantsView": {
+        "title": "Participants",
+        "subtitle": "Gérez les étudiants et leur progression.",
+        "search_placeholder": "Rechercher un participant...",
+        "no_results": "Aucun participant trouvé.",
+        "view_details": "VOIR DÉTAILS",
+        "headers": {
+            "name": "Nom",
+            "status": "Statut",
+            "progress": "Progression",
+            "action": "Action"
+        },
+        "status": {
+            "enrolled": "Inscrit",
+            "completed": "Terminé",
+            "inactive": "Inactif"
+        }
+    },
+    "CertificatesView": {
+        "title": "Suivi des Certificats et Validité",
+        "subtitle": "Gérez les certificats émis et surveillez leur validité.",
+        "search_placeholder": "Rechercher par nom ou référence...",
+        "download": "Télécharger Certificat",
+        "headers": {
+            "recipient": "Bénéficiaire",
+            "course": "Formation",
+            "issued": "Date d'Émission",
+            "validity": "Validité",
+            "action": "Action"
+        },
+        "stats": {
+            "active": "Certificats Valides",
+            "expiring_soon": "Expire Bientôt",
+            "expired": "Expirés"
+        },
+        "filters": {
+            "all": "Tous",
+            "expiring": "Expire Bientôt"
+        }
+    },
+    "OrgAdmin": {
+        "dashboard": {
+            "title": "Vue d'ensemble Organisation",
+            "active_staff": "Personnel Actif",
+            "active_sessions": "Sessions Actives",
+            "expiring_certs": "Certificats Expirant",
+            "pending_requests": "Demandes en Attente",
+            "recent_alerts": "Alertes Récentes (Derniers 30 Jours)"
+        },
+        "participants": {
+            "title": "Gestion du Personnel",
+            "subtitle": "Gérez vos employés inscrits aux programmes de formation.",
+            "add_participant": "AJOUTER PARTICIPANT",
+            "table": {
+                "name": "Nom",
+                "role": "Rôle",
+                "status": "Statut",
+                "assigned_sessions": "Sessions Affectées",
+                "actions": "Actions"
+            },
+            "status": {
+                "active": "Actif",
+                "inactive": "Inactif",
+                "nominated": "Nominé",
+                "dormant": "Dormant",
+                "completed": "Terminé"
+            },
+            "actions": {
+                "assign_session": "Affecter Session",
+                "manage": "Gérer"
+            },
+            "modal": {
+                "title": "Ajouter un Nouveau Participant",
+                "full_name": "Nom Complet",
+                "email": "Adresse Email",
+                "phone": "Téléphone (Optionnel)",
+                "submit": "CRÉER PARTICIPANT",
+                "cancel": "ANNULER",
+                "tabs": {
+                    "create": "Créer Nouveau",
+                    "search": "Rechercher Existant"
+                },
+                "search": {
+                    "placeholder": "Rechercher par email...",
+                    "button": "Rechercher",
+                    "add": "Ajouter",
+                    "no_results": "Aucun utilisateur non rattaché trouvé."
+                },
+                "success": {
+                    "created": "Utilisateur créé ! Mot de passe temporaire : {password}",
+                    "added": "Utilisateur ajouté à l'organisation"
+                },
+                "actions": {
+                    "dismiss": "Fermer",
+                    "assign": "Affecter à une Session"
+                }
+            }
+        },
+        "instructors": {
+            "title": "Instructeurs Affectés",
+            "subtitle": "Liste des instructeurs dirigeant les sessions de votre personnel.",
+            "no_instructors": "Aucun instructeur affecté pour le moment.",
+            "table": {
+                "name": "Nom",
+                "assigned_sessions": "Sessions Dirigées",
+                "contact": "Contact",
+                "status": "Statut"
+            }
+        },
+        "requests": {
+            "title": "Demandes de Formation",
+            "subtitle": "Soumettez vos besoins opérationnels à l'ERNAM.",
+            "request_training": "Demander une Formation",
+            "table": {
+                "standard": "Standard Demandé",
+                "period": "Période Souhaitée",
+                "participants": "Participants",
+                "status": "Statut",
+                "created_at": "Date de Demande"
+            },
+            "modal": {
+                "title": "Autorisation de Demande de Formation",
+                "select_standard": "Standard de Formation",
+                "preferred_period": "Période Souhaitée",
+                "dates": "Période (Début - Fin)",
+                "start_date": "Début Souhaité",
+                "end_date": "Fin Souhaitée",
+                "pax_count": "Nombre de Participants",
+                "pax_helper": "Cela aide l'ERNAM à planifier la capacité.",
+                "notes": "Note Optionnelle / Préférences",
+                "cancel": "Annuler",
+                "submit": "Envoyer la Demande"
+            },
+            "status": {
+                "pending": "En Attente",
+                "approved": "Approuvé",
+                "rejected": "Rejeté"
+            },
+            "success": "Votre demande a été transmise à l'ERNAM."
+        },
+        "sessions": {
+            "title": "Sessions de Formation Actives",
+            "subtitle": "Suivez les sessions où votre personnel est inscrit.",
+            "assign_participant": "AFFECTER PARTICIPANT",
+            "view_details": "DÉTAILS SESSION",
+            "table": {
+                "code": "Code Session",
+                "standard": "Formation",
+                "dates": "Dates",
+                "location": "Lieu",
+                "instructor": "Instructeur",
+                "status": "Statut"
+            }
+        },
+        "certificates": {
+            "title": "Certificats & Conformité",
+            "subtitle": "Suivez la validité des certifications de votre équipe.",
+            "download_pdf": "TÉLÉCHARGER PDF",
+            "filters": {
+                "valid": "Valide",
+                "expiring": "Expire Bientôt",
+                "expired": "Expiré"
+            },
+            "table": {
+                "recipient": "Bénéficiaire",
+                "code": "Réf. Certificat",
+                "issue_date": "Délivré le",
+                "expiry_date": "Expire le",
+                "status": "Statut"
+            }
+        },
+        "profile": {
+            "title": "Profil de l'Organisation",
+            "subtitle": "Informations légales et contacts officiels.",
+            "identity": "Identité Légale",
+            "contact": "Coordonnées",
+            "fields": {
+                "legal_name": "Nom Légal",
+                "type": "Type d'Organisation",
+                "ernam_id": "ID Référence ERNAM",
+                "status": "Statut d'Approbation",
+                "email": "Email de Contact",
+                "phone": "Téléphone"
+            },
+            "save": "METTRE À JOUR CONTACT"
+        }
+    },
+    "Organization": {
+        "profile_title": "Profil de l'Organisation",
+        "profile_desc": "Gérez le profil public et les coordonnées de votre organisation.",
+        "settings_title": "Paramètres de l'Organisation",
+        "settings_desc": "Configurez les préférences et politiques de votre organisation.",
+        "org_name": "Nom de l'Organisation",
+        "contact_email": "Email de Contact",
+        "phone": "Numéro de Téléphone",
+        "website": "Site Web",
+        "logo_url": "URL du Logo",
+        "save_changes": "Enregistrer",
+        "saved_success": "Modifications enregistrées avec succès",
+        "invite_instructor": "Inviter Instructeur",
+        "no_sessions": "Aucune Session Active",
+        "no_sessions_desc": "Les prochaines sessions de formation apparaîtront ici.",
+        "no_certificates": "Aucun Certificat Délivré",
+        "no_certificates_desc": "Les certificats obtenus par votre personnel seront archivés ici.",
+        "settings_soon": "Configuration des paramètres généraux à venir.",
+        "full_name": "Nom Complet",
+        "email": "Adresse Email",
+        "phone_optional": "Téléphone (Optionnel)",
+        "cancel": "Annuler",
+        "error_adding_instructor": "Erreur lors de l'ajout de l'instructeur : ",
+        "error_saving_profile": "Erreur lors de l'enregistrement du profil : ",
+        "org_not_found": "Organisation introuvable.",
+        "table": {
+            "name": "Nom",
+            "contact": "Contact",
+            "status": "Statut",
+            "action": "Action"
+        }
+    },
+    "Participant": {
+        "backToJourney": "Retour à mon parcours",
+        "welcome": "Bon retour",
+        "my_training_journey": "Mon parcours de formation",
+        "journeyTitle": "Mon parcours de formation",
+        "traineeId": "ID Stagiaire",
+        "back": "Retour",
+        "hero": {
+            "currentStatus": "Statut Actuel",
+            "progress": "Progression Mission",
+            "viewSession": "Voir Session",
+            "nextSession": "Prochaine Session: {time}"
+        },
+        "charts": {
+            "activity": "Activité Hebdomadaire",
+            "performance": "Métriques de Performance",
+            "hours": "Heures Étudiées",
+            "score": "Score Moyen"
+        },
+        "codex": {
+            "materials": "Matériels",
+            "assessments": "Évaluations",
+            "certificate": "Certificat",
+            "messages": "Messages",
+            "unit_files": "Fichiers",
+            "unit_total": "Total",
+            "ready": "Prêt",
+            "notIssued": "Non Délivré"
+        },
+        "placeholder": {
+            "schedule": "Votre emploi du temps de formation apparaîtra ici une fois les sessions planifiées.",
+            "assessments": "Vos évaluations et résultats d'examens apparaîtront ici.",
+            "settings": "Les paramètres du compte arrivent bientôt."
+        },
+        "empty": {
+            "title": "Aucune Mission Active",
+            "message": "Vous n'êtes inscrit à aucune session de formation active pour le moment."
+        },
+        "menu": {
+            "dashboard": "Tableau de Bord",
+            "session": "Détails Session",
+            "session-details": "Détails Session",
+            "schedule": "Mon Planning",
+            "assessments": "Évaluations",
+            "certificates": "Certificats",
+            "settings": "Paramètres",
+            "my-trainings": "Mes Formations",
+            "achievements": "Réalisations",
+            "documents": "Ressources",
+            "profile": "Profil",
+            "myTrainings": "Mes Formations",
+            "myTrainingsDesc": "Voir l'historique complet de vos formations.",
+            "achievementsDesc": "Voir vos certificats obtenus.",
+            "documentsDesc": "Accéder à vos ressources d'apprentissage.",
+            "profileDesc": "Gérer vos informations personnelles."
+        }
+    },
+    "Session": {
+        "loading": "Chargement de la session...",
+        "instructor": "Instructeur",
+        "status": {
+            "active": "Actif",
+            "completed": "Terminé"
+        },
+        "tabs": {
+            "overview": "Aperçu",
+            "schedule": "Emploi du temps",
+            "materials": "Matériels",
+            "messages": "Messages"
+        },
+        "overview": {
+            "about": "À propos de cette formation",
+            "noDescription": "Aucune description disponible."
+        },
+        "schedule": {
+            "title": "Calendrier de la session",
+            "empty": "Aucune activité programmée pour le moment.",
+            "day": "Jour"
+        },
+        "materials": {
+            "title": "Supports de cours",
+            "download": "Télécharger",
+            "empty": "Aucun document téléchargé pour le moment."
+        },
+        "messages": {
+            "title": "Chat de la classe",
+            "empty": "Aucun message pour le moment."
+        }
     }
 }

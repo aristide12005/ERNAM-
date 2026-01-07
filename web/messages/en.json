@@ -59,6 +59,35 @@
     "enrollment_revenue_trends": "Enrollment & Revenue Trends (Last 6 Months)",
     "trainee_origin": "Trainee Origin Data",
     "recent_activity": "Recent Activity Log",
+    "requests": {
+      "title": "Training Requests",
+      "subtitle": "Manage operational training demands from organizations.",
+      "filters": {
+        "status": "Filter by Status",
+        "org": "Filter by Organization"
+      },
+      "status": {
+        "pending": "Pending Check",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "table": {
+        "org": "Organization",
+        "standard": "Standard",
+        "pax": "Pax",
+        "dates": "Dates",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "review": {
+        "title": "Review Training Request",
+        "approve": "Approve Request",
+        "reject": "Reject Request",
+        "reject_placeholder": "Reason for rejection...",
+        "confirm_approve": "Are you sure you want to approve this request? Ideally, you would create a session immediately after.",
+        "request_details": "Request Details"
+      }
+    },
     "user": "User",
     "action": "Action",
     "module": "Module",
@@ -66,32 +95,119 @@
     "status": "Status"
   },
   "Sidebar": {
-    "dashboard": "Dashboard",
-    "my_learning": "My Learning",
-    "schedule": "Schedule",
-    "messages": "Messages",
-    "certificates": "Certificates",
-    "exam_results": "Exam Results",
-    "resources": "Resources",
-    "profile": "Profile",
-    "overview": "Overview",
-    "users": "User Management",
-    "applicants": "Applicants",
-    "academics": "Academics",
-    "exams": "Exams & Grades",
-    "courses": "Courses",
-    "finances": "Finances",
-    "audit_logs": "Audit Logs",
-    "settings": "System Settings",
-    "my_classes": "My Courses",
-    "students": "Students",
-    "exam_grading": "Exam Grading",
-    "assessment": "Assessment",
-    "reports": "Reports",
-    "create_new": "Create New",
-    "digital_twin": "Digital Twin"
+    "sections": {
+      "overview": "Overview",
+      "training_operations": "Training Operations",
+      "certification": "Certification",
+      "administration": "Administration",
+      "my_training": "My Training",
+      "account": "Account",
+      "my_learning": "My Learning",
+      "organization": "Organization",
+      "org_mgmt": "Organization Mgmt",
+      "training_ops": "Training Operations",
+      "training_content": "Training Content",
+      "evaluation": "Evaluation",
+      "learning_resources": "Learning Resources"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "standards": "Standards",
+      "sessions": "Sessions",
+      "instructors": "Instructors",
+      "participants": "Participants",
+      "organizations": "Organizations",
+      "certificates": "Certificates",
+      "validity_tracking": "Validity Tracking",
+      "users_roles": "Users & Roles",
+      "system_logs": "System Logs",
+      "settings": "Settings",
+      "my_dashboard": "My Dashboard",
+      "my_sessions": "My Sessions",
+      "results_scores": "Results & Scores",
+      "profile": "Profile",
+      "resources": "Resources",
+      "my_certificates": "My Certificates",
+      "staff": "Staff",
+      "training_status": "Training Status",
+      "compliance": "Compliance",
+      "my_org": "My Organization",
+      "training_sessions": "Training Sessions",
+      "training_requests": "Training Requests",
+      "applications": "Individual Applications",
+      "notifications": "Notifications",
+      "my_schedule": "My Schedule",
+      "documents": "Documents",
+      "planned_activities": "Planned Activities",
+      "assessments": "Assessments",
+      "my_trainings": "My Trainings",
+      "users": "Users & Roles",
+      "audit_logs": "Security Audit Logs"
+    },
+    "role": {
+      "ernam_admin": "ERNAM Admin",
+      "instructor": "Instructor",
+      "participant": "Participant",
+      "org_admin": "Org Admin"
+    },
+    "view_profile": "View Profile"
   },
   "AdminDashboard": {
+    "welcome": "Welcome, {name}",
+    "kpi": {
+      "active_sessions": "Active Sessions",
+      "upcoming_sessions": "Upcoming Sessions",
+      "pending_applications": "Pending Applications",
+      "expiring_certificates": "Expiring Certificates",
+      "total_participants": "Total Participants"
+    },
+    "charts": {
+      "participant_trends": "Participant Trends",
+      "app_status": "Application Status",
+      "approved": "Approved",
+      "pending": "Pending"
+    },
+    "activity": {
+      "title": "Recent Activities",
+      "date": "Date",
+      "actor": "Actor",
+      "action": "Action",
+      "type": "Entity",
+      "status": "Status"
+    },
+    "quick_actions": {
+      "create_standard": "Create Standard",
+      "schedule_session": "Schedule Session",
+      "approve_apps": "Approve Applications"
+    },
+    "footer_legal": "ERNAM – Secure Aviation Network Environment | All rights reserved",
+    "Standards": {
+      "title": "Training Standards",
+      "create_button": "Create Standard",
+      "search_placeholder": "Search by code or title...",
+      "table": {
+        "code": "Code",
+        "title": "Title",
+        "validity": "Validity",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "form": {
+        "create_title": "Create New Standard",
+        "edit_title": "Edit Standard",
+        "code_label": "Standard Code",
+        "code_placeholder": "e.g. AVSEC-001",
+        "title_label": "Training Title",
+        "desc_label": "Description",
+        "validity_label": "Validity (Months)",
+        "active_label": "Active",
+        "save": "Save Standard",
+        "cancel": "Cancel",
+        "success_create": "Standard created successfully",
+        "success_update": "Standard updated successfully",
+        "error_code_exists": "Code already exists"
+      }
+    },
     "exam_management_title": "Exam Management",
     "schedule_exam_button": "Schedule Exam",
     "loading_exams": "Loading exam schedules...",
@@ -383,5 +499,403 @@
     "instructor_tips": "Instructor Tips",
     "tip_1": "Regularly update course materials to keep students engaged.",
     "tip_2": "Check \"Needs Attention\" panel for urgent grading tasks."
+  },
+  "Finance": {
+    "title": "Financial Analytics",
+    "export_report": "EXPORT REPORT",
+    "kpi": {
+      "total_revenue": "Total Revenue (YTD)",
+      "pending_collections": "Pending Collections",
+      "active_invoices": "{count} active invoices",
+      "avg_course_fee": "Avg. Course Fee",
+      "this_month": "this month",
+      "enrollment_growth": "Enrollment Growth",
+      "target": "Target"
+    },
+    "charts": {
+      "revenue_forecast": "Revenue Forecast vs Actual",
+      "enrollment_mix": "Enrollment Mix"
+    },
+    "transactions": {
+      "title": "Recent Transactions",
+      "headers": {
+        "trainee": "Trainee",
+        "amount": "Amount",
+        "date": "Date",
+        "status": "Status",
+        "invoice": "Invoice"
+      },
+      "status": {
+        "completed": "Completed",
+        "pending": "Pending",
+        "failed": "Failed"
+      }
+    }
+  },
+  "AuditLogs": {
+    "title": "System Audit Stream",
+    "export_logs": "EXPORT LOGS",
+    "search_placeholder": "Search logs by action or resource...",
+    "filter_range": "Filter Range",
+    "table": {
+      "event_time": "Event Time",
+      "actor": "Actor",
+      "action": "Action",
+      "resource_id": "Resource Identifier"
+    },
+    "states": {
+      "streaming": "Streaming events...",
+      "no_events": "No events found in this period."
+    },
+    "system_internal": "System/Internal"
+  },
+  "AdminSettings": {
+    "title": "Platform Governance",
+    "tabs": {
+      "general": "Platform Settings",
+      "security": "Security & Access",
+      "notifications": "Alert Config",
+      "database": "Data Registry"
+    },
+    "general": {
+      "title": "General Platform Configuration",
+      "platform_name": "Platform Name",
+      "support_email": "Support Email",
+      "maintenance_mode": "Maintenance Mode",
+      "maintenance_desc": "Enable to restrict access for scheduled upgrades.",
+      "public_registration": "Public Registration",
+      "registration_desc": "Allow new users to sign up without invitations."
+    },
+    "security": {
+      "title": "Security Protocols",
+      "critical_logic": "Critical Security Logic",
+      "critical_desc": "All administrative actions are logged in the audit trail. Session timeout is currently set to 30 minutes.",
+      "force_logout": "FORCE LOGOUT ALL SESSIONS",
+      "two_factor": "Two-Factor (2FA)",
+      "configure_otp": "CONFIGURE SMS/OTP",
+      "domain_whitelist": "Domain Whitelist",
+      "manage_domains": "MANAGE DOMAINS"
+    },
+    "actions": {
+      "reset": "RESET",
+      "save_changes": "SAVE CHANGES",
+      "saving": "SAVING...",
+      "success_message": "Settings Saved Successfully"
+    }
+  },
+  "OrganizationsView": {
+    "title": "Registered Organizations",
+    "subtitle": "Official registry of approved aviation entities.",
+    "search_placeholder": "Search registry...",
+    "no_orgs_title": "No organizations found",
+    "no_orgs_desc_search": "Try adjusting your search terms.",
+    "no_orgs_desc_empty": "Approve applications to populate the registry.",
+    "org_suffix": "Organization",
+    "since": "Since {date}",
+    "manage": "Manage"
+  },
+  "ApplicationsView": {
+    "title": "Pending Organization Applications",
+    "no_apps_title": "No pending applications",
+    "no_apps_desc": "All caught up! Check back later.",
+    "headers": {
+      "org_name": "Organization Name",
+      "applicant": "Applicant",
+      "country": "Country",
+      "status": "Status",
+      "action": "Action"
+    },
+    "status": {
+      "pending_review": "Pending Review"
+    },
+    "review": "Review"
+  },
+  "InstructorsView": {
+    "title": "Instructor Faculty",
+    "subtitle": "Manage your qualified instructors and their assignments.",
+    "search_placeholder": "Search instructor...",
+    "no_results": "No instructors found.",
+    "view_profile": "VIEW PROFILE",
+    "assign_course": "ASSIGN COURSE"
+  },
+  "ParticipantsView": {
+    "title": "Participants",
+    "subtitle": "Manage students and their learning progress.",
+    "search_placeholder": "Search participant...",
+    "no_results": "No participants found.",
+    "view_details": "VIEW DETAILS",
+    "headers": {
+      "name": "Name",
+      "status": "Status",
+      "progress": "Progress",
+      "action": "Action"
+    },
+    "status": {
+      "enrolled": "Enrolled",
+      "completed": "Completed",
+      "inactive": "Inactive"
+    }
+  },
+  "CertificatesView": {
+    "title": "Certificates & Validity Tracking",
+    "subtitle": "Manage issued certificates and monitor compliance validity.",
+    "search_placeholder": "Search by name or reference...",
+    "download": "Download Certificate",
+    "headers": {
+      "recipient": "Recipient",
+      "course": "Course",
+      "issued": "Issue Date",
+      "validity": "Validity",
+      "action": "Action"
+    },
+    "stats": {
+      "active": "Active Certificates",
+      "expiring_soon": "Expiring Soon",
+      "expired": "Expired"
+    },
+    "filters": {
+      "all": "All",
+      "expiring": "Expiring Soon"
+    }
+  },
+  "OrgAdmin": {
+    "dashboard": {
+      "title": "Organization Overview",
+      "active_staff": "Active Staff",
+      "active_sessions": "Active Sessions",
+      "expiring_certs": "Expiring Certificates",
+      "pending_requests": "Pending Requests",
+      "recent_alerts": "Recent Alerts (Last 30 Days)"
+    },
+    "participants": {
+      "title": "Staff Management",
+      "subtitle": "Manage your employees enrolled in training programs.",
+      "add_participant": "ADD PARTICIPANT",
+      "table": {
+        "name": "Name",
+        "role": "Role",
+        "status": "Status",
+        "assigned_sessions": "Assigned Sessions",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "nominated": "Nominated",
+        "dormant": "Dormant",
+        "completed": "Completed"
+      },
+      "actions": {
+        "assign_session": "Assign Session",
+        "manage": "Manage"
+      },
+      "modal": {
+        "title": "Add New Participant",
+        "full_name": "Full Name",
+        "email": "Email Address",
+        "phone": "Phone (Optional)",
+        "submit": "CREATE PARTICIPANT",
+        "cancel": "CANCEL",
+        "tabs": {
+          "create": "Create New",
+          "search": "Search Existing"
+        },
+        "search": {
+          "placeholder": "Search by email...",
+          "button": "Search",
+          "add": "Add",
+          "no_results": "No unattached users found."
+        },
+        "success": {
+          "created": "User created! Temporary Password: {password}",
+          "added": "User added to organization"
+        },
+        "actions": {
+          "dismiss": "Dismiss",
+          "assign": "Assign to Session"
+        }
+      }
+    },
+    "instructors": {
+      "title": "Assigned Instructors",
+      "subtitle": "List of instructors leading your staff's sessions.",
+      "no_instructors": "No instructors assigned at the moment.",
+      "table": {
+        "name": "Name",
+        "assigned_sessions": "Sessions Led",
+        "contact": "Contact",
+        "status": "Status"
+      }
+    },
+    "requests": {
+      "title": "Training Requests",
+      "subtitle": "Submit your operational training needs to ERNAM.",
+      "request_training": "Request Training",
+      "table": {
+        "standard": "Requested Standard",
+        "period": "Preferred Period",
+        "participants": "Participants",
+        "status": "Status",
+        "created_at": "Request Date"
+      },
+      "modal": {
+        "title": "Request Training Authorization",
+        "select_standard": "Training Standard",
+        "preferred_period": "Preferred Period",
+        "dates": "Preferred Dates",
+        "start_date": "Preferred Start",
+        "end_date": "Preferred End",
+        "pax_count": "Number of Participants",
+        "pax_helper": "This helps ERNAM plan capacity.",
+        "notes": "Optional Note",
+        "cancel": "Cancel",
+        "submit": "Send Request"
+      },
+      "status": {
+        "pending": "Pending Review",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "success": "Your request has been sent to ERNAM for review."
+    },
+    "sessions": {
+      "title": "Active Training Sessions",
+      "subtitle": "Track sessions where your staff is enrolled.",
+      "assign_participant": "ASSIGN PARTICIPANT",
+      "view_details": "SESSION DETAILS",
+      "table": {
+        "code": "Session Code",
+        "standard": "Training",
+        "dates": "Dates",
+        "location": "Location",
+        "instructor": "Instructor",
+        "status": "Status"
+      }
+    },
+    "certificates": {
+      "title": "Certificates & Compliance",
+      "subtitle": "Track certification validity for your team.",
+      "download_pdf": "DOWNLOAD PDF",
+      "filters": {
+        "valid": "Valid",
+        "expiring": "Expiring Soon",
+        "expired": "Expired"
+      },
+      "table": {
+        "recipient": "Recipient",
+        "code": "Cert Ref",
+        "issue_date": "Issued On",
+        "expiry_date": "Expires On",
+        "status": "Status"
+      }
+    },
+    "profile": {
+      "title": "Organization Profile",
+      "subtitle": "Legal information and official contacts.",
+      "identity": "Legal Identity",
+      "contact": "Contact Details",
+      "fields": {
+        "legal_name": "Legal Name",
+        "type": "Organization Type",
+        "ernam_id": "ERNAM Reference ID",
+        "status": "Approval Status",
+        "email": "Contact Email",
+        "phone": "Phone"
+      },
+      "save": "UPDATE CONTACT"
+    }
+  },
+  "Participant": {
+    "backToJourney": "Back to My Journey",
+    "welcome": "Welcome back",
+    "my_training_journey": "My Training Journey",
+    "journeyTitle": "My Training Journey",
+    "traineeId": "Trainee ID",
+    "back": "Back",
+    "hero": {
+      "currentStatus": "Current Status",
+      "progress": "Mission Progress",
+      "viewSession": "View Session",
+      "nextSession": "Next Session: {time}"
+    },
+    "charts": {
+      "activity": "Weekly Activity",
+      "performance": "Performance Metrics",
+      "hours": "Hours Studied",
+      "score": "Avg Support Score"
+    },
+    "codex": {
+      "materials": "Materials",
+      "assessments": "Assessments",
+      "certificate": "Certificate",
+      "messages": "Messages",
+      "unit_files": "Files",
+      "unit_total": "Total",
+      "ready": "Ready",
+      "notIssued": "Not Issued"
+    },
+    "placeholder": {
+      "schedule": "Your training schedule will appear here once sessions are scheduled.",
+      "assessments": "Your assessments and exam results will appear here.",
+      "settings": "Account settings coming soon."
+    },
+    "empty": {
+      "title": "No Active Missions",
+      "message": "You are not enrolled in any active training sessions at the moment."
+    },
+    "menu": {
+      "dashboard": "Dashboard",
+      "session": "Session Details",
+      "session-details": "Session Details",
+      "schedule": "My Schedule",
+      "assessments": "Assessments",
+      "certificates": "Certificates",
+      "settings": "Settings",
+      "my-trainings": "My Trainings",
+      "achievements": "Achievements",
+      "documents": "Resources",
+      "profile": "Profile",
+      "myTrainings": "My Trainings",
+      "myTrainingsDesc": "View your complete training history.",
+      "achievements": "Achievements",
+      "achievementsDesc": "View your earned certificates.",
+      "documents": "Documents",
+      "documentsDesc": "Access your learning resources.",
+      "profile": "Profile",
+      "profileDesc": "Manage your personal information."
+    }
+  },
+  "Session": {
+    "loading": "Loading Session...",
+    "instructor": "Instructor",
+    "status": {
+      "active": "Active",
+      "completed": "Completed"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "schedule": "Schedule",
+      "materials": "Materials",
+      "messages": "Messages"
+    },
+    "overview": {
+      "about": "About this Training",
+      "noDescription": "No description available."
+    },
+    "schedule": {
+      "title": "Session Schedule",
+      "empty": "No activities scheduled yet.",
+      "day": "Day"
+    },
+    "materials": {
+      "title": "Course Materials",
+      "download": "Download",
+      "empty": "No materials uploaded yet."
+    },
+    "messages": {
+      "title": "Classroom Chat",
+      "empty": "No messages yet."
+    }
   }
+}
 }

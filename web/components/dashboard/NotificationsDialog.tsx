@@ -7,22 +7,19 @@ import { supabase } from '@/lib/supabaseClient';
 
 interface NotificationMetadata {
     enrollment_id?: string;
-    user_id?: string;
-    course_id?: string;
     student_name?: string;
     course_name?: string;
-    request_id?: string; // Critical for new RPC workflow
+    request_id?: string;
 }
 
 interface Notification {
     id: string;
-    title: string;
+    // title: string; // Schema only has message. We might infer title from Type.
     message: string;
-    type: 'info' | 'alert' | 'success' | 'priority' | 'enrollment_request' | 'enrollment_approved' | 'enrollment_rejected';
-    is_read: boolean;
+    type: string;
+    read: boolean;
     created_at: string;
-    action_link?: string;
-    metadata?: NotificationMetadata;
+    reference_id?: string;
 }
 
 interface NotificationsDialogProps {
@@ -43,22 +40,11 @@ export default function NotificationsDialog({ isOpen, onClose, userId, onNavigat
         const { data, error } = await supabase
             .from('notifications')
             .select('*')
-            .eq('recipient_id', userId)
+            .eq('user_id', userId)
             .order('created_at', { ascending: false });
 
         if (data) {
-            // Map new schema (payload) to UI interface
-            const mappedNotifications: Notification[] = data.map((n: any) => ({
-                id: n.id,
-                title: n.payload?.title || 'Notification',
-                message: n.payload?.message || '',
-                type: n.type,
-                is_read: n.read || n.is_read || false, // Handle both naming conventions just in case
-                created_at: n.created_at,
-                action_link: n.payload?.action_link,
-                metadata: n.payload // Use payload as metadata source
-            }));
-            setNotifications(mappedNotifications);
+            setNotifications(data as any);
         }
         setLoading(false);
     };
@@ -135,7 +121,7 @@ export default function NotificationsDialog({ isOpen, onClose, userId, onNavigat
         setProcessingAction(notificationId);
 
         try {
-            let rpcName = isApproval ? 'approve_enrollment' : 'reject_enrollment';
+            const rpcName = isApproval ? 'approve_enrollment' : 'reject_enrollment';
             console.log(`Calling RPC: ${rpcName} with request_id: ${requestId}`);
 
             const { data, error } = await supabase.rpc(rpcName, { request_id: requestId });
@@ -244,38 +230,27 @@ export default function NotificationsDialog({ isOpen, onClose, userId, onNavigat
                                                 } ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}
                                         >
                                             <div
-                                                onClick={() => {
-                                                    if (showActions) {
-                                                        toggleExpand(notif.id);
-                                                    } else {
-                                                        markAsRead(notif.id);
-                                                    }
-                                                }}
+                                                onClick={() => markAsRead(notif.id)}
                                                 className="p-4 cursor-pointer"
                                             >
                                                 <div className="flex gap-4">
                                                     <div className="mt-1">{getTypeIcon(notif.type)}</div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex justify-between items-start gap-2">
-                                                            <h3 className={`font-bold text-sm ${notif.is_read ? 'text-foreground' : 'text-primary'}`}>
-                                                                {notif.title}
+                                                            <h3 className={`font-bold text-sm capitalize ${notif.read ? 'text-foreground' : 'text-primary'}`}>
+                                                                {notif.type.replace('_', ' ')}
                                                             </h3>
                                                             <div className="flex items-center gap-2 flex-shrink-0">
                                                                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                                     <Clock className="h-3 w-3" />
                                                                     {new Date(notif.created_at).toLocaleDateString()}
                                                                 </span>
-                                                                {showActions && (
-                                                                    <div className="text-muted-foreground">
-                                                                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         </div>
                                                         <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                                                             {notif.message}
                                                         </p>
-                                                        {!notif.is_read && !isExpanded && (
+                                                        {!notif.read && (
                                                             <div className="mt-2 flex justify-end">
                                                                 <span className="text-[10px] font-bold text-primary uppercase tracking-wider">New</span>
                                                             </div>

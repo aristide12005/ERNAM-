@@ -24,7 +24,8 @@ import {
     X,
     TrendingUp,
     BookOpen,
-    ArrowRight
+    ArrowRight,
+    Building2
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -35,6 +36,7 @@ interface Profile {
     role: string;
     status: string;
     created_at: string;
+    organization?: { name: string };
 }
 
 interface Course {
@@ -62,11 +64,23 @@ export default function UserManagement() {
 
     const fetchProfiles = async () => {
         setLoading(true);
-        let query = supabase.from('profiles').select('id, full_name, email, role, status, created_at').order('created_at', { ascending: false });
+        // Switched from 'profiles' to 'users' to align with new Org Management flow
+        const query = supabase
+            .from('users')
+            .select(`
+                id, 
+                full_name, 
+                email, 
+                role, 
+                status, 
+                created_at,
+                organization:organizations(name)
+            `)
+            .order('created_at', { ascending: false });
 
         const { data, error } = await query;
         if (!error && data) {
-            setProfiles(data);
+            setProfiles(data as any);
         }
         setLoading(false);
     };
@@ -79,16 +93,16 @@ export default function UserManagement() {
 
         if (!channelRef.current) {
             channelRef.current = supabase
-                .channel('profiles-realtime')
+                .channel('users-realtime') // Changed channel name
                 .on(
                     'postgres_changes',
                     {
                         event: '*',
                         schema: 'public',
-                        table: 'profiles'
+                        table: 'users' // Changed table to users
                     },
                     (payload) => {
-                        console.log('Profile change detected:', payload);
+                        console.log('User change detected:', payload);
                         fetchProfiles();
                     }
                 )
@@ -107,7 +121,7 @@ export default function UserManagement() {
         if (action === 'delete') {
             const confirmed = window.confirm(t('confirm_delete_user'));
             if (!confirmed) return;
-            const { error } = await supabase.from('profiles').delete().eq('id', id);
+            const { error } = await supabase.from('users').delete().eq('id', id);
             if (!error) fetchProfiles();
             else alert(t('delete_error') + error.message);
         } else {
@@ -235,6 +249,11 @@ export default function UserManagement() {
                                                         <div className="text-xs text-gray-500 flex items-center gap-1">
                                                             <Mail className="h-3 w-3" /> {p.email}
                                                         </div>
+                                                        {p.organization && (
+                                                            <div className="text-[10px] text-blue-400 font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
+                                                                <Building2 className="h-3 w-3" /> {p.organization.name}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>
