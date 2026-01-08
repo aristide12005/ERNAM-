@@ -38,13 +38,38 @@ export default function MyLearning() {
             setMyCourses(activeCourses);
 
             // Catalog still separate for now or could be added to logic
-            const enrolledIds = activeCourses.map(c => c.courseId);
-            const { data: allCourses } = await supabase
-                .from('courses')
-                .select('*')
-                .eq('course_status', 'published');
+            const enrolledIds = activeCourses.map(c => c.courseId); // Note: courseId mapped to session.id in student.ts.
+            // For catalog we want Standards.
+            // Complex logic: A student enrolls in a Session, but Browse Catalog shows Standards?
+            // For simplicity, let's fetch ACTIVE Sessions (published courses).
 
-            setCatalog(allCourses?.filter(c => !enrolledIds.includes(c.id)) || []);
+            // Fetch available SESSIONS (which represent bookable courses)
+            // Or fetch STANDARDS? If the UI expects "Join", it implies a Session.
+            // Let's fetch Sessions with status 'scheduled' or 'planned'.
+            const { data: allSessions } = await supabase
+                .from('sessions')
+                .select(`
+                    id,
+                    start_date,
+                    training_standard:training_standards (
+                        title, 
+                        description,
+                        details
+                    )
+                `)
+                .in('status', ['planned', 'scheduled', 'confirmed']); // Only show future/open sessions
+
+            // Map to "Course" shape for UI
+            const catalogItems = allSessions?.map((s: any) => ({
+                id: s.id,
+                title_en: s.training_standard?.title,
+                description_en: s.training_standard?.description,
+                thumbnail_url: s.training_standard?.details?.thumbnail_url,
+                duration_hours: s.training_standard?.details?.duration_hours,
+                level: s.training_standard?.details?.level
+            })) || [];
+
+            setCatalog(catalogItems.filter(c => !enrolledIds.includes(c.id)));
         } catch (error) {
             console.error('Error fetching academic data:', error);
         } finally {
@@ -65,7 +90,7 @@ export default function MyLearning() {
                 {
                     event: '*',
                     schema: 'public',
-                    table: 'enrollments',
+                    table: 'session_roster',
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
@@ -245,7 +270,7 @@ function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index, t }:
                         {course?.level || t('default_level')}
                     </div>
                     <h3 className="text-lg font-bold text-white leading-tight group-hover:text-blue-300 transition-colors line-clamp-1 italic underline decoration-blue-500/50 underline-offset-4">
-                        {course?.title}
+                        {course?.title || course?.title_en}
                     </h3>
                 </div>
             </div>

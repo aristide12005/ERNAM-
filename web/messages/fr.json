@@ -110,10 +110,16 @@
             "training_ops": "Opérations Formation",
             "training_content": "Contenu Formation",
             "evaluation": "Évaluation",
-            "learning_resources": "Ressources Pédagogiques"
+            "learning_resources": "Ressources Pédagogiques",
+            "teaching": "Enseignement",
+            "learning": "Apprentissage",
+            "records": "Dossiers",
+            "monitoring": "Surveillance",
+            "management": "Gestion"
         },
         "items": {
             "dashboard": "Tableau de Bord",
+            "overview": "Vue d'ensemble",
             "standards": "Normes & Standards",
             "sessions": "Sessions",
             "instructors": "Instructeurs",
@@ -142,11 +148,11 @@
             "training_requests": "Demandes de Formation",
             "applications": "Candidatures Individuelles",
             "notifications": "Notifications",
-            "my_schedule": "Mon Planning",
-            "documents": "Documents",
             "planned_activities": "Activités Prévues",
-            "assessments": "Évaluations",
-            "my_trainings": "Mes Formations"
+            "session_details": "Détails de Session",
+            "messages": "Messages",
+            "profile_settings": "Profil & Paramètres",
+            "org_profile": "Profil Organisation"
         },
         "role": {
             "ernam_admin": "Admin ERNAM",

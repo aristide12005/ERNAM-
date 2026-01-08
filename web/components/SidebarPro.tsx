@@ -96,89 +96,83 @@ export default function SidebarPro({ isCollapsed = false, toggleCollapse }: Side
             {
                 title: t('sections.overview'),
                 items: [
-                    { label: "Overview", icon: LayoutDashboard, view: "dashboard" }
+                    { label: t('items.overview'), icon: LayoutDashboard, view: "dashboard" }
                 ]
             },
             {
-                title: "Teaching",
+                title: t('sections.teaching'),
                 items: [
-                    { label: "My Sessions", icon: GraduationCap, view: "sessions" },
-                    // Session Workspace is accessed via Sessions usually, but sidebar link requested?
-                    // User list: Overview, My Sessions, Session Workspace, Participants, Assessments...
-                    // "Session Workspace" implies a specific context. I'll add "Active Session" or keep hidden/dynamic.
-                    // Actually user listed "Session Workspace" in the sidebar list. 
-                    // I'll add it but it might need a fallback if no active session. 
-                    // For now, I'll stick to clear navigables.
-                    { label: "Participants", icon: Users, view: "participants" },
-                    { label: "Assessments", icon: ClipboardCheck, view: "assessments" },
-                    { label: "Documents", icon: FileText, view: "documents" },
-                    { label: "Messages", icon: UserCircle, view: "messages" },
+                    { label: t('items.my_sessions'), icon: GraduationCap, view: "sessions" },
+                    { label: t('items.participants'), icon: Users, view: "participants" },
+                    { label: t('items.assessments'), icon: ClipboardCheck, view: "assessments" },
+                    { label: t('items.documents'), icon: FileText, view: "documents" },
+                    { label: t('items.messages'), icon: UserCircle, view: "messages" },
                 ]
             },
             {
-                title: "Account",
+                title: t('sections.account'),
                 items: [
-                    { label: "Profile & Settings", icon: Settings, view: "settings" }
+                    { label: t('items.profile_settings'), icon: Settings, view: "settings" }
                 ]
             }
         ],
         participant: [
             {
-                title: "Overview",
+                title: t('sections.overview'),
                 items: [
-                    { label: "Dashboard", icon: LayoutDashboard, view: "dashboard" }
+                    { label: t('items.dashboard'), icon: LayoutDashboard, view: "dashboard" }
                 ]
             },
             {
-                title: "Learning",
+                title: t('sections.learning'),
                 items: [
-                    { label: "My Trainings", icon: GraduationCap, view: "my-trainings" },
-                    { label: "Session Details", icon: BookOpen, view: "session-details" }, // Maybe conditional
-                    { label: "Schedule", icon: History, view: "schedule" },
-                    { label: "Documents", icon: FileText, view: "documents" },
-                    { label: "Assessments", icon: ClipboardCheck, view: "assessments" },
+                    { label: t('items.my_trainings'), icon: GraduationCap, view: "my-trainings" },
+                    { label: t('items.session_details'), icon: BookOpen, view: "session-details" }, // Maybe conditional
+                    { label: t('items.my_schedule'), icon: History, view: "schedule" },
+                    { label: t('items.documents'), icon: FileText, view: "documents" },
+                    { label: t('items.assessments'), icon: ClipboardCheck, view: "assessments" },
                 ]
             },
             {
-                title: "Records",
+                title: t('sections.records'),
                 items: [
-                    { label: "Certificates", icon: FileBadge, view: "certificates" }
+                    { label: t('items.certificates'), icon: FileBadge, view: "certificates" }
                 ]
             },
             {
-                title: "Account",
+                title: t('sections.account'),
                 items: [
-                    { label: "Profile & Settings", icon: Settings, view: "settings" }
+                    { label: t('items.profile_settings'), icon: Settings, view: "settings" }
                 ]
             }
         ],
         org_admin: [
             {
-                title: "Overview",
+                title: t('sections.overview'),
                 items: [
-                    { label: "Overview", icon: LayoutDashboard, view: "dashboard" }
+                    { label: t('items.overview'), icon: LayoutDashboard, view: "dashboard" }
                 ]
             },
             {
-                title: "Management",
+                title: t('sections.management'),
                 items: [
-                    { label: "Participants", icon: Users, view: "participants" },
-                    { label: "Instructors", icon: GraduationCap, view: "instructors" }, // Nominations
-                    { label: "Training Requests", icon: BookOpen, view: "training-requests" },
+                    { label: t('items.participants'), icon: Users, view: "participants" },
+                    { label: t('items.instructors'), icon: GraduationCap, view: "instructors" }, // Nominations
+                    { label: t('items.training_requests'), icon: BookOpen, view: "training-requests" },
                 ]
             },
             {
-                title: "Monitoring",
+                title: t('sections.monitoring'),
                 items: [
-                    { label: "Sessions", icon: LayoutDashboard, view: "sessions" }, // Monitoring
-                    { label: "Certificates", icon: FileBadge, view: "certificates" },
+                    { label: t('items.sessions'), icon: LayoutDashboard, view: "sessions" }, // Monitoring
+                    { label: t('items.certificates'), icon: FileBadge, view: "certificates" },
                 ]
             },
             {
-                title: "Organization",
+                title: t('sections.organization'),
                 items: [
-                    { label: "Organization Profile", icon: Building2, view: "organization" },
-                    { label: "Settings", icon: Settings, view: "settings" },
+                    { label: t('items.org_profile'), icon: Building2, view: "organization" },
+                    { label: t('items.settings'), icon: Settings, view: "settings" },
                 ]
             }
         ]
@@ -216,8 +210,8 @@ export default function SidebarPro({ isCollapsed = false, toggleCollapse }: Side
     const RESTRICTED_PARTICIPANT_MENU: MenuSection[] = [
         {
             items: [
-                { label: "Profile", icon: UserCircle, view: "profile" }, // Was Settings, user asked for Profile/Notifs. Profile usually maps to settings or profile view.
-                { label: "Settings", icon: Settings, view: "settings" },
+                { label: t('items.profile'), icon: UserCircle, view: "profile" }, // Was Settings, user asked for Profile/Notifs. Profile usually maps to settings or profile view.
+                { label: t('items.settings'), icon: Settings, view: "settings" },
             ]
         }
     ];

@@ -42,6 +42,9 @@ export default async function RootLayout({
   // side is the easiest way to get started
   const messages = await getMessages({ locale });
 
+  // Verification Log
+  console.log(`Current Language: ${locale}`);
+
   return (
     <html lang={locale}>
       <body

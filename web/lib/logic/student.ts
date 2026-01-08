@@ -11,19 +11,19 @@ import { supabase } from '@/lib/supabaseClient';
 // 1. TYPE DEFINITIONS (The "Shape" of Data)
 // ==========================================
 
-export type EnrollmentStatus = 'pending' | 'active' | 'completed' | 'failed';
+export type EnrollmentStatus = 'nominated' | 'approved' | 'attended' | 'failed' | 'certified'; // Aligned with session_roster
 
 export interface StudentProfile {
     id: string;
     fullName: string;
     email: string;
     studentId: string;
-    avatarUrl?: string;
+    avatarUrl?: string; // Not in users table, removed or ignored
     qualifications: string[];
 }
 
 export interface StudentCourse {
-    courseId: string;
+    courseId: string; // This is the SESSION ID
     title: string;
     instructorName: string;
     progress: number;
@@ -46,50 +46,36 @@ export const getStudentDashboard = async (userId: string): Promise<{
     profile: StudentProfile;
     activeCourses: StudentCourse[];
 }> => {
-    // 1. Fetch Profile
+    // 1. Fetch Profile (from users table)
     const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
         .eq('id', userId)
         .single();
 
     if (profileError) throw profileError;
 
-    // 2. Fetch Enrollments with Course data
-    const { data: enrollments, error: enrollError } = await supabase
-        .from('enrollments')
-        .select(`
-      status,
-      courses (
-        id,
-        title_en,
-        description_en,
-        thumbnail_url,
-        duration_hours,
-        level
-      )
-    `)
-        .eq('user_id', userId);
-
-    // 2b. Fetch Pending Requests
-    const { data: requests, error: reqError } = await supabase
-        .from('enrollment_requests')
+    // 2. Fetch Enrollments (from session_roster)
+    // We get both pending ('nominated') and active ('approved', 'attended') here
+    const { data: rosterData, error: rosterError } = await supabase
+        .from('session_roster')
         .select(`
             status,
-            courses (
+            session:sessions (
                 id,
-                title_en,
-                description_en,
-                thumbnail_url,
-                duration_hours,
-                level
+                start_date,
+                end_date,
+                training_standard:training_standards (
+                    title,
+                    description,
+                    details
+                )
             )
         `)
-        .eq('requester_id', userId)
-        .eq('status', 'pending');
+        .eq('user_id', userId);
 
-    if (enrollError) {
-        console.error('Enrollment fetch error:', enrollError);
+    if (rosterError) {
+        console.error('Enrollment fetch error:', rosterError);
         return {
             profile: {
                 id: userId,
@@ -97,67 +83,54 @@ export const getStudentDashboard = async (userId: string): Promise<{
                 email: profileData.email || '',
                 studentId: `ERN-2025-${userId.substring(0, 3).toUpperCase()}`,
                 qualifications: [],
-                avatarUrl: profileData.avatar_url
+                avatarUrl: undefined
             },
             activeCourses: []
         };
     }
 
-    // 3. Fetch instructor names via course_staff
-    const enrolledCourseIds = enrollments?.map((e: any) => e.courses?.id).filter(Boolean) || [];
-    const requestedCourseIds = requests?.map((r: any) => r.courses?.id).filter(Boolean) || [];
-    const allCourseIds = [...new Set([...enrolledCourseIds, ...requestedCourseIds])];
-
+    // 3. Helper to get instructor name (Naive approach: fetch one instructor per session)
+    // In a real app, we might want to batch this or use a view
+    const sessionIds = rosterData?.map((r: any) => r.session?.id).filter(Boolean) || [];
     const instructorMap = new Map();
 
-    if (allCourseIds.length > 0) {
+    if (sessionIds.length > 0) {
         const { data: staffData } = await supabase
-            .from('course_staff')
+            .from('session_instructors')
             .select(`
-                course_id,
-                profiles (full_name)
+                session_id,
+                instructor:users (full_name)
             `)
-            .in('course_id', allCourseIds)
-            .in('role', ['owner', 'trainer', 'instructor']);
+            .in('session_id', sessionIds);
 
         if (staffData) {
             staffData.forEach((s: any) => {
-                if (!instructorMap.has(s.course_id)) {
-                    instructorMap.set(s.course_id, s.profiles?.full_name || 'Staff');
+                if (!instructorMap.has(s.session_id)) {
+                    instructorMap.set(s.session_id, s.instructor?.full_name || 'TBA');
                 }
             });
         }
     }
 
-    // Map Active Enrollments
-    const activeCourses: StudentCourse[] = enrollments?.map((e: any) => ({
-        courseId: e.courses?.id || '',
-        title: e.courses?.title_en || 'Untitled Course',
-        instructorName: instructorMap.get(e.courses?.id) || 'TBA',
-        progress: 0,
-        status: e.status as EnrollmentStatus,
-        thumbnail_url: e.courses?.thumbnail_url,
-        description_en: e.courses?.description_en,
-        level: e.courses?.level || 'Aviation Specialist',
-        duration_hours: e.courses?.duration_hours || 0
-    })) || [];
+    // 4. Map Data to StudentCourse Interface
+    const activeCourses: StudentCourse[] = rosterData?.map((r: any) => {
+        const session = r.session;
+        const standard = session?.training_standard;
+        const details = standard?.details || {};
 
-    // Map Pending Requests (Avoid duplicates if already enrolled)
-    requests?.forEach((r: any) => {
-        if (!activeCourses.find(c => c.courseId === r.courses?.id)) {
-            activeCourses.push({
-                courseId: r.courses?.id || '',
-                title: r.courses?.title_en || 'Untitled Course',
-                instructorName: instructorMap.get(r.courses?.id) || 'TBA',
-                progress: 0,
-                status: 'pending', // Explicitly pending
-                thumbnail_url: r.courses?.thumbnail_url,
-                description_en: r.courses?.description_en,
-                level: r.courses?.level || 'Aviation Specialist',
-                duration_hours: r.courses?.duration_hours || 0
-            });
-        }
-    });
+        return {
+            courseId: session?.id || '',
+            title: standard?.title || 'Untitled Session',
+            instructorName: instructorMap.get(session?.id) || 'TBA',
+            progress: r.status === 'certified' ? 100 : (r.status === 'attended' ? 80 : 0),
+            status: r.status as EnrollmentStatus,
+            nextSessionDate: session?.start_date ? new Date(session.start_date) : undefined,
+            thumbnail_url: details.thumbnail_url || null,
+            description_en: standard?.description,
+            level: details.level || 'Aviation Specialist',
+            duration_hours: details.duration_hours || 0
+        };
+    }) || [];
 
     return {
         profile: {
@@ -166,7 +139,7 @@ export const getStudentDashboard = async (userId: string): Promise<{
             email: profileData.email || '',
             studentId: `ERN-2025-${userId.substring(0, 3).toUpperCase()}`,
             qualifications: [],
-            avatarUrl: profileData.avatar_url
+            avatarUrl: undefined // users table doesn't have avatar_url
         },
         activeCourses
     };
@@ -175,26 +148,26 @@ export const getStudentDashboard = async (userId: string): Promise<{
 /**
  * Logic for a student attempting to join a class.
  */
-export const requestEnrollment = async (userId: string, courseId: string) => {
-    // Check if already requested
+export const requestEnrollment = async (userId: string, sessionId: string) => {
+    // Check if already requested (in session_roster)
     const { data: existing } = await supabase
-        .from('enrollment_requests')
-        .select('id')
-        .eq('course_id', courseId)
-        .eq('requester_id', userId)
-        .eq('status', 'pending')
+        .from('session_roster')
+        .select('id, status')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
         .single();
 
     if (existing) {
-        return { success: false, message: "⚠️ Request already pending approval." };
+        return { success: false, message: `⚠️ You are already in this session (Status: ${existing.status}).` };
     }
 
-    const { error } = await supabase.from('enrollment_requests').insert({
-        requester_id: userId,
-        course_id: courseId,
-        status: 'pending'
+    // Insert into session_roster with status 'nominated'
+    const { error } = await supabase.from('session_roster').insert({
+        user_id: userId,
+        session_id: sessionId,
+        status: 'nominated'
     });
 
     if (error) return { success: false, message: error.message };
-    return { success: true, message: "✅ Request Sent! Awaiting Instructor Approval." };
+    return { success: true, message: "✅ Request Sent! Awaiting Instructor/Admin Approval." };
 };

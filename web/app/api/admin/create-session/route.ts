@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
                 location,
                 start_date,
                 end_date,
-                status: status || 'planned'
+                status: status || 'planned',
+                max_participants: 15 // Default value, should ideally come from body
             })
             .select()
             .single();
