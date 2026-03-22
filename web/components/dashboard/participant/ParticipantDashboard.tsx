@@ -39,10 +39,6 @@ export default function ParticipantDashboard() {
     const activeView = searchParams.get('view') || 'dashboard';
     const sessionId = searchParams.get('sessionId');
 
-    useEffect(() => {
-        if (user) fetchCurrentTraining();
-    }, [user]);
-
     const fetchCurrentTraining = async () => {
         setLoading(true);
         // Fetch the nearest active session for this participant
@@ -102,6 +98,10 @@ export default function ParticipantDashboard() {
         }
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (user) fetchCurrentTraining();
+    }, [user]);
 
     const handleNavigate = (view: string, sId?: string) => {
         let url = `/dashboard?view=${view}`;

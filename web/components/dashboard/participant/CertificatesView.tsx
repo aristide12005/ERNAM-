@@ -26,10 +26,6 @@ export default function CertificatesView() {
     const [certificates, setCertificates] = useState<Certificate[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user?.id) fetchCertificates();
-    }, [user?.id]);
-
     const fetchCertificates = async () => {
         setLoading(true);
         const { data, error } = await supabase
@@ -51,6 +47,10 @@ export default function CertificatesView() {
         }
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (user?.id) fetchCertificates();
+    }, [user?.id]);
 
     return (
         <div className="p-6">

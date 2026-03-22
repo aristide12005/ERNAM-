@@ -20,12 +20,6 @@ export default function OrgProfileView() {
         website: ''
     });
 
-    useEffect(() => {
-        if (profile?.organization_id) {
-            fetchOrg();
-        }
-    }, [profile?.organization_id]);
-
     const fetchOrg = async () => {
         setLoading(true);
         const { data } = await supabase
@@ -44,6 +38,12 @@ export default function OrgProfileView() {
         }
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (profile?.organization_id) {
+            fetchOrg();
+        }
+    }, [profile?.organization_id]);
 
     const handleSave = async () => {
         setSaving(true);

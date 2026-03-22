@@ -80,8 +80,10 @@ export default function StudentResults() {
         const printContent = document.getElementById(`report-card-${examId}`);
         if (printContent) {
             const originalContents = document.body.innerHTML;
+            // eslint-disable-next-line react-hooks/immutability
             document.body.innerHTML = printContent.innerHTML;
             window.print();
+            // eslint-disable-next-line react-hooks/immutability
             document.body.innerHTML = originalContents;
             window.location.reload(); // Reload to restore state (brute force fix for React state loss on body replacement)
         }

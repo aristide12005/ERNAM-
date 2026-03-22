@@ -25,10 +25,6 @@ export default function StaffView() {
     // New Staff Form
     const [newStaff, setNewStaff] = useState({ full_name: '', email: '', phone: '' });
 
-    useEffect(() => {
-        if (user?.id) fetchOrgAndStaff();
-    }, [user?.id]);
-
     const fetchOrgAndStaff = async () => {
         setLoading(true);
         // 1. Find my organization
@@ -52,6 +48,10 @@ export default function StaffView() {
         }
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (user?.id) fetchOrgAndStaff();
+    }, [user?.id]);
 
     const handleAddStaff = async () => {
         if (!orgId) return;
@@ -98,7 +98,7 @@ export default function StaffView() {
                 <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
                     <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900">No Staff Found</h3>
-                    <p className="text-gray-500">Use the "Add Staff Member" button to register your team.</p>
+                    <p className="text-gray-500">Use the &quot;Add Staff Member&quot; button to register your team.</p>
                 </div>
             ) : (
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">

@@ -36,13 +36,6 @@ export default function OrgTrainingRequestsView() {
     const [standards, setStandards] = useState<any[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        if (profile?.organization_id) {
-            fetchRequests();
-            fetchStandards();
-        }
-    }, [profile?.organization_id]);
-
     const fetchRequests = async () => {
         setLoading(true);
         // Assuming 'training_requests' table exists with organization_id
@@ -63,6 +56,13 @@ export default function OrgTrainingRequestsView() {
         const { data } = await supabase.from('training_standards').select('id, title, code').eq('active', true);
         if (data) setStandards(data);
     };
+
+    useEffect(() => {
+        if (profile?.organization_id) {
+            fetchRequests();
+            fetchStandards();
+        }
+    }, [profile?.organization_id]);
 
     const handleSubmit = async () => {
         if (!newRequest.standard_id || !newRequest.preferred_start_date || !newRequest.preferred_end_date) return;

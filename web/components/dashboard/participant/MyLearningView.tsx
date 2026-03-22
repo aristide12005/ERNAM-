@@ -28,10 +28,6 @@ export default function MyLearningView() {
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user?.id) fetchMyLearning();
-    }, [user?.id]);
-
     const fetchMyLearning = async () => {
         setLoading(true);
         const { data, error } = await supabase
@@ -60,6 +56,10 @@ export default function MyLearningView() {
         }
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (user?.id) fetchMyLearning();
+    }, [user?.id]);
 
     return (
         <div className="p-6">

@@ -2,23 +2,24 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Initialize Admin Client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-if (!supabaseUrl || !supabaseKey) {
-    console.error("Missing Supabase credentials in api/org/invite-user");
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-        autoRefreshToken: false,
-        persistSession: false
-    }
-});
-
 export async function POST(req: NextRequest) {
     try {
+        // Initialize Admin Client
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+        if (!supabaseUrl || !supabaseKey) {
+            console.error("Missing Supabase credentials in api/org/invite-user");
+            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+        }
+
+        const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        });
+
         const body = await req.json();
         const { email, fullName, organizationId } = body;
 

@@ -24,12 +24,6 @@ export default function OrgSessionsView() {
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (profile?.organization_id) {
-            fetchSessions();
-        }
-    }, [profile?.organization_id]);
-
     const fetchSessions = async () => {
         setLoading(true);
         try {
@@ -72,6 +66,12 @@ export default function OrgSessionsView() {
         }
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (profile?.organization_id) {
+            fetchSessions();
+        }
+    }, [profile?.organization_id]);
 
     return (
         <div className="space-y-6">

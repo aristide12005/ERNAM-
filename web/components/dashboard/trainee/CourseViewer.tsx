@@ -31,10 +31,6 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
     const [enrollment, setEnrollment] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchCourseData();
-    }, [courseId]);
-
     const fetchCourseData = async () => {
         if (!user) return;
         setLoading(true);
@@ -58,7 +54,7 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
             .maybeSingle();
 
         if (staffData?.profiles) {
-            // @ts-ignore
+            // @ts-expect-error - Types missing for Supabase join resolution
             instructorName = staffData.profiles.full_name || 'TBA';
         }
 
@@ -103,6 +99,10 @@ export default function CourseViewer({ courseId, onBack }: CourseViewerProps) {
 
         setLoading(false);
     };
+
+    useEffect(() => {
+        fetchCourseData();
+    }, [courseId]);
 
     const renderContentItem = (item: any) => {
         const iconClasses = "h-5 w-5 text-blue-500 mr-3";
