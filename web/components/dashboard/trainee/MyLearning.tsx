@@ -17,11 +17,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStudentDashboard, requestEnrollment, StudentCourse } from '@/lib/logic/student';
 import CourseViewer from './CourseViewer';
-import { useTranslations } from 'next-intl';
 
 export default function MyLearning() {
     const { user } = useAuth();
-    const t = useTranslations('TraineeDashboard');
     const [activeTab, setActiveTab] = useState<'my' | 'catalog'>('my');
     const [myCourses, setMyCourses] = useState<any[]>([]);
     const [catalog, setCatalog] = useState<any[]>([]);
@@ -33,19 +31,10 @@ export default function MyLearning() {
         if (!user) return;
         setLoading(true);
         try {
-            // Use logical layer
             const { activeCourses } = await getStudentDashboard(user.id);
             setMyCourses(activeCourses);
 
-            // Catalog still separate for now or could be added to logic
-            const enrolledIds = activeCourses.map(c => c.courseId); // Note: courseId mapped to session.id in student.ts.
-            // For catalog we want Standards.
-            // Complex logic: A student enrolls in a Session, but Browse Catalog shows Standards?
-            // For simplicity, let's fetch ACTIVE Sessions (published courses).
-
-            // Fetch available SESSIONS (which represent bookable courses)
-            // Or fetch STANDARDS? If the UI expects "Join", it implies a Session.
-            // Let's fetch Sessions with status 'scheduled' or 'planned'.
+            const enrolledIds = activeCourses.map(c => c.courseId);
             const { data: allSessions } = await supabase
                 .from('sessions')
                 .select(`
@@ -57,9 +46,8 @@ export default function MyLearning() {
                         details
                     )
                 `)
-                .in('status', ['planned', 'scheduled', 'confirmed']); // Only show future/open sessions
+                .in('status', ['planned', 'scheduled', 'confirmed']);
 
-            // Map to "Course" shape for UI
             const catalogItems = allSessions?.map((s: any) => ({
                 id: s.id,
                 title_en: s.training_standard?.title,
@@ -79,8 +67,6 @@ export default function MyLearning() {
 
     useEffect(() => {
         fetchData();
-
-        // Set up real-time subscription for enrollment updates
         if (!user) return;
 
         const channel = supabase
@@ -94,8 +80,6 @@ export default function MyLearning() {
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log('Enrollment changed:', payload);
-                    // Refresh data when enrollment status changes
                     fetchData();
                 }
             )
@@ -122,7 +106,6 @@ export default function MyLearning() {
         (c.title_en || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // If a course is selected, show the course viewer
     if (selectedCourseId) {
         return <CourseViewer courseId={selectedCourseId} onBack={() => setSelectedCourseId(null)} />;
     }
@@ -136,15 +119,15 @@ export default function MyLearning() {
                         <div className="p-2 bg-blue-600 rounded-xl">
                             <BookOpen className="h-6 w-6 text-white" />
                         </div>
-                        {t('portal_title')}
+                        My Academic Portal
                     </h2>
-                    <p className="text-slate-500 mt-1 font-medium italic">{t('portal_desc')}</p>
+                    <p className="text-slate-500 mt-1 font-medium italic">Access your assigned curriculum, track progress, and explore new training standards.</p>
                 </div>
 
                 <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-auto">
                     {[
-                        { id: 'my', label: t('my_learning') },
-                        { id: 'catalog', label: t('course_catalog') }
+                        { id: 'my', label: "My Active Courses" },
+                        { id: 'catalog', label: "Academic Catalog" }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -164,7 +147,7 @@ export default function MyLearning() {
             <div className="relative group">
                 <input
                     type="text"
-                    placeholder={t('search_placeholder')}
+                    placeholder="Filter courses by title, code or description..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full bg-white border border-slate-100 rounded-3xl py-4 pl-14 pr-6 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all shadow-sm group-hover:shadow-md"
@@ -178,7 +161,7 @@ export default function MyLearning() {
                         <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
                         <Sparkles className="absolute top-0 right-0 h-4 w-4 text-blue-400 animate-pulse" />
                     </div>
-                    <p className="text-slate-900 font-black uppercase tracking-widest text-sm italic">{t('sync_data')}</p>
+                    <p className="text-slate-900 font-black uppercase tracking-widest text-sm italic">Synchronizing Academic Data...</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -191,13 +174,13 @@ export default function MyLearning() {
                                     className="col-span-full py-24 bg-white border-2 border-dashed border-slate-200 rounded-[40px] text-center"
                                 >
                                     <Trophy className="h-16 w-16 text-slate-100 mx-auto mb-6" />
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{t('journey_awaits')}</h3>
-                                    <p className="text-slate-500 mb-8 max-w-sm mx-auto font-medium">{t('no_enrollments')}</p>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Your Training Journey Awaits</h3>
+                                    <p className="text-slate-500 mb-8 max-w-sm mx-auto font-medium">You are not currently enrolled in any active courses. Browse our catalog to start learning.</p>
                                     <button
                                         onClick={() => setActiveTab('catalog')}
                                         className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-900 shadow-2xl shadow-blue-500/30 transition-all active:scale-95"
                                     >
-                                        {t('browse_catalog')}
+                                        Explore Catalog
                                     </button>
                                 </motion.div>
                             ) : (
@@ -209,7 +192,6 @@ export default function MyLearning() {
                                         isEnrolled
                                         onClick={() => course.status === 'active' && setSelectedCourseId(course.courseId)}
                                         index={idx}
-                                        t={t}
                                     />
                                 ))
                             )
@@ -217,7 +199,7 @@ export default function MyLearning() {
                             filteredCatalog.length === 0 ? (
                                 <div className="col-span-full py-24 text-center">
                                     <Search className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-                                    <p className="text-slate-500 font-bold italic">{t('no_matching_courses')}</p>
+                                    <p className="text-slate-500 font-bold italic">No courses match your search criteria.</p>
                                 </div>
                             ) : (
                                 filteredCatalog.map((course, idx) => (
@@ -226,7 +208,6 @@ export default function MyLearning() {
                                         course={course}
                                         onEnroll={() => handleEnroll(course.id)}
                                         index={idx}
-                                        t={t}
                                     />
                                 ))
                             )
@@ -238,7 +219,7 @@ export default function MyLearning() {
     );
 }
 
-function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index, t }: any) {
+function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -267,7 +248,7 @@ function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index, t }:
 
                 <div className="absolute bottom-4 left-6 right-6">
                     <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">
-                        {course?.level || t('default_level')}
+                        {course?.level || "Standard Level"}
                     </div>
                     <h3 className="text-lg font-bold text-white leading-tight group-hover:text-blue-300 transition-colors line-clamp-1 italic underline decoration-blue-500/50 underline-offset-4">
                         {course?.title || course?.title_en}
@@ -277,18 +258,17 @@ function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index, t }:
 
             <div className="p-6 space-y-5 flex-1 flex flex-col">
                 <p className="text-sm text-slate-500 line-clamp-2 font-medium leading-relaxed">
-                    {course?.description_en || t('default_desc')}
+                    {course?.description_en || "No description available for this training standard."}
                 </p>
 
                 <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     <div className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5" />
-                        {course?.duration_hours ? `${course.duration_hours} ${t('hours')}` : t('flexible_duration')}
+                        {course?.duration_hours ? `${course.duration_hours} hours` : "Flexible Duration"}
                     </div>
-                    {/* Module count not currently fetched in list view, using generic label */}
                     <div className="flex items-center gap-1.5 text-blue-600">
                         <CheckCircle className="h-3.5 w-3.5" />
-                        {t('standard_curriculum')}
+                        Standard Curriculum
                     </div>
                 </div>
 
@@ -314,14 +294,14 @@ function CourseCard({ course, status, isEnrolled, onEnroll, onClick, index, t }:
                                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                 }`}
                         >
-                            <Play className="h-3.5 w-3.5" /> {t('continue_training')}
+                            <Play className="h-3.5 w-3.5" /> Resume Course
                         </button>
                     ) : (
                         <button
                             onClick={onEnroll}
                             className="w-full py-4 bg-white border-2 border-slate-100 hover:border-blue-600 text-slate-900 hover:text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 group/btn"
                         >
-                            {t('request_enrollment')} <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                            Join Standard <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
                         </button>
                     )}
                 </div>

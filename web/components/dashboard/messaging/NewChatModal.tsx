@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { X, Search, User, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { useTranslations } from 'next-intl';
 
 interface Profile {
     id: string;
@@ -21,12 +20,10 @@ interface NewChatModalProps {
 }
 
 export default function NewChatModal({ isOpen, onClose, onStartChat, currentUserId }: NewChatModalProps) {
-    const t = useTranslations('Messaging');
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Fetch users on open
     useEffect(() => {
         if (isOpen) {
             fetchUsers();
@@ -36,8 +33,6 @@ export default function NewChatModal({ isOpen, onClose, onStartChat, currentUser
 
     const fetchUsers = async () => {
         setLoading(true);
-        // Fetch all profiles except current user
-        // Optimally, limit this or paginate in a real large app
         const { data, error } = await supabase
             .from('profiles')
             .select('id, full_name, role')
@@ -62,7 +57,7 @@ export default function NewChatModal({ isOpen, onClose, onStartChat, currentUser
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h2 className="text-lg font-bold text-slate-800">{t('new_message')}</h2>
+                    <h2 className="text-lg font-bold text-slate-800">New Message</h2>
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500"
@@ -77,7 +72,7 @@ export default function NewChatModal({ isOpen, onClose, onStartChat, currentUser
                         <Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-400" />
                         <input
                             type="text"
-                            placeholder={t('search_people')}
+                            placeholder="Search people by name or role..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -94,7 +89,7 @@ export default function NewChatModal({ isOpen, onClose, onStartChat, currentUser
                         </div>
                     ) : filteredUsers.length === 0 ? (
                         <div className="text-center py-8 text-slate-500">
-                            {t('no_users_found')}
+                            No users found matching your search
                         </div>
                     ) : (
                         <div className="space-y-1">

@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { Plus, Search, MoreHorizontal, Settings, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CourseCreationWizard from './CourseCreationWizard';
-import { useTranslations } from 'next-intl';
 
 interface Course {
     id: string;
@@ -30,7 +29,6 @@ export default function MyClasses({
     showCreateModal: externalShowModal,
     setShowCreateModal: setExternalShowModal
 }: MyClassesProps) {
-    const t = useTranslations('InstructorDashboard.MyClasses');
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -114,14 +112,14 @@ export default function MyClasses({
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-                    <p className="text-sm text-muted-foreground mt-1">{t('subtitle')}</p>
+                    <h1 className="text-2xl font-bold text-foreground">Instructor Hub</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Manage your training sessions, materials, and student assessments.</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center gap-2"
                 >
-                    <Plus className="h-5 w-5" /> {t('create_new')}
+                    <Plus className="h-5 w-5" /> Create New Session
                 </button>
             </div>
 
@@ -130,7 +128,7 @@ export default function MyClasses({
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <input
                         type="text"
-                        placeholder={t('search_placeholder')}
+                        placeholder="Search by course title or code..."
                         className="w-full bg-background border border-border rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -147,7 +145,7 @@ export default function MyClasses({
             ) : filteredCourses.length === 0 ? (
                 <div className="text-center py-20 bg-card rounded-2xl border border-dashed border-border">
                     <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                    <p className="text-muted-foreground">{t('no_results')}</p>
+                    <p className="text-muted-foreground">No sessions found. Create your first one to get started.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -173,7 +171,7 @@ export default function MyClasses({
                                             }`}
                                     >
                                         {course.course_status === 'published' ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                                        {course.course_status === 'published' ? t('published') : t('draft')}
+                                        {course.course_status === 'published' ? 'Live' : 'Draft'}
                                     </button>
                                 </div>
                             </div>
@@ -190,7 +188,7 @@ export default function MyClasses({
                                             </div>
                                         ))}
                                     </div>
-                                    <span className="text-[10px] font-bold text-muted-foreground">{t('students_count', { count: course.enrollment_count })}</span>
+                                    <span className="text-[10px] font-bold text-muted-foreground">{course.enrollment_count} enrolled students</span>
                                 </div>
                             </div>
 
@@ -198,7 +196,7 @@ export default function MyClasses({
                                 onClick={() => onManageClass(course.id)}
                                 className="w-full bg-secondary hover:bg-muted text-foreground font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 group-hover:bg-primary group-hover:text-primary-foreground"
                             >
-                                <Settings className="h-4 w-4" /> {t('manage_class')}
+                                <Settings className="h-4 w-4" /> Manage Session
                             </button>
                         </motion.div>
                     ))}

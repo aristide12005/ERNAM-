@@ -1,4 +1,4 @@
-export type UserRole = 'participant' | 'instructor' | 'org_admin' | 'ernam_admin' | 'maintainer' | 'developer';
+export type UserRole = 'trainee' | 'trainer' | 'admin' | 'maintainer' | 'developer' | 'instructor' | 'participant' | 'org_admin' | 'ernam_admin';
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface UserProfile {
@@ -10,6 +10,10 @@ export interface UserProfile {
     status: UserStatus;
     organization_id?: string;
     created_at: string;
+    avatar_url?: string;
+    permissions?: Record<string, any>;
+    impersonated_by?: string;
+    last_impersonated_at?: string;
 }
 
 export type SessionStatus = 'planned' | 'scheduled' | 'confirmed' | 'active' | 'in_progress' | 'completed' | 'cancelled' | 'audited';

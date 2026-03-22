@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { useTranslations } from 'next-intl';
 import { ArrowLeft, BookOpen, Download, Calendar, MapPin, User, FileText, Bell, Clock, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -15,8 +14,6 @@ type ParticipantSessionViewProps = {
 type ViewTab = 'overview' | 'schedule' | 'materials' | 'messages';
 
 export default function ParticipantSessionView({ sessionId, onBack }: ParticipantSessionViewProps) {
-    const t = useTranslations('Session');
-    const tp = useTranslations('Participant');
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<ViewTab>('overview');
@@ -84,13 +81,13 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
         }
     };
 
-    if (loading) return <div className="p-12 text-center text-gray-500 animate-pulse">{t('loading')}</div>;
+    if (loading) return <div className="p-12 text-center text-gray-500 animate-pulse">Synchronizing Session Context...</div>;
 
     const tabs = [
-        { id: 'overview', label: t('tabs.overview'), icon: BookOpen },
-        { id: 'schedule', label: t('tabs.schedule'), icon: Calendar },
-        { id: 'materials', label: t('tabs.materials'), icon: FileText },
-        { id: 'messages', label: t('tabs.messages'), icon: Bell },
+        { id: 'overview', label: "Training Overview", icon: BookOpen },
+        { id: 'schedule', label: "Module Schedule", icon: Calendar },
+        { id: 'materials', label: "Course Resources", icon: FileText },
+        { id: 'messages', label: "Studio Alerts", icon: Bell },
     ];
 
     return (
@@ -98,7 +95,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
             {/* Header / Hero */}
             <div className="bg-slate-900 text-white p-8 pb-32">
                 <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 group">
-                    <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> {tp('backToJourney')}
+                    <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to My Training Journey
                 </button>
                 <div className="max-w-4xl mx-auto">
                     <div className="flex items-center gap-3 mb-4">
@@ -106,7 +103,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                             {session?.training_standard?.code || 'TRAINING'}
                         </span>
                         <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider animate-pulse">
-                            {t('status.active')}
+                            IN PROGRESS
                         </span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">{session?.training_standard?.title}</h1>
@@ -122,7 +119,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                         {instructor && (
                             <div className="flex items-center gap-3">
                                 <User className="h-5 w-5 text-emerald-400" />
-                                <span>{t('instructor')}: {instructor.full_name}</span>
+                                <span>Assigned Trainer: {instructor.full_name}</span>
                             </div>
                         )}
                     </div>
@@ -162,20 +159,18 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                     {activeTab === 'overview' && (
                         <div className="space-y-8">
                             <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                                <h3 className="text-xl font-bold text-slate-900 mb-4">{t('overview.about')}</h3>
+                                <h3 className="text-xl font-bold text-slate-900 mb-4">About this Training</h3>
                                 <p className="text-slate-600 leading-relaxed">
-                                    {session?.training_standard?.description || t('overview.noDescription')}
+                                    {session?.training_standard?.description || "No detailed description provided for this session."}
                                 </p>
                             </div>
-
-                            {/* Add more overview content here if needed */}
                         </div>
                     )}
 
                     {activeTab === 'schedule' && (
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-xl font-bold text-slate-900">{t('schedule.title')}</h3>
+                                <h3 className="text-xl font-bold text-slate-900">Detailed Activity Log</h3>
                             </div>
                             <div className="space-y-4">
                                 {activities.length > 0 ? (
@@ -185,7 +180,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                                                 <div className="text-2xl font-bold text-slate-900">
                                                     {activity.day_order || 1}
                                                 </div>
-                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('schedule.day')}</div>
+                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">DAY</div>
                                             </div>
                                             <div className="flex-1 border-l border-slate-100 pl-6">
                                                 <h4 className="font-bold text-lg text-slate-900 mb-2">{activity.title}</h4>
@@ -205,7 +200,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                                 ) : (
                                     <div className="text-center p-12 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
                                         <Calendar className="h-10 w-10 text-slate-300 mx-auto mb-4" />
-                                        <p className="text-slate-500 font-medium">{t('schedule.empty')}</p>
+                                        <p className="text-slate-500 font-medium">The precise activity timeline for this session hasn't been published yet.</p>
                                     </div>
                                 )}
                             </div>
@@ -214,7 +209,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
 
                     {activeTab === 'materials' && (
                         <div className="space-y-6">
-                            <h3 className="text-xl font-bold text-slate-900">{t('materials.title')}</h3>
+                            <h3 className="text-xl font-bold text-slate-900">Resource Library</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {documents.length > 0 ? (
                                     documents.map((doc) => (
@@ -232,7 +227,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                                                         rel="noopener noreferrer"
                                                         className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold text-slate-700 transition-colors flex items-center gap-2"
                                                     >
-                                                        <Download className="h-3 w-3" /> {t('materials.download')}
+                                                        <Download className="h-3 w-3" /> Open Document
                                                     </a>
                                                 </div>
                                             </div>
@@ -241,7 +236,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                                 ) : (
                                     <div className="col-span-full text-center p-12 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
                                         <BookOpen className="h-10 w-10 text-slate-300 mx-auto mb-4" />
-                                        <p className="text-slate-500 font-medium">{t('materials.empty')}</p>
+                                        <p className="text-slate-500 font-medium">No supplementary materials have been uploaded to this studio yet.</p>
                                     </div>
                                 )}
                             </div>
@@ -252,7 +247,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                         <div className="text-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
                             <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center justify-center gap-2">
                                 <Bell className="h-6 w-6 text-blue-500" />
-                                {t('messages.title')}
+                                Recent studio alerts
                             </h3>
 
                             {messages.length > 0 ? (
@@ -281,7 +276,7 @@ export default function ParticipantSessionView({ sessionId, onBack }: Participan
                                     <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
                                         <Bell className="h-8 w-8 text-blue-300" />
                                     </div>
-                                    <p className="text-slate-500 max-w-sm mx-auto">{t('messages.empty')}</p>
+                                    <p className="text-slate-500 max-w-sm mx-auto">Your notification log for this studio is currently empty.</p>
                                 </div>
                             )}
                         </div>

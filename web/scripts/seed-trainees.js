@@ -99,7 +99,7 @@ async function main() {
     const { data: instructors } = await supabase
         .from('users')
         .select('id, full_name')
-        .eq('role', 'instructor')
+        .eq('role', 'trainer')
         .limit(1);
 
     if (instructors && instructors.length > 0) {
@@ -158,7 +158,7 @@ async function main() {
                 .insert({
                     full_name: trainee.full_name,
                     email: trainee.email,
-                    role: 'participant',
+                    role: 'trainee',
                     status: 'approved',
                 })
                 .select('id')

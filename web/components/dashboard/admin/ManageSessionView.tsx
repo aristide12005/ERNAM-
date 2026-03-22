@@ -99,14 +99,14 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
     // --- Fetchers for Dialogs ---
     const fetchAvailableInstructors = async () => {
         const assignedIds = instructors.map(i => i.id);
-        const { data } = await supabase.from('users').select('id, full_name, email').eq('role', 'instructor');
+        const { data } = await supabase.from('users').select('id, full_name, email').eq('role', 'trainer');
         if (data) setAvailableInstructors(data.filter(u => !assignedIds.includes(u.id)));
         setShowAddInstructor(true);
     };
 
     const fetchAvailableParticipants = async () => {
         const enrolledIds = participants.map(p => p.id);
-        const { data } = await supabase.from('users').select('id, full_name, email').eq('role', 'participant');
+        const { data } = await supabase.from('users').select('id, full_name, email').eq('role', 'trainee');
         if (data) setAvailableParticipants(data.filter(u => !enrolledIds.includes(u.id)));
         setShowEnrollParticipant(true);
     };

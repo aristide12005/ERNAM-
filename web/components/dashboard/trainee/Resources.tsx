@@ -119,7 +119,7 @@ export default function Resources() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <button className="flex-1 sm:flex-none px-6 py-3 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2">
+                                    <button className="flex-1 sm:flex-none px-8 py-3.5 bg-gray-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 hover:-translate-y-0.5 active:scale-95 shadow-lg shadow-black/5">
                                         <Download className="h-4 w-4" /> VIEW ASSET
                                     </button>
                                     <button className="p-3 text-slate-400 hover:bg-slate-50 rounded-xl">

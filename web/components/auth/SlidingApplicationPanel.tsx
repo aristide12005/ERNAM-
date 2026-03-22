@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Building2, User, ChevronRight, CheckCircle2, ArrowLeft, Loader2, UploadCloud } from 'lucide-react';
 
 type Step = 'role' | 'details' | 'confirmation';
-type AppType = 'organization' | 'instructor' | 'developer';
+type AppType = 'trainer' | 'developer';
 
 interface SlidingApplicationPanelProps {
     onBack: () => void;
@@ -58,12 +58,10 @@ export default function SlidingApplicationPanel({ onBack }: SlidingApplicationPa
         // DB Insert for regular applications
         const { error } = await supabase.from('applications').insert([{
             application_type: appType,
-            organization_name: appType === 'organization' ? formData.name : undefined,
             details: {
-                full_name: appType === 'instructor' ? formData.name : undefined,
+                full_name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
-                org_type: appType === 'organization' ? formData.orgType : undefined,
                 message: formData.notes
             },
             status: 'pending'
@@ -106,25 +104,11 @@ export default function SlidingApplicationPanel({ onBack }: SlidingApplicationPa
                         className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full"
                     >
                         <h2 className="text-3xl md:text-4xl font-black mb-2">Join the Network</h2>
-                        <p className="text-gray-500 mb-8">Select your entity type to begin the application process.</p>
+                        <p className="text-gray-500 mb-8">Select your role type to begin the application process.</p>
 
                         <div className="grid gap-4">
                             <button
-                                onClick={() => { setAppType('organization'); setStep('details'); }}
-                                className="group relative overflow-hidden p-6 rounded-2xl border-2 border-gray-100 dark:border-white/5 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all text-left"
-                            >
-                                <div className="absolute right-0 top-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500">
-                                    <ChevronRight className="h-6 w-6" />
-                                </div>
-                                <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-xl flex items-center justify-center mb-4">
-                                    <Building2 className="h-6 w-6" />
-                                </div>
-                                <h3 className="text-xl font-bold mb-1">Organization</h3>
-                                <p className="text-sm text-gray-500">For Airlines, Airports, and Government Bodies wishing to train staff.</p>
-                            </button>
-
-                            <button
-                                onClick={() => { setAppType('instructor'); setStep('details'); }}
+                                onClick={() => { setAppType('trainer'); setStep('details'); }}
                                 className="group relative overflow-hidden p-6 rounded-2xl border-2 border-gray-100 dark:border-white/5 hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-500/5 transition-all text-left"
                             >
                                 <div className="absolute right-0 top-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500">
@@ -133,7 +117,7 @@ export default function SlidingApplicationPanel({ onBack }: SlidingApplicationPa
                                 <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900/20 text-purple-600 rounded-xl flex items-center justify-center mb-4">
                                     <User className="h-6 w-6" />
                                 </div>
-                                <h3 className="text-xl font-bold mb-1">Instructor</h3>
+                                <h3 className="text-xl font-bold mb-1">Trainer</h3>
                                 <p className="text-sm text-gray-500">For qualified experts applying to teach certified training standards.</p>
                             </button>
 
@@ -165,20 +149,20 @@ export default function SlidingApplicationPanel({ onBack }: SlidingApplicationPa
                         className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full"
                     >
                         <h2 className="text-3xl font-black mb-2">
-                            {appType === 'organization' ? 'Organization Details' : 'Instructor Profile'}
+                            {appType === 'trainer' ? 'Trainer Profile' : 'Developer Admin'}
                         </h2>
                         <p className="text-gray-500 mb-6">Please provide your official contact information.</p>
 
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs font-bold uppercase text-gray-400">
-                                    {appType === 'organization' ? 'Organization Name' : 'Full Legal Name'}
+                                    Full Legal Name
                                 </label>
                                 <input
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
-                                    placeholder={appType === 'organization' ? "e.g. Acme Airways" : "e.g. Capt. Sarah Connor"}
+                                    placeholder="e.g. Capt. Sarah Connor"
                                 />
                             </div>
 
@@ -202,23 +186,6 @@ export default function SlidingApplicationPanel({ onBack }: SlidingApplicationPa
                                     />
                                 </div>
                             </div>
-
-                            {appType === 'organization' && (
-                                <div>
-                                    <label className="text-xs font-bold uppercase text-gray-400">Entity Type</label>
-                                    <select
-                                        value={formData.orgType}
-                                        onChange={(e) => setFormData({ ...formData, orgType: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 mt-1 outline-none font-medium"
-                                    >
-                                        <option value="airline">Airline Operator</option>
-                                        <option value="airport">Airport Authority</option>
-                                        <option value="security_company">Security Company</option>
-                                        <option value="government">Government Body</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-                            )}
 
                             {appType === 'developer' && (
                                 <div>
@@ -253,7 +220,7 @@ export default function SlidingApplicationPanel({ onBack }: SlidingApplicationPa
                                         value={formData.notes}
                                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                         className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium h-24 resize-none"
-                                        placeholder="Tell us about your training needs or qualifications..."
+                                        placeholder="Tell us about your training qualifications..."
                                     />
                                 </div>
                             )}

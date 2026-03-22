@@ -23,160 +23,127 @@ import {
     Trophy
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { useTheme } from '@/components/providers/ThemeProvider';
-import { useTranslations } from 'next-intl';
 
 export default function DashboardSidebar({ activeView, setActiveView, collapsed, setCollapsed, onCreateNew }: any) {
     const { signOut, profile } = useAuth();
-    const isTrainee = profile?.role === 'participant';
-    const t = useTranslations('Sidebar');
-    const tCommon = useTranslations('Common');
+    const roleId = (() => {
+        const raw = profile?.role || 'trainee';
+        if (raw === 'instructor') return 'trainer';
+        if (raw === 'participant') return 'trainee';
+        if (raw === 'org_admin' || raw === 'ernam_admin') return 'admin';
+        return raw;
+    })();
+    const isTrainee = roleId === 'trainee';
 
     // Different menu items per role
     // Grouped menu structure
     const getMenuGroups = () => {
-        if (profile?.role === 'participant') {
+        if (profile?.role === 'trainee' || profile?.role === 'participant') {
             return [
                 {
-                    title: t('sections.overview'),
+                    title: "Overview",
                     items: [
-                        { id: 'dashboard', label: t('items.dashboard'), icon: LayoutDashboard },
+                        { id: 'dashboard', label: "Dashboard", icon: LayoutDashboard },
                     ]
                 },
                 {
-                    title: t('sections.my_training'),
+                    title: "My Training",
                     items: [
-                        { id: 'my-trainings', label: t('items.my_trainings'), icon: BookOpen },
-                        { id: 'schedule', label: t('items.my_schedule'), icon: Calendar },
+                        { id: 'courses', label: "Courses", icon: BookOpen },
+                        { id: 'schedule', label: "My Schedule", icon: Calendar },
                     ]
                 },
                 {
-                    title: t('sections.learning_resources'),
+                    title: "Learning Resources",
                     items: [
-                        { id: 'documents', label: t('items.documents'), icon: FolderKanban },
-                        { id: 'assessments', label: t('items.assessments'), icon: FileText },
+                        { id: 'documents', label: "Documents", icon: FolderKanban },
+                        { id: 'assessments', label: "Assessments", icon: FileText },
                     ]
                 },
                 {
-                    title: t('sections.certification'),
+                    title: "Certification",
                     items: [
-                        { id: 'certificates', label: t('items.certificates'), icon: Award },
+                        { id: 'certificates', label: "Certificates", icon: Award },
                     ]
                 },
                 {
-                    title: t('sections.account'),
+                    title: "Account",
                     items: [
-                        { id: 'profile', label: t('items.profile'), icon: UserIcon },
-                        { id: 'settings', label: t('items.settings'), icon: Settings },
+                        { id: 'profile', label: "Profile", icon: UserIcon },
+                        { id: 'settings', label: "Settings", icon: Settings },
                     ]
                 }
             ];
         }
-        if (profile?.role === 'ernam_admin') {
+        if (profile?.role === 'admin' || profile?.role === 'ernam_admin' || profile?.role === 'org_admin') {
             return [
                 {
-                    title: t('sections.overview'),
+                    title: "Overview",
                     items: [
-                        { id: 'dashboard', label: t('items.dashboard'), icon: LayoutDashboard },
+                        { id: 'dashboard', label: "Dashboard", icon: LayoutDashboard },
                     ]
                 },
                 {
-                    title: t('sections.training_ops'),
+                    title: "Training Operations",
                     items: [
-                        { id: 'standards', label: t('items.standards'), icon: ShieldCheck },
-                        { id: 'sessions', label: t('items.sessions'), icon: Calendar },
-                        { id: 'training_requests', label: t('items.training_requests'), icon: MessageSquare },
+                        { id: 'standards', label: "Standards", icon: ShieldCheck },
+                        { id: 'sessions', label: "Sessions", icon: Calendar },
+                        { id: 'training-requests', label: "Training Requests", icon: MessageSquare },
+                        { id: 'exams', label: "Exam Management", icon: FileText },
                     ]
                 },
                 {
-                    title: t('sections.administration'),
+                    title: "Administration",
                     items: [
-                        { id: 'organizations', label: t('items.organizations'), icon: Users },
-                        { id: 'applications', label: t('items.applications'), icon: FileText },
-                        { id: 'users', label: t('items.users'), icon: Users },
-                        { id: 'audit-logs', label: t('items.audit_logs'), icon: ShieldCheck },
+                        { id: 'users', label: "Users", icon: Users },
+                        { id: 'instructors', label: "Instructors", icon: Users },
+                        { id: 'trainees-list', label: "Trainees Directory", icon: Users },
+                        { id: 'audit-logs', label: "Audit Logs", icon: ShieldCheck },
+                        { id: 'finance', label: "Finance", icon: DollarSign },
                     ]
                 },
                 {
-                    title: t('sections.account'),
+                    title: "System",
                     items: [
-                        { id: 'settings', label: t('items.settings'), icon: Settings },
+                        { id: 'settings', label: "System Settings", icon: Settings },
                     ]
                 }
             ];
         }
-        if (profile?.role === 'org_admin') {
-            return [
-                {
-                    title: t('sections.overview'),
-                    items: [
-                        { id: 'dashboard', label: t('items.dashboard'), icon: LayoutDashboard },
-                    ]
-                },
-                {
-                    title: t('sections.org_mgmt'),
-                    items: [
-                        { id: 'organization', label: t('items.my_org'), icon: Users },
-                        { id: 'participants', label: t('items.staff'), icon: Users }, // Staff (Users) mapped to 'participants' view in OrgAdminDashboard
-                    ]
-                },
-                {
-                    title: t('sections.training_ops'),
-                    items: [
-                        { id: 'sessions', label: t('items.training_sessions'), icon: Calendar },
-                        { id: 'training-requests', label: t('items.participants'), icon: FileText }, // Participants (Assignments) mapped to 'training-requests' or similar? Prompt says: "Participants (Assignments)"
-                    ]
-                },
-                {
-                    title: t('sections.certification'),
-                    items: [
-                        { id: 'certificates', label: t('items.certificates'), icon: Award },
-                        { id: 'validity-tracking', label: t('items.validity_tracking'), icon: Clock },
-                    ]
-                },
-                {
-                    title: t('sections.administration'),
-                    items: [
-                        { id: 'notifications', label: t('items.notifications'), icon: MessageSquare },
-                        { id: 'settings', label: t('items.settings'), icon: Settings },
-                    ]
-                }
-            ];
-        }
-        // Instructor (default)
+        // Trainer (default)
         return [
             {
-                title: t('sections.overview'),
+                title: "Overview",
                 items: [
-                    { id: 'dashboard', label: t('items.dashboard'), icon: LayoutDashboard },
-                    { id: 'my-schedule', label: t('items.my_schedule'), icon: Calendar },
+                    { id: 'dashboard', label: "Dashboard", icon: LayoutDashboard },
+                    { id: 'my-schedule', label: "My Schedule", icon: Calendar },
                 ]
             },
             {
-                title: t('sections.training_ops'),
+                title: "Training Operations",
                 items: [
-                    { id: 'sessions', label: t('items.sessions'), icon: Calendar },
-                    { id: 'participants', label: t('items.participants'), icon: Users },
+                    { id: 'sessions', label: "Sessions", icon: Calendar },
+                    { id: 'trainees', label: "Participants", icon: Users },
                 ]
             },
             {
-                title: t('sections.training_content'),
+                title: "Training Content",
                 items: [
-                    { id: 'documents', label: t('items.documents'), icon: FolderKanban },
-                    { id: 'planned-activities', label: t('items.planned_activities'), icon: FileText },
+                    { id: 'documents', label: "Documents", icon: FolderKanban },
+                    { id: 'planned-activities', label: "Planned Activities", icon: FileText },
                 ]
             },
             {
-                title: t('sections.evaluation'),
+                title: "Evaluation",
                 items: [
-                    { id: 'assessments', label: t('items.assessments'), icon: ShieldCheck },
+                    { id: 'assessments', label: "Assessments", icon: ShieldCheck },
                 ]
             },
             {
-                title: t('sections.account'),
+                title: "Account",
                 items: [
-                    { id: 'profile', label: t('items.profile'), icon: UserIcon },
-                    { id: 'settings', label: t('items.settings'), icon: Settings },
+                    { id: 'profile', label: "Profile", icon: UserIcon },
+                    { id: 'settings', label: "Settings", icon: Settings },
                 ]
             }
         ];
@@ -209,7 +176,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
                     {!collapsed && (
                         <div className="flex flex-col">
                             <span className="text-lg font-black tracking-tighter text-white leading-none">ERNAM</span>
-                            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">{t('digital_twin')}</span>
+                            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">Digital Twin</span>
                         </div>
                     )}
                 </div>
@@ -221,7 +188,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
                     className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 ${collapsed ? 'px-0' : 'px-4'}`}
                 >
                     <Plus className="h-5 w-5" />
-                    {!collapsed && <span>{t('create_new')}</span>}
+                    {!collapsed && <span>Create New</span>}
                 </button>
             </div>
 
@@ -272,7 +239,7 @@ export default function DashboardSidebar({ activeView, setActiveView, collapsed,
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors ${collapsed ? 'justify-center' : ''}`}
                 >
                     <LogOut className="h-5 w-5" />
-                    {!collapsed && <span className="font-medium">{tCommon('sign_out')}</span>}
+                    {!collapsed && <span className="font-medium">Sign Out</span>}
                 </button>
             </div>
 

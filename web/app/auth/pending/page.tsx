@@ -3,15 +3,12 @@
 import { useAuth } from '@/components/providers/AuthProvider';
 import { LogOut, RefreshCw, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
 
 export default function PendingPage() {
-    const t = useTranslations('Pending');
     const { profile, refreshProfile, signOut } = useAuth();
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-background p-4 relative overflow-hidden">
-            {/* Background Ambience */}
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-900/10 via-background to-background z-0 pointer-events-none" />
 
             <motion.div
@@ -23,33 +20,32 @@ export default function PendingPage() {
                     <Clock className="h-10 w-10 text-amber-500 animate-pulse" />
                 </div>
 
-                <h1 className="text-2xl font-bold text-white mb-2">{t('title')}</h1>
-                <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
-                    {t.rich('thank_you', { name: profile?.full_name ?? 'Student' })}
+                <h1 className="text-2xl font-bold text-white mb-2">Access Authorization Pending</h1>
+                <div className="text-muted-foreground mb-8 text-sm leading-relaxed">
+                    <p>Thank you, {profile?.full_name ?? 'Student'}.</p>
+                    <p>Your request for the {profile?.role ?? 'Student'} role has been received by ERNAM command.</p>
                     <br />
-                    {t.rich('request_received', { role: profile?.role ?? 'Student' })}
-                    <br /><br />
-                    {t('security_notice')}
-                </p>
+                    <p>For security reasons, an administrator must manually verify your credentials before access is granted to the simulation environment.</p>
+                </div>
 
                 <div className="flex flex-col gap-3">
                     <button
                         onClick={() => refreshProfile()}
                         className="w-full py-3 bg-secondary hover:bg-secondary/80 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 border border-white/5"
                     >
-                        <RefreshCw className="h-4 w-4" /> {t('check_status')}
+                        <RefreshCw className="h-4 w-4" /> Refresh Access Status
                     </button>
 
                     <button
                         onClick={() => signOut()}
                         className="w-full py-3 text-red-400 hover:text-red-300 hover:bg-red-950/30 font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
-                        <LogOut className="h-4 w-4" /> {t('sign_out')}
+                        <LogOut className="h-4 w-4" /> Abort Session
                     </button>
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-white/5 text-xs text-gray-600">
-                    ID: {profile?.id?.slice(0, 8)}... • {t('queue_position')}
+                    ID: {profile?.id?.slice(0, 8)}... • Status: In Verification Queue
                 </div>
             </motion.div>
         </div>

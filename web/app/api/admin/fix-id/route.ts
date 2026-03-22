@@ -53,7 +53,7 @@ export async function GET() {
             .from('users')
             .update({
                 id: adminUser.id,
-                role: 'ernam_admin',
+                role: 'admin',
                 status: 'approved'
             })
             .eq('email', email);

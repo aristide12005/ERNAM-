@@ -1,20 +1,10 @@
 "use client";
 
-import { useTranslations } from 'next-intl';
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import {
-    Activity,
-    Search,
-    Filter,
-    Calendar,
-    Clock,
-    User,
-    ArrowRightCircle,
-    RotateCcw,
-    FileSearch,
-    Download
+import { 
+    Activity, Search, Filter, Calendar, Clock, User, 
+    ArrowRightCircle, RotateCcw, FileSearch, Download, Ghost 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,10 +14,10 @@ interface AuditLog {
     target_resource: string;
     timestamp: string;
     user_id: string;
+    impersonated_by?: string;
 }
 
 export default function AuditLogs() {
-    const t = useTranslations('AuditLogs');
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -54,20 +44,26 @@ export default function AuditLogs() {
     );
 
     return (
-        <div className="space-y-6 pb-12">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                    <Activity className="h-6 w-6 text-indigo-500" /> {t('title')}
-                </h2>
-                <div className="flex gap-2">
+        <div className="p-6 md:p-12 space-y-8 min-h-screen bg-white">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600">
+                            <Activity className="h-6 w-6" />
+                        </div>
+                        System Audit Trail
+                    </h2>
+                    <p className="text-slate-500 font-medium mt-1">Real-time security and administrative logs</p>
+                </div>
+                <div className="flex gap-3">
                     <button
                         onClick={fetchLogs}
-                        className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg border border-white/10 transition-all"
+                        className="p-3 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-900 rounded-2xl border border-slate-100 transition-all active:scale-95"
                     >
-                        <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        <RotateCcw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
                     </button>
-                    <button className="bg-white/5 hover:bg-white/10 text-white text-xs font-bold px-4 py-2 rounded-lg border border-white/10 flex items-center gap-2 transition-all">
-                        <Download className="h-3 w-3" /> {t('export_logs')}
+                    <button className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-black transition-all shadow-xl shadow-slate-900/10 active:scale-95">
+                        <Download className="h-4 w-4" /> Export Data
                     </button>
                 </div>
             </div>
@@ -76,46 +72,44 @@ export default function AuditLogs() {
                 <div className="relative md:col-span-3">
                     <input
                         type="text"
-                        placeholder={t('search_placeholder')}
+                        placeholder="Search by action or resource..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-white"
+                        className="w-full bg-[#F8FAFC] border border-slate-100 rounded-[20px] py-4 pl-14 pr-6 text-sm font-bold tracking-tight focus:outline-none focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder:text-slate-300 shadow-sm"
                     />
-                    <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-500" />
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
                 </div>
-                <button className="bg-[#1A1A1A] border border-white/10 rounded-xl px-4 flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <Filter className="h-4 w-4" /> {t('filter_range')}
+                <button className="bg-white border border-slate-100 rounded-[20px] px-6 flex items-center justify-center gap-2 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                    <Filter className="h-4 w-4" /> Filter Range
                 </button>
             </div>
 
-            <div className="bg-[#141414] border border-white/5 rounded-2xl overflow-hidden min-h-[500px]">
+            <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <table className="w-full text-left text-sm border-collapse">
                         <thead>
-                            <tr className="bg-white/5 text-gray-500 uppercase text-[10px] font-black tracking-widest border-b border-white/5">
-                                <th className="px-6 py-4">{t('table.event_time')}</th>
-                                <th className="px-6 py-4">{t('table.actor')}</th>
-                                <th className="px-6 py-4">{t('table.action')}</th>
-                                <th className="px-6 py-4">{t('table.resource_id')}</th>
+                            <tr className="bg-slate-50/50 text-[#8E9296] text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                                <th className="px-8 py-5 font-black uppercase tracking-widest">Timestamp</th>
+                                <th className="px-8 py-5 font-black uppercase tracking-widest">Actor</th>
+                                <th className="px-8 py-5 font-black uppercase tracking-widest">Action</th>
+                                <th className="px-8 py-5 font-black uppercase tracking-widest">Context</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
-                            <AnimatePresence>
+                        <tbody className="divide-y divide-slate-50">
+                            <AnimatePresence mode="wait">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-20 text-center">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <Clock className="h-8 w-8 text-indigo-500 animate-pulse" />
-                                                <p className="text-gray-500 italic">{t('states.streaming')}</p>
-                                            </div>
+                                        <td colSpan={4} className="px-8 py-24 text-center">
+                                            <RotateCcw className="h-10 w-10 text-blue-600 animate-spin mx-auto mb-4" />
+                                            <p className="text-slate-400 font-black text-xs uppercase tracking-[0.2em]">Synchronizing Logs...</p>
                                         </td>
                                     </tr>
                                 ) : filteredLogs.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-20 text-center">
-                                            <div className="flex flex-col items-center gap-2 text-gray-500">
-                                                <FileSearch className="h-10 w-10 opacity-20" />
-                                                <p className="italic">{t('states.no_events')}</p>
+                                        <td colSpan={4} className="px-8 py-24 text-center">
+                                            <div className="flex flex-col items-center gap-3 text-slate-300">
+                                                <FileSearch className="h-12 w-12 opacity-20" />
+                                                <p className="font-black text-xs uppercase tracking-widest italic italic">No matching activities found</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -123,30 +117,42 @@ export default function AuditLogs() {
                                     filteredLogs.map((log) => (
                                         <motion.tr
                                             key={log.id}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            className="hover:bg-white/5 transition-colors group border-l-2 border-transparent hover:border-indigo-500"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className="hover:bg-slate-50/50 transition-colors group"
                                         >
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span className="text-white font-mono text-xs">{new Date(log.timestamp).toLocaleDateString()}</span>
-                                                    <span className="text-[10px] text-gray-500 font-mono italic">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-3">
+                                                    <Clock className="h-4 w-4 text-slate-300" />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-slate-900 font-bold text-xs">{new Date(log.timestamp).toLocaleDateString()}</span>
+                                                        <span className="text-[10px] text-slate-400 font-medium italic">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2 text-gray-300">
-                                                    <User className="h-3 w-3 text-gray-500" />
-                                                    <span className="text-xs uppercase font-bold tracking-tighter">{t('system_internal')}</span>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">
+                                                        {log.impersonated_by ? <Ghost className="h-4 w-4 text-blue-600" /> : <User className="h-4 w-4" />}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs font-black text-slate-900 uppercase tracking-tight">System Account</div>
+                                                        {log.impersonated_by && (
+                                                            <div className="text-[9px] font-black text-blue-600 uppercase tracking-widest mt-0.5 whitespace-nowrap">
+                                                                ACT AS SESSION
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <ArrowRightCircle className="h-4 w-4 text-emerald-500" />
-                                                    <span className="text-white font-bold">{log.action}</span>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                    <span className="text-slate-900 font-bold text-sm">{log.action}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <code className="bg-black/40 text-gray-400 px-2 py-1 rounded text-[10px] border border-white/5">
+                                            <td className="px-8 py-6">
+                                                <code className="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-xl text-[10px] font-bold border border-slate-200/50">
                                                     {log.target_resource}
                                                 </code>
                                             </td>

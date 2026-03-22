@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import {
     Search,
@@ -27,7 +26,6 @@ type TrainingStandard = {
 };
 
 export default function StandardsView() {
-    const t = useTranslations('AdminDashboard.Standards');
     const [standards, setStandards] = useState<TrainingStandard[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -85,7 +83,7 @@ export default function StandardsView() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                        {t('title')}
+                        Training Standards
                     </h1>
                     <p className="text-muted-foreground text-sm">
                         Manage course templates, validity periods, and requirements.
@@ -97,7 +95,7 @@ export default function StandardsView() {
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all font-medium text-sm"
                 >
                     <Plus className="w-4 h-4" />
-                    {t('create_button')}
+                    Create Standard
                 </button>
             </div>
 
@@ -106,7 +104,7 @@ export default function StandardsView() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                     type="text"
-                    placeholder={t('search_placeholder')}
+                    placeholder="Search standards..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -119,11 +117,11 @@ export default function StandardsView() {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-muted/30 text-muted-foreground uppercase tracking-wider text-xs font-semibold border-b border-border">
                             <tr>
-                                <th className="px-6 py-4">{t('table.code')}</th>
-                                <th className="px-6 py-4">{t('table.title')}</th>
-                                <th className="px-6 py-4">{t('table.validity')}</th>
-                                <th className="px-6 py-4">{t('table.status')}</th>
-                                <th className="px-6 py-4 text-right">{t('table.actions')}</th>
+                                <th className="px-6 py-4">Code</th>
+                                <th className="px-6 py-4">Title</th>
+                                <th className="px-6 py-4">Validity</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { X, Save, AlertCircle, Loader2 } from "lucide-react";
 
@@ -13,7 +12,6 @@ type StandardFormModalProps = {
 };
 
 export default function StandardFormModal({ isOpen, onClose, onSuccess, standardToEdit }: StandardFormModalProps) {
-    const t = useTranslations('AdminDashboard.Standards.form');
 
     // Form State
     const [formData, setFormData] = useState({
@@ -70,7 +68,7 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
                     // Ignore RLS errors on count, let API handle it
                     console.warn("Pre-check failed, proceeding to API", countError);
                 } else if (count && count > 0) {
-                    setError(t('error_code_exists'));
+                    setError("This code already exists.");
                     setLoading(false);
                     return;
                 }
@@ -134,7 +132,7 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-gray-50/50 dark:bg-muted/10">
                     <h2 className="text-lg font-bold text-foreground">
-                        {standardToEdit ? t('edit_title') : t('create_title')}
+                        {standardToEdit ? "Edit Standard" : "Create New Standard"}
                     </h2>
                     <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
                         <X className="w-5 h-5" />
@@ -153,12 +151,12 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
 
                     {/* Code */}
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">{t('code_label')}</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Standard Code</label>
                         <input
                             required
                             type="text"
                             className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase font-mono tracking-widest"
-                            placeholder={t('code_placeholder')}
+                            placeholder="e.g. B737-NG-T1"
                             value={formData.code}
                             onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                         />
@@ -166,7 +164,7 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
 
                     {/* Title */}
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">{t('title_label')}</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Title / Course Name</label>
                         <input
                             required
                             type="text"
@@ -178,7 +176,7 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
 
                     {/* Validity - Now Single Column */}
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">{t('validity_label')}</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Validity (Months)</label>
                         <input
                             type="number"
                             min="0"
@@ -191,7 +189,7 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
 
                     {/* Description */}
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">{t('desc_label')}</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Description</label>
                         <textarea
                             rows={3}
                             className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none text-sm"
@@ -206,9 +204,9 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
                             onClick={() => setFormData({ ...formData, active: !formData.active })}
                             className={`w-11 h-6 rounded-full flex items-center px-0.5 cursor-pointer transition-colors ${formData.active ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}
                         >
-                            <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${formData.active ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+                            <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${formData.active ? 'translate-x-5' : 'translate-x-0'}`} />
                         </div>
-                        <span className="text-sm font-medium text-foreground">{t('active_label')}</span>
+                        <span className="text-sm font-medium text-foreground">Active</span>
                     </div>
 
                 </form>
@@ -220,7 +218,7 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
                         className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                         disabled={loading}
                     >
-                        {t('cancel')}
+                        Cancel
                     </button>
                     <button
                         onClick={handleSubmit}
@@ -228,7 +226,7 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
                         className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {t('save')}
+                        Save Standard
                     </button>
                 </div>
             </div>

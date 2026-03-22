@@ -9,17 +9,23 @@ import { useRouter, usePathname } from 'next/navigation';
 interface AuthContextType {
     user: User | null;
     profile: UserProfile | null;
+    impersonator: UserProfile | null;
     loading: boolean;
     signOut: () => Promise<void>;
     refreshProfile: () => Promise<void>;
+    startImpersonation: (target: UserProfile) => void;
+    stopImpersonation: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
     profile: null,
+    impersonator: null,
     loading: true,
     signOut: async () => { },
     refreshProfile: async () => { },
+    startImpersonation: () => { },
+    stopImpersonation: () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -27,11 +33,40 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [impersonator, setImpersonator] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
 
-    const fetchProfile = async (userId: string) => {
+    // Load impersonation state from session storage on mount
+    useEffect(() => {
+        const saved = sessionStorage.getItem('ernam_impersonator');
+        const savedTarget = sessionStorage.getItem('ernam_impersonated_user');
+        if (saved && savedTarget) {
+            setImpersonator(JSON.parse(saved));
+            setProfile(JSON.parse(savedTarget));
+        }
+    }, []);
+
+    const startImpersonation = (target: UserProfile) => {
+        if (!profile) return;
+        sessionStorage.setItem('ernam_impersonator', JSON.stringify(profile));
+        sessionStorage.setItem('ernam_impersonated_user', JSON.stringify(target));
+        setImpersonator(profile);
+        setProfile(target);
+        router.push('/dashboard');
+    };
+
+    const stopImpersonation = () => {
+        if (!impersonator) return;
+        sessionStorage.removeItem('ernam_impersonator');
+        sessionStorage.removeItem('ernam_impersonated_user');
+        setProfile(impersonator);
+        setImpersonator(null);
+        router.push('/dashboard');
+    };
+
+    const fetchProfile = async (userId: string, retries = 1) => {
         try {
             const { data, error } = await supabase
                 .from('users')
@@ -41,11 +76,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (error) {
                 console.error('Error fetching profile:', error);
+                if (retries > 0) {
+                    console.log(`Retrying profile fetch in 2s... (${retries} left)`);
+                    await new Promise(r => setTimeout(r, 2000));
+                    return fetchProfile(userId, retries - 1);
+                }
             } else {
                 setProfile(data as UserProfile);
             }
         } catch (err) {
             console.error('Unexpected error fetching profile:', err);
+            if (retries > 0) {
+                await new Promise(r => setTimeout(r, 2000));
+                return fetchProfile(userId, retries - 1);
+            }
         }
     };
 
@@ -61,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // Add timeout to prevent hanging if Supabase is unreachable
                 const sessionPromise = supabase.auth.getSession();
                 const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Auth timeout')), 8000)
+                    setTimeout(() => reject(new Error('Auth timeout')), 15000)
                 );
 
                 const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
@@ -143,7 +187,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
+        <AuthContext.Provider value={{
+            user,
+            profile,
+            impersonator,
+            loading,
+            signOut,
+            refreshProfile,
+            startImpersonation,
+            stopImpersonation
+        }}>
             {!loading && children}
             {loading && (
                 <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden relative">

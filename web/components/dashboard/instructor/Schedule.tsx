@@ -14,7 +14,7 @@ import {
     MoreVertical
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslations, useFormatter } from 'next-intl';
+import { format } from 'date-fns';
 
 interface Todo {
     id: string;
@@ -33,8 +33,6 @@ interface Event {
 }
 
 export default function Schedule({ userId }: { userId: string }) {
-    const t = useTranslations('InstructorDashboard');
-    const format = useFormatter();
     const [todos, setTodos] = useState<Todo[]>([]);
     const [events, setEvents] = useState<Event[]>([]);
     const [newTodo, setNewTodo] = useState('');
@@ -91,15 +89,15 @@ export default function Schedule({ userId }: { userId: string }) {
                 <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
                     <div className="flex justify-between items-center mb-8">
                         <div>
-                            <h2 className="text-xl font-bold text-foreground">{t('calendar_title')}</h2>
-                            <p className="text-sm text-muted-foreground">{t('calendar_desc')}</p>
+                            <h2 className="text-xl font-bold text-foreground">Training Calendar</h2>
+                            <p className="text-sm text-muted-foreground">View and manage your scheduled sessions and exams.</p>
                         </div>
                         <div className="flex gap-2">
                             <button className="p-2 hover:bg-muted rounded-lg border border-border transition-colors">
                                 <ChevronLeft className="h-4 w-4" />
                             </button>
                             <button className="px-4 py-2 border border-border rounded-lg text-sm font-bold text-foreground">
-                                {t('today')}
+                                Today
                             </button>
                             <button className="p-2 hover:bg-muted rounded-lg border border-border transition-colors">
                                 <ChevronRight className="h-4 w-4" />
@@ -111,14 +109,14 @@ export default function Schedule({ userId }: { userId: string }) {
                         {events.length === 0 ? (
                             <div className="py-20 text-center border-2 border-dashed border-border rounded-xl opacity-40">
                                 <CalendarIcon className="h-12 w-12 mx-auto mb-3" />
-                                <p>{t('no_events')}</p>
+                                <p>No events scheduled for this period.</p>
                             </div>
                         ) : (
                             events.map(event => (
                                 <div key={event.id} className="flex gap-4 p-4 hover:bg-muted/50 rounded-xl border border-transparent hover:border-border transition-all">
                                     <div className="w-16 h-16 bg-primary/10 rounded-xl flex flex-col items-center justify-center text-primary">
-                                        <span className="text-[10px] font-bold uppercase">{format.dateTime(new Date(event.start_time), { month: 'short' })}</span>
-                                        <span className="text-xl font-bold">{format.dateTime(new Date(event.start_time), { day: 'numeric' })}</span>
+                                        <span className="text-[10px] font-bold uppercase">{format(new Date(event.start_time), 'MMM')}</span>
+                                        <span className="text-xl font-bold">{format(new Date(event.start_time), 'd')}</span>
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between">
@@ -130,7 +128,7 @@ export default function Schedule({ userId }: { userId: string }) {
                                         <div className="flex items-center gap-4 mt-2">
                                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                 <Clock className="h-3.5 w-3.5" />
-                                                {format.dateTime(new Date(event.start_time), { hour: '2-digit', minute: '2-digit' })} - {format.dateTime(new Date(event.end_time), { hour: '2-digit', minute: '2-digit' })}
+                                                {format(new Date(event.start_time), 'HH:mm')} - {format(new Date(event.end_time), 'HH:mm')}
                                             </div>
                                             {event.location && (
                                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -152,16 +150,16 @@ export default function Schedule({ userId }: { userId: string }) {
             <div className="lg:col-span-1 space-y-6">
                 <div className="bg-card border border-border rounded-2xl p-6 shadow-sm h-fit">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-lg font-bold text-foreground">{t('personal_tasks')}</h2>
+                        <h2 className="text-lg font-bold text-foreground">Personal Tasks</h2>
                         <span className="text-[10px] font-bold bg-primary/20 text-primary px-2 py-1 rounded-full uppercase">
-                            {todos.filter(t => !t.is_completed).length} {t('remaining')}
+                            {todos.filter(t => !t.is_completed).length} remaining
                         </span>
                     </div>
 
                     <div className="flex gap-2 mb-6">
                         <input
                             type="text"
-                            placeholder={t('add_task')}
+                            placeholder="Add a new task..."
                             className="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                             value={newTodo}
                             onChange={(e) => setNewTodo(e.target.value)}
@@ -202,7 +200,7 @@ export default function Schedule({ userId }: { userId: string }) {
                         {todos.length === 0 && (
                             <div className="text-center py-10 opacity-30">
                                 <Plus className="h-8 w-8 mx-auto mb-2" />
-                                <p className="text-xs">{t('no_tasks')}</p>
+                                <p className="text-xs">No tasks yet. Add one to stay organized!</p>
                             </div>
                         )}
                     </div>
@@ -210,15 +208,15 @@ export default function Schedule({ userId }: { userId: string }) {
 
                 {/* Quick Shortcuts */}
                 <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6">
-                    <h3 className="text-sm font-bold text-primary mb-4 uppercase tracking-widest">{t('instructor_tips')}</h3>
+                    <h3 className="text-sm font-bold text-primary mb-4 uppercase tracking-widest">Instructor Tips</h3>
                     <ul className="space-y-3">
                         <li className="flex gap-3 text-xs text-muted-foreground leading-relaxed">
                             <div className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-bold">1</div>
-                            {t('tip_1')}
+                            Check your session materials 24h before the start.
                         </li>
                         <li className="flex gap-3 text-xs text-muted-foreground leading-relaxed">
                             <div className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-bold">2</div>
-                            {t('tip_2')}
+                            Mark attendance at the beginning of each session.
                         </li>
                     </ul>
                 </div>

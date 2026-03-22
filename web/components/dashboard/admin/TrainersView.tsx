@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useTranslations } from 'next-intl';
 import { Search, UserCheck, Shield, BookOpen, MoreHorizontal, Mail } from 'lucide-react';
 
 type Instructor = {
@@ -15,8 +14,7 @@ type Instructor = {
     specialization?: string;
 };
 
-export default function InstructorsView() {
-    const t = useTranslations('InstructorsView');
+export default function TrainersView() {
     const [instructors, setInstructors] = useState<Instructor[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +38,7 @@ export default function InstructorsView() {
         const { data, error } = await supabase
             .from('users')
             .select('*')
-            .eq('role', 'instructor')
+            .eq('role', 'trainer')
             .order('full_name', { ascending: true });
 
         if (!error && data) setInstructors(data as any);
@@ -59,7 +57,7 @@ export default function InstructorsView() {
                     email: newInstructor.email,
                     password: newInstructor.password,
                     fullName: newInstructor.fullName,
-                    role: 'instructor'
+                    role: 'trainer'
                     // Specialization is not standard in createUser, would need profile update. 
                     // For now, let's just create the user. Specialized view can edit later.
                 })
@@ -127,10 +125,10 @@ export default function InstructorsView() {
                 <div>
                     <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                         <Shield className="text-blue-500" />
-                        {t('title')}
+                        Instructor Hub
                     </h1>
                     <p className="text-gray-400 text-sm mt-1">
-                        {t('subtitle')}
+                        Manage qualified trainers and assign session leads
                     </p>
                 </div>
 
@@ -139,7 +137,7 @@ export default function InstructorsView() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                         <input
                             type="text"
-                            placeholder={t('search_placeholder')}
+                            placeholder="Search instructors..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full bg-[#141414] border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
@@ -161,7 +159,7 @@ export default function InstructorsView() {
             ) : filtered.length === 0 ? (
                 <div className="text-center py-20 bg-[#141414] rounded-xl border border-white/5">
                     <UserCheck className="h-12 w-12 text-gray-700 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-300">{t('no_results')}</h3>
+                    <h3 className="text-lg font-medium text-gray-300">No instructors found</h3>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -188,7 +186,7 @@ export default function InstructorsView() {
                                 <button
                                     onClick={() => setViewProfileInstructor(inst)}
                                     className="flex-1 bg-white/5 hover:bg-white/10 text-white py-2 rounded-lg text-xs font-bold transition-colors">
-                                    {t('view_profile')}
+                                    View Profile
                                 </button>
                                 <button
                                     onClick={() => openAssignModal(inst)}

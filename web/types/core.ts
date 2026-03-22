@@ -1,4 +1,4 @@
-export type UserRole = 'participant' | 'instructor' | 'org_admin' | 'ernam_admin';
+export type UserRole = 'trainee' | 'trainer' | 'admin';
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface UserProfile {
@@ -9,6 +9,7 @@ export interface UserProfile {
     role: UserRole;
     status: UserStatus;
     created_at: string;
+    avatar_url?: string;
 }
 
 export interface Organization {

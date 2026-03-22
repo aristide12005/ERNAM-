@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { supabase } from "@/lib/supabaseClient";
 import {
@@ -15,7 +14,8 @@ import {
     Clock,
     CheckCircle,
     AlertCircle,
-    TrendingUp
+    TrendingUp,
+    MoreVertical
 } from "lucide-react";
 import {
     BarChart,
@@ -29,6 +29,7 @@ import {
     Pie,
     Cell
 } from "recharts";
+import { cn } from "@/lib/utils";
 
 // --- Types ---
 type KpiStats = {
@@ -66,9 +67,7 @@ const PIE_DATA = [
 const COLORS = ['#1D4ED8', '#93C5FD']; // Blue-600, Blue-300
 
 export default function ErnamAdminOverview() {
-    const t = useTranslations('AdminDashboard');
     const { profile } = useAuth();
-    // const supabase = createClient(); // REPLACED: using singleton imported above
 
     const [stats, setStats] = useState<KpiStats>({
         activeSessions: 0,
@@ -97,7 +96,7 @@ export default function ErnamAdminOverview() {
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'planned');
 
-            // 2. Applications
+            // 2. Applications (Trainer applications)
             const { count: pendingApps } = await supabase
                 .from('applications')
                 .select('*', { count: 'exact', head: true })
@@ -109,11 +108,11 @@ export default function ErnamAdminOverview() {
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'valid'); // In real app, filter by date < NOW() + 90
 
-            // 4. Participants
+            // 4. Trainees
             const { count: partCount } = await supabase
-                .from('users')
+                .from('profiles')
                 .select('*', { count: 'exact', head: true })
-                .eq('role', 'participant');
+                .eq('role', 'trainee');
 
             setStats({
                 activeSessions: activeCount || 0,
@@ -157,204 +156,175 @@ export default function ErnamAdminOverview() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50/50 dark:bg-background p-8 space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-500">
 
-            {/* 1. Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-                        {t('welcome', { name: profile?.full_name || 'Admin' })}
-                    </h1>
-                    <p className="text-muted-foreground mt-1 text-sm font-medium">
-                        {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    </p>
-                </div>
-
-                {/* 7. Quick Actions (Floating Top Right in Design) */}
-                <div className="flex gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all text-sm font-medium">
-                        <Plus className="w-4 h-4" />
-                        {t('quick_actions.create_standard')}
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-card border border-border hover:bg-gray-50 dark:hover:bg-accent text-foreground rounded-lg shadow-sm transition-all text-sm font-medium">
-                        <Calendar className="w-4 h-4 text-gray-500" />
-                        {t('quick_actions.schedule_session')}
-                    </button>
-                </div>
-            </div>
-
-            {/* 4. KPI Cards Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                <KpiCard
-                    title={t('kpi.active_sessions')}
-                    value={stats.activeSessions}
-                    icon={Activity}
-                    colorClass="bg-green-500 text-green-600"
-                />
-                <KpiCard
-                    title={t('kpi.upcoming_sessions')}
-                    value={stats.upcomingSessions}
-                    icon={Calendar}
-                    colorClass="bg-blue-500 text-blue-600"
-                />
-                <KpiCard
-                    title={t('kpi.pending_applications')}
-                    value={stats.pendingApplications}
-                    icon={FileText}
-                    colorClass="bg-orange-500 text-orange-600"
-                />
-                <KpiCard
-                    title={t('kpi.expiring_certificates')}
-                    value={stats.expiringCertificates}
-                    icon={Award}
-                    colorClass="bg-red-500 text-red-600"
-                />
-                <KpiCard
-                    title={t('kpi.total_participants')}
-                    value={stats.totalParticipants}
-                    icon={Users}
-                    colorClass="bg-purple-500 text-purple-600"
-                />
-            </div>
-
-            {/* 5. Graphs Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-96">
-
-                {/* Left: Participant Trends */}
-                <div className="lg:col-span-2 bg-white dark:bg-card p-6 rounded-xl shadow-sm border border-border flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-semibold text-lg text-foreground flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-blue-500" />
-                            {t('charts.participant_trends')}
-                        </h3>
+            {/* 2. Top Grid: KPI + Dynamics Chart + Asset Shares */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                
+                {/* Left: Balance style KPI */}
+                <div className="lg:col-span-3 flex flex-col gap-6">
+                    <div className="backdrop-blur-xl bg-white/5 p-8 rounded-[2rem] border border-white/10 shadow-2xl h-full flex flex-col justify-between hover:bg-white/10 transition-all">
+                        <div>
+                            <p className="text-white/40 text-[10px] font-black tracking-widest mb-3 uppercase">Total Network Reach</p>
+                            <div className="flex items-center gap-3">
+                                <span className="text-4xl font-bold text-white tracking-tighter">
+                                    {stats.totalParticipants.toLocaleString()}
+                                </span>
+                                <div className="flex items-center gap-1 bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-emerald-500/20">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span>+16.3%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-8 space-y-4">
+                            <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">Quick View</p>
+                            <div className="flex justify-between items-center text-sm font-bold">
+                                <span className="text-white/40">Active</span>
+                                <span className="text-white">{stats.activeSessions}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm font-bold">
+                                <span className="text-white/40">Pending</span>
+                                <span className="text-white">{stats.pendingApplications}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex-1 w-full min-h-0">
+                </div>
+
+                {/* Center: Dynamics of the balance (Bar Chart) */}
+                <div className="lg:col-span-6 backdrop-blur-xl bg-white/5 p-8 rounded-[2rem] border border-white/10 shadow-2xl flex flex-col">
+                    <div className="flex justify-between items-center mb-8">
+                        <h3 className="font-bold text-lg text-white tracking-tight">Trainee Dynamics</h3>
+                        <button className="text-white/20 hover:text-white transition-colors p-1"><MoreVertical className="w-5 h-5" /></button>
+                    </div>
+                    <div className="flex-1 w-full min-h-[200px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={CHART_DATA}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                <XAxis 
+                                    dataKey="name" 
+                                    fontSize={10} 
+                                    tickLine={false} 
+                                    axisLine={false} 
+                                    tick={{fill: 'rgba(255,255,255,0.4)', fontWeight: 'bold'}}
                                 />
-                                <Bar dataKey="enrolled" fill="#1D4ED8" radius={[4, 4, 0, 0]} barSize={30} />
-                                <Bar dataKey="certified" fill="#93C5FD" radius={[4, 4, 0, 0]} barSize={30} />
+                                <Tooltip
+                                    cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                                    contentStyle={{ backgroundColor: 'rgba(15, 1, 33, 0.9)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                    itemStyle={{ color: '#fff' }}
+                                />
+                                <Bar 
+                                    dataKey="enrolled" 
+                                    fill="rgba(255,255,255,0.1)" 
+                                    radius={[4, 4, 4, 4]} 
+                                    barSize={14} 
+                                    background={{ fill: 'transparent' }}
+                                />
+                                <Bar 
+                                    dataKey="certified" 
+                                    fill="#F43F5E" // Vibrant Rose/Red from mockup
+                                    radius={[4, 4, 0, 0]} 
+                                    barSize={2} 
+                                />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Right: Application Status */}
-                <div className="bg-white dark:bg-card p-6 rounded-xl shadow-sm border border-border flex flex-col">
-                    <h3 className="font-semibold text-lg text-foreground mb-6">
-                        {t('charts.app_status')}
-                    </h3>
-                    <div className="flex-1 w-full min-h-0 relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={PIE_DATA}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {PIE_DATA.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        {/* Center Text Stub */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="text-center">
-                                <span className="block text-2xl font-bold text-foreground">
-                                    {(stats.pendingApplications / (stats.totalParticipants || 1) * 100).toFixed(0)}%
-                                </span>
-                                <span className="text-xs text-muted-foreground uppercase">Pending</span>
-                            </div>
-                        </div>
+                {/* Right: Shares of assets (Role/Type Distribution) */}
+                <div className="lg:col-span-3 backdrop-blur-xl bg-white/5 p-8 rounded-[2rem] border border-white/10 shadow-2xl flex flex-col">
+                    <div className="flex justify-between items-center mb-8">
+                        <h3 className="font-bold text-lg text-white tracking-tight">Access Distribution</h3>
+                        <button className="text-white/20 hover:text-white transition-colors p-1"><MoreVertical className="w-5 h-5" /></button>
                     </div>
-                    <div className="flex justify-center gap-4 mt-4 text-sm">
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-blue-700"></div>
-                            <span className="text-muted-foreground">{t('charts.approved')}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-blue-300"></div>
-                            <span className="text-muted-foreground">{t('charts.pending')}</span>
-                        </div>
+                    <div className="space-y-6">
+                        {[
+                            { name: 'Admins', value: 12, total: 100, color: 'from-indigo-500 to-purple-600' },
+                            { name: 'Trainers', value: 36, total: 100, color: 'from-blue-500 to-indigo-600' },
+                            { name: 'Trainees', value: 52, total: 100, color: 'from-emerald-400 to-teal-500' },
+                        ].map((asset) => (
+                            <div key={asset.name} className="space-y-3">
+                                <div className="flex justify-between text-[11px] font-bold tracking-tight">
+                                    <span className="text-white/40 uppercase tracking-widest">{asset.name}</span>
+                                    <span className="text-white">{asset.value}%</span>
+                                </div>
+                                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                    <div 
+                                        className={cn("h-full rounded-full transition-all duration-1000 bg-gradient-to-r", asset.color)} 
+                                        style={{ width: `${asset.value}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            {/* 6. Recent Activity Table */}
-            <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-border overflow-hidden">
-                <div className="p-6 border-b border-border flex justify-between items-center bg-gray-50/50 dark:bg-accent/10">
-                    <h3 className="font-semibold text-lg text-foreground flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-gray-500" />
-                        {t('activity.title')}
-                    </h3>
-                    <button className="text-xs font-semibold text-blue-600 hover:text-blue-700 uppercase tracking-wider">
-                        View All Log
-                    </button>
+            {/* Bottom Section: Recent Activity Table */}
+            <div className="mt-8 backdrop-blur-xl bg-white/5 rounded-[2rem] border border-white/10 shadow-2xl overflow-hidden">
+                <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                    <h3 className="font-bold text-lg text-white tracking-tight">Real-time Activity</h3>
+                    <div className="flex items-center gap-6">
+                        <div className="flex gap-4 text-[10px] font-black uppercase tracking-widest text-white/20">
+                            <span className="text-white border-b-2 border-white pb-1 cursor-pointer">Daily</span>
+                            <span className="cursor-pointer hover:text-white transition-colors">Weekly</span>
+                            <span className="cursor-pointer hover:text-white transition-colors">Monthly</span>
+                        </div>
+                        <button className="bg-white text-black px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/90 transition-all shadow-lg shadow-white/10 active:scale-95">
+                            Filter
+                        </button>
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 dark:bg-accent/20 text-muted-foreground uppercase tracking-wider text-xs font-semibold">
-                            <tr>
-                                <th className="px-6 py-4">{t('activity.date')}</th>
-                                <th className="px-6 py-4">{t('activity.actor')}</th>
-                                <th className="px-6 py-4">{t('activity.action')}</th>
-                                <th className="px-6 py-4">{t('activity.type')}</th>
-                                <th className="px-6 py-4">{t('activity.status')}</th>
+                    <table className="w-full text-sm text-left border-collapse">
+                        <thead>
+                            <tr className="text-white/30 text-[10px] font-black uppercase tracking-[0.2em] border-b border-white/5 bg-white/[0.02]">
+                                <th className="px-8 py-5">Timestamp</th>
+                                <th className="px-8 py-5">Actor</th>
+                                <th className="px-8 py-5">Action</th>
+                                <th className="px-8 py-5 text-right">Status</th>
+                                <th className="px-8 py-5 text-right">Event</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-border">
+                        <tbody className="divide-y divide-white/5">
                             {logs.map((log) => (
-                                <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-accent/10 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-foreground">
-                                        {new Date(log.created_at).toLocaleDateString()}
+                                <tr key={log.id} className="group hover:bg-white/[0.04] transition-colors">
+                                    <td className="px-8 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40 font-bold text-[10px]">
+                                                {log.entity_type.charAt(0).toUpperCase()}
+                                            </div>
+                                            <span className="font-bold text-white text-xs">{new Date(log.created_at).toLocaleDateString()}</span>
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4 text-blue-600 font-medium">
-                                        {log.actor?.full_name || 'System'}
+                                    <td className="px-8 py-4 text-white/40 font-medium text-xs">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                                            {log.actor?.full_name || 'System'}
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4 text-foreground">
-                                        {log.action}
+                                    <td className="px-8 py-4">
+                                        <span className="text-white font-bold text-xs uppercase tracking-tight">{log.action}</span>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-accent text-gray-600 dark:text-gray-300 text-xs font-medium">
-                                            {log.entity_type}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-1.5 text-green-600 font-medium text-xs">
-                                            <CheckCircle className="w-3.5 h-3.5" />
+                                    <td className="px-8 py-4 text-right">
+                                        <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
                                             Success
                                         </div>
                                     </td>
-                                </tr>
-                            ))}
-                            {logs.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic">
-                                        No recent activity recorded.
+                                    <td className="px-8 py-4 text-right">
+                                        <button className="text-blue-400 text-xs font-bold hover:underline transition-all">
+                                            Details →
+                                        </button>
                                     </td>
                                 </tr>
-                            )}
+                            ))}
                         </tbody>
                     </table>
                 </div>
             </div>
 
             {/* 8. Footer */}
-            <footer className="text-center py-8 text-xs text-muted-foreground border-t border-border mt-12">
-                {t('footer_legal')}
+            <footer className="text-center py-8 text-xs text-white/20 border-t border-white/5 mt-12">
+                ERNAM – Secure Aviation Network Environment | All rights reserved
             </footer>
         </div>
     );

@@ -11,7 +11,7 @@
     "view_all": "View All",
     "home": "Home",
     "governance": "Governance",
-    "dashboard": "Dashboard",
+    "dashboard": "Home",
     "generate_report": "Generate Report"
   },
   "Status": {
@@ -25,21 +25,8 @@
     "offline": "Offline",
     "absent": "Absent"
   },
-  "Trainee": {
-    "live_now": "Live Now",
-    "started_recently": "Started recently",
-    "class_in_session": "Class in session",
-    "join_session": "JOIN SESSION",
-    "overall_progress": "Overall Progress",
-    "next_exam": "Next Exam",
-    "next_exam_days": "Days",
-    "attendance_rate": "Attendance Rate",
-    "current_courses": "My Current Courses",
-    "view_catalog": "View Catalog",
-    "completed": "Completed"
-  },
   "Trainer": {
-    "active_students": "Active Students",
+    "active_students": "Active Trainees",
     "pending_grades": "Pending Grades",
     "next_session": "Next Session",
     "no_upcoming_sessions": "No upcoming sessions",
@@ -59,35 +46,6 @@
     "enrollment_revenue_trends": "Enrollment & Revenue Trends (Last 6 Months)",
     "trainee_origin": "Trainee Origin Data",
     "recent_activity": "Recent Activity Log",
-    "requests": {
-      "title": "Training Requests",
-      "subtitle": "Manage operational training demands from organizations.",
-      "filters": {
-        "status": "Filter by Status",
-        "org": "Filter by Organization"
-      },
-      "status": {
-        "pending": "Pending Check",
-        "approved": "Approved",
-        "rejected": "Rejected"
-      },
-      "table": {
-        "org": "Organization",
-        "standard": "Standard",
-        "pax": "Pax",
-        "dates": "Dates",
-        "status": "Status",
-        "actions": "Actions"
-      },
-      "review": {
-        "title": "Review Training Request",
-        "approve": "Approve Request",
-        "reject": "Reject Request",
-        "reject_placeholder": "Reason for rejection...",
-        "confirm_approve": "Are you sure you want to approve this request? Ideally, you would create a session immediately after.",
-        "request_details": "Request Details"
-      }
-    },
     "user": "User",
     "action": "Action",
     "module": "Module",
@@ -103,8 +61,6 @@
       "my_training": "My Training",
       "account": "Account",
       "my_learning": "My Learning",
-      "organization": "Organization",
-      "org_mgmt": "Organization Mgmt",
       "training_ops": "Training Operations",
       "training_content": "Training Content",
       "evaluation": "Evaluation",
@@ -116,18 +72,17 @@
       "management": "Management"
     },
     "items": {
-      "dashboard": "Dashboard",
+      "dashboard": "Home",
       "standards": "Standards",
       "sessions": "Sessions",
-      "instructors": "Instructors",
-      "participants": "Participants",
-      "organizations": "Organizations",
+      "trainers": "Trainers",
+      "trainees": "Trainees",
       "certificates": "Certificates",
       "validity_tracking": "Validity Tracking",
       "users_roles": "Users & Roles",
       "system_logs": "System Logs",
       "settings": "Settings",
-      "my_dashboard": "My Dashboard",
+      "my_dashboard": "My Home",
       "my_sessions": "My Sessions",
       "results_scores": "Results & Scores",
       "profile": "Profile",
@@ -136,7 +91,6 @@
       "staff": "Staff",
       "training_status": "Training Status",
       "compliance": "Compliance",
-      "my_org": "My Organization",
       "training_sessions": "Training Sessions",
       "training_requests": "Training Requests",
       "applications": "Individual Applications",
@@ -145,24 +99,21 @@
       "documents": "Documents",
       "planned_activities": "Planned Activities",
       "assessments": "Assessments",
-      "my_trainings": "My Trainings",
+      "courses": "Courses",
       "users": "Users & Roles",
       "audit_logs": "Security Audit Logs",
       "overview": "Overview",
       "session_details": "Session Details",
       "messages": "Messages",
       "profile_settings": "Profile & Settings",
-      "org_profile": "Organization Profile",
-      "trainees": "Trainees",
       "notes": "Notes",
       "attendance": "Attendance",
       "grades": "Grades"
     },
     "role": {
-      "ernam_admin": "ERNAM Admin",
-      "instructor": "Instructor",
-      "participant": "Participant",
-      "org_admin": "Org Admin"
+      "admin": "Admin",
+      "trainer": "Trainer",
+      "trainee": "Trainee"
     },
     "view_profile": "View Profile"
   },
@@ -173,10 +124,10 @@
       "upcoming_sessions": "Upcoming Sessions",
       "pending_applications": "Pending Applications",
       "expiring_certificates": "Expiring Certificates",
-      "total_participants": "Total Participants"
+      "total_participants": "Total Trainees"
     },
     "charts": {
-      "participant_trends": "Participant Trends",
+      "participant_trends": "Trainee Trends",
       "app_status": "Application Status",
       "approved": "Approved",
       "pending": "Pending"
@@ -195,6 +146,9 @@
       "approve_apps": "Approve Applications"
     },
     "footer_legal": "ERNAM – Secure Aviation Network Environment | All rights reserved",
+    "role_admin": "Admin",
+    "role_trainer": "Trainer",
+    "role_trainee": "Trainee",
     "Standards": {
       "title": "Training Standards",
       "create_button": "Create Standard",
@@ -251,11 +205,11 @@
     "mark_entry_title": "Mark Entry: {name}",
     "select_subject": "Select Subject",
     "select_subject_desc": "Select a subject to begin entering marks.",
-    "student_list": "Student List",
+    "student_list": "Trainee List",
     "enrolled_count": "({count} Enrolled)",
     "save_marks": "Save Marks",
     "roll_no": "Roll No",
-    "student_name": "Student Name",
+    "student_name": "Trainee Name",
     "theory_max": "Theory (70)",
     "practical_max": "Practical (30)",
     "total": "Total",
@@ -314,18 +268,7 @@
     "creating": "Creating...",
     "create_user": "Create User",
     "user_created": "User created successfully!",
-    "creation_failed": "Creation failed: ",
-    "role_trainee": "Trainee",
-    "role_trainer": "Trainer",
-    "role_admin": "Admin"
-  },
-  "Admissions": {
-    "title": "ERNAM Admissions",
-    "academic_session": "Academic Session {year}",
-    "start_journey": "Start Your Journey",
-    "description": "Join our world-class digital learning environment. Fill out the form below to apply for upcoming batches.",
-    "already_student": "Already a student?",
-    "login_here": "Login here"
+    "creation_failed": "Creation failed: "
   },
   "Archives": {
     "title": "Digital Vault",
@@ -340,14 +283,14 @@
     "login": "LOGIN",
     "register": "REGISTER",
     "digital_twin": "Digital Twin",
-    "role_student": "Student",
-    "role_instructor": "Instructor",
+    "role_trainee": "Trainee",
+    "role_trainer": "Trainer",
     "full_name": "Full Name",
     "email": "Email",
     "password": "Password",
-    "access_dashboard": "ACCESS DASHBOARD",
+    "access_dashboard": "ACCESS HOME",
     "submit_application": "SUBMIT APPLICATION",
-    "please_select_role": "Please select a role (Student or Instructor).",
+    "please_select_role": "Please select a role (Trainee or Trainer).",
     "account_failed": "Account creation failed."
   },
   "Pending": {
@@ -454,13 +397,13 @@
     "join_virtual_class": "JOIN VIRTUAL CLASS"
   },
   "InstructorDashboard": {
-    "students_title": "Students",
-    "students_desc": "Manage enrolled students and admission requests",
-    "active_students": "Active Students",
+    "students_title": "Trainees",
+    "students_desc": "Manage enrolled trainees and admission requests",
+    "active_students": "Active Trainees",
     "pending_requests": "Pending Requests",
     "search_students": "Search by name, email, or course...",
-    "loading_students": "Loading students...",
-    "no_active_students": "No active students found.",
+    "loading_students": "Loading trainees...",
+    "no_active_students": "No active trainees found.",
     "no_pending_requests": "No pending requests found.",
     "active_courses": "Active Courses",
     "includes": "Includes:",
@@ -478,10 +421,10 @@
     "class_grade_summary": "Class Grade Summary",
     "class_grade_desc": "Generate a comprehensive PDF of all class grades",
     "attendance_report": "Attendance Report",
-    "attendance_desc": "Daily and weekly attendance sheets for students",
+    "attendance_desc": "Daily and weekly attendance sheets for trainees",
     "generate_report": "Generate Report",
     "gradebook_title": "Gradebook",
-    "gradebook_desc": "Manage assessments and track student performance",
+    "gradebook_desc": "Manage assessments and track trainee performance",
     "export": "Export",
     "new_assignment": "New Assignment",
     "assignments_tab": "Assignments",
@@ -491,7 +434,7 @@
     "max_score": "Max Score",
     "graded_count": "Graded",
     "no_assignments": "No assignments created yet.",
-    "student_col": "Student",
+    "student_col": "Trainee",
     "create_assignment": "Create Assignment",
     "title_label": "Title",
     "title_placeholder": "Enter assignment title",
@@ -510,8 +453,8 @@
     "remaining": "Remaining",
     "add_task": "Add a new task...",
     "no_tasks": "No tasks for today.",
-    "instructor_tips": "Instructor Tips",
-    "tip_1": "Regularly update course materials to keep students engaged.",
+    "instructor_tips": "Trainer Tips",
+    "tip_1": "Regularly update course materials to keep trainees engaged.",
     "tip_2": "Check \"Needs Attention\" panel for urgent grading tasks."
   },
   "Finance": {
@@ -597,46 +540,19 @@
       "success_message": "Settings Saved Successfully"
     }
   },
-  "OrganizationsView": {
-    "title": "Registered Organizations",
-    "subtitle": "Official registry of approved aviation entities.",
-    "search_placeholder": "Search registry...",
-    "no_orgs_title": "No organizations found",
-    "no_orgs_desc_search": "Try adjusting your search terms.",
-    "no_orgs_desc_empty": "Approve applications to populate the registry.",
-    "org_suffix": "Organization",
-    "since": "Since {date}",
-    "manage": "Manage"
-  },
-  "ApplicationsView": {
-    "title": "Pending Organization Applications",
-    "no_apps_title": "No pending applications",
-    "no_apps_desc": "All caught up! Check back later.",
-    "headers": {
-      "org_name": "Organization Name",
-      "applicant": "Applicant",
-      "country": "Country",
-      "status": "Status",
-      "action": "Action"
-    },
-    "status": {
-      "pending_review": "Pending Review"
-    },
-    "review": "Review"
-  },
-  "InstructorsView": {
-    "title": "Instructor Faculty",
-    "subtitle": "Manage your qualified instructors and their assignments.",
-    "search_placeholder": "Search instructor...",
-    "no_results": "No instructors found.",
+  "TrainersView": {
+    "title": "Trainer Faculty",
+    "subtitle": "Manage your qualified trainers and their assignments.",
+    "search_placeholder": "Search trainer...",
+    "no_results": "No trainers found.",
     "view_profile": "VIEW PROFILE",
     "assign_course": "ASSIGN COURSE"
   },
-  "ParticipantsView": {
-    "title": "Participants",
-    "subtitle": "Manage students and their learning progress.",
-    "search_placeholder": "Search participant...",
-    "no_results": "No participants found.",
+  "TraineesView": {
+    "title": "Trainees",
+    "subtitle": "Manage trainees and their learning progress.",
+    "search_placeholder": "Search trainee...",
+    "no_results": "No trainees found.",
     "view_details": "VIEW DETAILS",
     "headers": {
       "name": "Name",
@@ -672,155 +588,8 @@
       "expiring": "Expiring Soon"
     }
   },
-  "OrgAdmin": {
-    "dashboard": {
-      "title": "Organization Overview",
-      "active_staff": "Active Staff",
-      "active_sessions": "Active Sessions",
-      "expiring_certs": "Expiring Certificates",
-      "pending_requests": "Pending Requests",
-      "recent_alerts": "Recent Alerts (Last 30 Days)"
-    },
-    "participants": {
-      "title": "Staff Management",
-      "subtitle": "Manage your employees enrolled in training programs.",
-      "add_participant": "ADD PARTICIPANT",
-      "table": {
-        "name": "Name",
-        "role": "Role",
-        "status": "Status",
-        "assigned_sessions": "Assigned Sessions",
-        "actions": "Actions"
-      },
-      "status": {
-        "active": "Active",
-        "inactive": "Inactive",
-        "nominated": "Nominated",
-        "dormant": "Dormant",
-        "completed": "Completed"
-      },
-      "actions": {
-        "assign_session": "Assign Session",
-        "manage": "Manage"
-      },
-      "modal": {
-        "title": "Add New Participant",
-        "full_name": "Full Name",
-        "email": "Email Address",
-        "phone": "Phone (Optional)",
-        "submit": "CREATE PARTICIPANT",
-        "cancel": "CANCEL",
-        "tabs": {
-          "create": "Create New",
-          "search": "Search Existing"
-        },
-        "search": {
-          "placeholder": "Search by email...",
-          "button": "Search",
-          "add": "Add",
-          "no_results": "No unattached users found."
-        },
-        "success": {
-          "created": "User created! Temporary Password: {password}",
-          "added": "User added to organization"
-        },
-        "actions": {
-          "dismiss": "Dismiss",
-          "assign": "Assign to Session"
-        }
-      }
-    },
-    "instructors": {
-      "title": "Assigned Instructors",
-      "subtitle": "List of instructors leading your staff's sessions.",
-      "no_instructors": "No instructors assigned at the moment.",
-      "table": {
-        "name": "Name",
-        "assigned_sessions": "Sessions Led",
-        "contact": "Contact",
-        "status": "Status"
-      }
-    },
-    "requests": {
-      "title": "Training Requests",
-      "subtitle": "Submit your operational training needs to ERNAM.",
-      "request_training": "Request Training",
-      "table": {
-        "standard": "Requested Standard",
-        "period": "Preferred Period",
-        "participants": "Participants",
-        "status": "Status",
-        "created_at": "Request Date"
-      },
-      "modal": {
-        "title": "Request Training Authorization",
-        "select_standard": "Training Standard",
-        "preferred_period": "Preferred Period",
-        "dates": "Preferred Dates",
-        "start_date": "Preferred Start",
-        "end_date": "Preferred End",
-        "pax_count": "Number of Participants",
-        "pax_helper": "This helps ERNAM plan capacity.",
-        "notes": "Optional Note",
-        "cancel": "Cancel",
-        "submit": "Send Request"
-      },
-      "status": {
-        "pending": "Pending Review",
-        "approved": "Approved",
-        "rejected": "Rejected"
-      },
-      "success": "Your request has been sent to ERNAM for review."
-    },
-    "sessions": {
-      "title": "Active Training Sessions",
-      "subtitle": "Track sessions where your staff is enrolled.",
-      "assign_participant": "ASSIGN PARTICIPANT",
-      "view_details": "SESSION DETAILS",
-      "table": {
-        "code": "Session Code",
-        "standard": "Training",
-        "dates": "Dates",
-        "location": "Location",
-        "instructor": "Instructor",
-        "status": "Status"
-      }
-    },
-    "certificates": {
-      "title": "Certificates & Compliance",
-      "subtitle": "Track certification validity for your team.",
-      "download_pdf": "DOWNLOAD PDF",
-      "filters": {
-        "valid": "Valid",
-        "expiring": "Expiring Soon",
-        "expired": "Expired"
-      },
-      "table": {
-        "recipient": "Recipient",
-        "code": "Cert Ref",
-        "issue_date": "Issued On",
-        "expiry_date": "Expires On",
-        "status": "Status"
-      }
-    },
-    "profile": {
-      "title": "Organization Profile",
-      "subtitle": "Legal information and official contacts.",
-      "identity": "Legal Identity",
-      "contact": "Contact Details",
-      "fields": {
-        "legal_name": "Legal Name",
-        "type": "Organization Type",
-        "ernam_id": "ERNAM Reference ID",
-        "status": "Approval Status",
-        "email": "Contact Email",
-        "phone": "Phone"
-      },
-      "save": "UPDATE CONTACT"
-    }
-  },
-  "InstructorDashboard": {
-    "role_instructor": "Instructor",
+  "TrainerDashboard": {
+    "role_trainer": "Trainer",
     "hero": {
       "title": "My Teaching Day",
       "subtitle": "Here is your daily mission.",
@@ -831,7 +600,7 @@
       "open_session": "OPEN SESSION"
     },
     "stats": {
-      "participants": "Participants",
+      "participants": "Trainees",
       "pending_assmts": "Pending Assmts",
       "materials": "Materials",
       "messages": "Messages",
@@ -841,8 +610,8 @@
     "shortcuts": {
       "schedule": "My Schedule",
       "schedule_desc": "Check upcoming dates",
-      "directory": "Student Directory",
-      "directory_desc": "All past students",
+      "directory": "Trainee Directory",
+      "directory_desc": "All past trainees",
       "repository": "File Repository",
       "repository_desc": "Manage all docs",
       "profile": "My Profile",
@@ -854,13 +623,24 @@
       "create_new": "Create New Course",
       "search_placeholder": "Search your courses...",
       "no_results": "No courses found matching your criteria.",
-      "students_count": "{count} Students",
+      "students_count": "{count} Trainees",
       "manage_class": "Manage Class",
       "published": "PUBLISHED",
       "draft": "DRAFT"
     }
   },
-  "Participant": {
+  "Trainee": {
+    "live_now": "Live Now",
+    "started_recently": "Started recently",
+    "class_in_session": "Class in session",
+    "join_session": "JOIN SESSION",
+    "overall_progress": "Overall Progress",
+    "next_exam": "Next Exam",
+    "next_exam_days": "Days",
+    "attendance_rate": "Attendance Rate",
+    "current_courses": "My Current Courses",
+    "view_catalog": "View Catalog",
+    "completed": "Completed",
     "backToJourney": "Back to My Journey",
     "welcome": "Welcome back",
     "my_training_journey": "My Training Journey",
@@ -895,7 +675,7 @@
       "settings": "Account settings coming soon."
     },
     "MyLearning": {
-      "title": "My Learning Schedule",
+      "title": "Courses",
       "no_active": "No Active Sessions",
       "no_active_desc": "You are not currently enrolled in any upcoming training.",
       "access_materials": "Access Materials"
@@ -905,20 +685,15 @@
       "message": "You are not enrolled in any active training sessions at the moment."
     },
     "menu": {
-      "dashboard": "Dashboard",
+      "dashboard": "Home",
       "session": "Session Details",
       "session-details": "Session Details",
       "schedule": "My Schedule",
       "assessments": "Assessments",
       "certificates": "Certificates",
       "settings": "Settings",
-      "my-trainings": "My Trainings",
-      "achievements": "Achievements",
-      "documents": "Resources",
-      "profile": "Profile",
-      "myTrainings": "My Trainings",
-      "myTrainingsDesc": "View your complete training history.",
-      "achievements": "Achievements",
+      "courses": "Courses",
+      "coursesDesc": "View your complete training history.",
       "achievementsDesc": "View your earned certificates.",
       "documents": "Documents",
       "documentsDesc": "Access your learning resources.",
@@ -928,7 +703,7 @@
   },
   "Session": {
     "loading": "Loading Session...",
-    "instructor": "Instructor",
+    "trainer": "Trainer",
     "status": {
       "active": "Active",
       "completed": "Completed"

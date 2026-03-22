@@ -198,7 +198,7 @@ export default function ManageClass({ courseId, userId, onBack }: ManageClassPro
             <VideoConference
                 courseId={courseId}
                 userId={userId}
-                userName={requests.find(r => r.requester_id === userId)?.profiles?.full_name || 'Instructor'}
+                userName={requests.find(r => r.requester_id === userId)?.profiles?.full_name || 'Trainer'}
                 onClose={() => setShowConference(false)}
             />
         );

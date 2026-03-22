@@ -1,7 +1,5 @@
 "use client";
 
-import { useTranslations } from 'next-intl';
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import {
@@ -29,7 +27,6 @@ import {
 } from 'recharts';
 
 export default function Finance() {
-    const t = useTranslations('Finance');
     const [stats, setStats] = useState({
         totalRevenue: 0,
         pendingRevenue: 0,
@@ -57,10 +54,10 @@ export default function Finance() {
         <div className="space-y-8 pb-12">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                    <DollarSign className="h-6 w-6 text-emerald-500" /> {t('title')}
+                    <DollarSign className="h-6 w-6 text-emerald-500" /> Financial Overview
                 </h2>
                 <button className="bg-white/5 hover:bg-white/10 text-white text-xs font-bold px-4 py-2 rounded-lg border border-white/10 flex items-center gap-2 transition-all">
-                    <Download className="h-3 w-3" /> {t('export_report')}
+                    <Download className="h-3 w-3" /> Export Report
                 </button>
             </div>
 
@@ -68,7 +65,7 @@ export default function Finance() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-[#1A1A1A] border border-white/5 p-6 rounded-2xl space-y-2">
                     <div className="flex justify-between items-start">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('kpi.total_revenue')}</p>
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Revenue</p>
                         <div className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-md">
                             <TrendingUp className="h-3 w-3" />
                         </div>
@@ -81,44 +78,44 @@ export default function Finance() {
 
                 <div className="bg-[#1A1A1A] border border-white/5 p-6 rounded-2xl space-y-2">
                     <div className="flex justify-between items-start">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('kpi.pending_collections')}</p>
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending Collections</p>
                         <div className="p-1.5 bg-amber-500/10 text-amber-500 rounded-md">
                             <CreditCard className="h-3 w-3" />
                         </div>
                     </div>
                     <div className="text-2xl font-black text-white">$850K</div>
-                    <p className="text-[10px] text-gray-500">{t('kpi.active_invoices', { count: 14 })}</p>
+                    <p className="text-[10px] text-gray-500">14 Active Invoices</p>
                 </div>
 
                 <div className="bg-[#1A1A1A] border border-white/5 p-6 rounded-2xl space-y-2">
                     <div className="flex justify-between items-start">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('kpi.avg_course_fee')}</p>
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Avg. Course Fee</p>
                         <div className="p-1.5 bg-blue-500/10 text-blue-500 rounded-md">
                             <BarChart3 className="h-3 w-3" />
                         </div>
                     </div>
                     <div className="text-2xl font-black text-white">$45.2K</div>
                     <div className="flex items-center gap-1 text-[10px] text-red-400 font-bold">
-                        <ArrowDownRight className="h-3 w-3" /> -2.4% {t('kpi.this_month')}
+                        <ArrowDownRight className="h-3 w-3" /> -2.4% this month
                     </div>
                 </div>
 
                 <div className="bg-[#1A1A1A] border border-white/5 p-6 rounded-2xl space-y-2">
                     <div className="flex justify-between items-start">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('kpi.enrollment_growth')}</p>
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Enrollment Growth</p>
                         <div className="p-1.5 bg-purple-500/10 text-purple-500 rounded-md">
                             <BarChart3 className="h-3 w-3" />
                         </div>
                     </div>
                     <div className="text-2xl font-black text-white">15.4%</div>
-                    <p className="text-[10px] text-gray-500">{t('kpi.target')}: 20%</p>
+                    <p className="text-[10px] text-gray-500">Target: 20%</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Revenue Chart */}
                 <div className="lg:col-span-2 bg-[#141414] border border-white/5 rounded-2xl p-6">
-                    <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest">{t('charts.revenue_forecast')}</h3>
+                    <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest">Revenue Forecast & Trends</h3>
                     <div className="h-80 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={revenueData}>
@@ -143,7 +140,7 @@ export default function Finance() {
 
                 {/* Enrollment Distribution */}
                 <div className="bg-[#141414] border border-white/5 rounded-2xl p-6">
-                    <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest">{t('charts.enrollment_mix')}</h3>
+                    <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest">Enrollment Mix</h3>
                     <div className="h-80 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={revenueData}>
@@ -168,7 +165,7 @@ export default function Finance() {
             {/* Recent Transactions */}
             <div className="bg-[#141414] border border-white/5 rounded-2xl overflow-hidden">
                 <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                    <h3 className="text-sm font-bold text-white uppercase tracking-widest">{t('transactions.title')}</h3>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-widest">Recent Transactions</h3>
                     <div className="flex gap-2">
                         <button className="p-2 hover:bg-white/5 rounded-lg transition-colors border border-white/10">
                             <Filter className="h-4 w-4 text-gray-500" />
@@ -179,11 +176,11 @@ export default function Finance() {
                     <table className="w-full text-left text-[11px]">
                         <thead>
                             <tr className="bg-white/5 text-gray-500 uppercase font-black tracking-widest border-b border-white/5">
-                                <th className="px-6 py-4">{t('transactions.headers.trainee')}</th>
-                                <th className="px-6 py-4">{t('transactions.headers.amount')}</th>
-                                <th className="px-6 py-4">{t('transactions.headers.date')}</th>
-                                <th className="px-6 py-4">{t('transactions.headers.status')}</th>
-                                <th className="px-6 py-4 text-right">{t('transactions.headers.invoice')}</th>
+                                <th className="px-6 py-4">Trainee</th>
+                                <th className="px-6 py-4">Amount</th>
+                                <th className="px-6 py-4">Date</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Invoice</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -197,7 +194,7 @@ export default function Finance() {
                                             t.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                                                 'bg-red-500/10 text-red-500 border-red-500/20'
                                             }`}>
-                                            {t(`transactions.status.${t.status}` as any) || t.status}
+                                            {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">

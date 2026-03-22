@@ -12,7 +12,6 @@ import {
     AlertCircle,
     Loader2
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 interface MarkEntryProps {
     exam: any;
@@ -20,7 +19,6 @@ interface MarkEntryProps {
 }
 
 export default function MarkEntry({ exam, onBack }: MarkEntryProps) {
-    const t = useTranslations('AdminDashboard');
     const [courses, setCourses] = useState<any[]>([]);
     const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
     const [students, setStudents] = useState<any[]>([]);
@@ -112,9 +110,9 @@ export default function MarkEntry({ exam, onBack }: MarkEntryProps) {
         const { error } = await supabase.from('marks').upsert(upsertData, { onConflict: 'exam_id,course_id,student_id' });
 
         if (error) {
-            alert(t('save_error') + error.message);
+            alert("Error saving marks: " + error.message);
         } else {
-            alert(t('marks_saved'));
+            alert("Marks saved successfully!");
         }
         setSaving(false);
     };
@@ -126,15 +124,15 @@ export default function MarkEntry({ exam, onBack }: MarkEntryProps) {
                     <ArrowLeft className="h-5 w-5 text-white" />
                 </button>
                 <div>
-                    <h2 className="text-xl font-bold text-white">{t('mark_entry_title', { name: exam.name })}</h2>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{t('academic_session_label')}: {exam.academic_sessions?.year}</p>
+                    <h2 className="text-xl font-bold text-white">Mark Entry: {exam.name}</h2>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Academic Session: {exam.academic_sessions?.year}</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {/* Course Selection */}
                 <div className="md:col-span-1 space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase">{t('select_subject')}</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Select Subject</label>
                     <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
                         {courses.map(course => (
                             <button
@@ -146,7 +144,7 @@ export default function MarkEntry({ exam, onBack }: MarkEntryProps) {
                                     }`}
                             >
                                 <div className="font-bold text-sm">{course.title_en}</div>
-                                <div className="text-[10px] opacity-70">{course.code} &bull; {course.departments?.name || t('general_dept')}</div>
+                                <div className="text-[10px] opacity-70">{course.code} &bull; {course.departments?.name || "General"}</div>
                             </button>
                         ))}
                     </div>
@@ -157,7 +155,7 @@ export default function MarkEntry({ exam, onBack }: MarkEntryProps) {
                     {!selectedCourse ? (
                         <div className="flex flex-col items-center justify-center h-full text-gray-500">
                             <ArrowLeft className="h-8 w-8 mb-2 opacity-50" />
-                            <p>{t('select_subject_desc')}</p>
+                            <p>Select a subject from the left to start entering marks</p>
                         </div>
                     ) : loading ? (
                         <div className="flex items-center justify-center h-full">
@@ -166,14 +164,14 @@ export default function MarkEntry({ exam, onBack }: MarkEntryProps) {
                     ) : (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-white">{t('student_list')} <span className="text-gray-500 text-xs ml-2">{t('enrolled_count', { count: students.length })}</span></h3>
+                                <h3 className="font-bold text-white">Student List <span className="text-gray-500 text-xs ml-2">{students.length} Students Enrolled</span></h3>
                                 <button
                                     onClick={handleSave}
                                     disabled={saving}
                                     className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50"
                                 >
                                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                    {t('save_marks')}
+                                    Save Marks
                                 </button>
                             </div>
 
@@ -181,11 +179,11 @@ export default function MarkEntry({ exam, onBack }: MarkEntryProps) {
                                 <table className="w-full text-left text-sm">
                                     <thead>
                                         <tr className="bg-white/5 text-gray-400 uppercase text-[10px] font-black tracking-widest border-b border-white/5">
-                                            <th className="px-4 py-3">{t('roll_no')}</th>
-                                            <th className="px-4 py-3">{t('student_name')}</th>
-                                            <th className="px-4 py-3 w-32">{t('theory_max')}</th>
-                                            <th className="px-4 py-3 w-32">{t('practical_max')}</th>
-                                            <th className="px-4 py-3 w-24">{t('total')}</th>
+                                            <th className="px-4 py-3">Roll No</th>
+                                            <th className="px-4 py-3">Student Name</th>
+                                            <th className="px-4 py-3 w-32">Theory (Max 100)</th>
+                                            <th className="px-4 py-3 w-32">Practical (Max 100)</th>
+                                            <th className="px-4 py-3 w-24">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">

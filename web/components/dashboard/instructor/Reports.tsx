@@ -15,7 +15,6 @@ import {
     Search
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
 
 interface UserDocument {
     id: string;
@@ -27,7 +26,6 @@ interface UserDocument {
 }
 
 export default function Reports({ userId }: { userId: string }) {
-    const t = useTranslations('InstructorDashboard');
     const [docs, setDocs] = useState<UserDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('all');
@@ -79,10 +77,10 @@ export default function Reports({ userId }: { userId: string }) {
     };
 
     const categories = [
-        { id: 'all', label: t('all_documents'), icon: Briefcase },
-        { id: 'grades', label: t('grade_reports'), icon: FileText },
-        { id: 'course', label: t('course_items'), icon: PieChart },
-        { id: 'notes', label: t('personal_notes'), icon: FileSearch },
+        { id: 'all', label: "All Documents", icon: Briefcase },
+        { id: 'grades', label: "Grade Reports", icon: FileText },
+        { id: 'course', label: "Course Items", icon: PieChart },
+        { id: 'notes', label: "Personal Notes", icon: FileSearch },
     ];
 
     const filteredDocs = activeCategory === 'all'
@@ -93,11 +91,11 @@ export default function Reports({ userId }: { userId: string }) {
         <div className="space-y-8 pb-20">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">{t('reports_title')}</h1>
-                    <p className="text-sm text-muted-foreground mt-1">{t('reports_desc')}</p>
+                    <h1 className="text-2xl font-bold text-foreground">Personal Resource Vault</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Manage your private teaching resources, notes, and generated grade reports.</p>
                 </div>
                 <label className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold px-6 py-3 rounded-xl shadow-lg shadow-primary/20 cursor-pointer flex items-center gap-2 transition-all active:scale-95">
-                    <Upload className="h-5 w-5" /> {t('upload_document')}
+                    <Upload className="h-5 w-5" /> Upload Resource
                     <input type="file" className="hidden" onChange={handleUpload} />
                 </label>
             </div>
@@ -130,7 +128,7 @@ export default function Reports({ userId }: { userId: string }) {
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <input
                                 type="text"
-                                placeholder={t('search_docs')}
+                                placeholder="Search documents..."
                                 className="w-full bg-background border border-border rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
@@ -169,7 +167,7 @@ export default function Reports({ userId }: { userId: string }) {
                             {filteredDocs.length === 0 && (
                                 <div className="col-span-full py-20 text-center border-2 border-dashed border-border rounded-xl opacity-40">
                                     <FileSearch className="h-12 w-12 mx-auto mb-3" />
-                                    <p>{t('no_docs')}</p>
+                                    <p>No documents found in this category.</p>
                                 </div>
                             )}
                         </div>
@@ -177,26 +175,26 @@ export default function Reports({ userId }: { userId: string }) {
 
                     {/* Report Generators Section */}
                     <div className="pt-8 border-t border-border">
-                        <h2 className="text-lg font-bold text-foreground mb-4">{t('quick_reports')}</h2>
+                        <h2 className="text-lg font-bold text-foreground mb-4">Quick Report Generators</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl text-white shadow-xl shadow-blue-900/40 relative overflow-hidden group">
                                 <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:scale-110 transition-transform">
                                     <PieChart className="h-32 w-32" />
                                 </div>
-                                <h3 className="font-bold mb-1">{t('class_grade_summary')}</h3>
-                                <p className="text-xs text-blue-100 mb-6">{t('class_grade_desc')}</p>
+                                <h3 className="font-bold mb-1">Class Grade Summary</h3>
+                                <p className="text-xs text-blue-100 mb-6">Generate a comprehensive CSV/PDF of all current student grades.</p>
                                 <button className="bg-white text-blue-700 text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-50 transition-colors">
-                                    <Plus className="h-4 w-4" /> {t('generate_report')}
+                                    <Plus className="h-4 w-4" /> Generate
                                 </button>
                             </div>
                             <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-6 rounded-2xl text-white shadow-xl shadow-emerald-900/40 relative overflow-hidden group">
                                 <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:scale-110 transition-transform">
                                     <FileText className="h-32 w-32" />
                                 </div>
-                                <h3 className="font-bold mb-1">{t('attendance_report')}</h3>
-                                <p className="text-xs text-emerald-100 mb-6">{t('attendance_desc')}</p>
+                                <h3 className="font-bold mb-1">Attendance Audit</h3>
+                                <p className="text-xs text-emerald-100 mb-6">Export detailed presence/absence logs for the current session.</p>
                                 <button className="bg-white text-emerald-700 text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-emerald-50 transition-colors">
-                                    <Plus className="h-4 w-4" /> {t('generate_report')}
+                                    <Plus className="h-4 w-4" /> Generate
                                 </button>
                             </div>
                         </div>

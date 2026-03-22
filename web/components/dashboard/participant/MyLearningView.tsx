@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Calendar, MapPin } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { useTranslations } from 'next-intl';
-import { useLocale } from 'next-intl';
+import { format } from 'date-fns';
 
 type Session = {
     id: string;
@@ -22,8 +21,6 @@ type Session = {
 };
 
 export default function MyLearningView() {
-    const t = useTranslations('Participant.MyLearning');
-    const locale = useLocale();
     const { user } = useAuth();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
@@ -63,7 +60,6 @@ export default function MyLearningView() {
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('title')}</h1>
 
             {loading ? (
                 <div className="space-y-4 animate-pulse">
@@ -72,48 +68,70 @@ export default function MyLearningView() {
             ) : sessions.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
                     <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900">{t('no_active')}</h3>
-                    <p className="text-gray-500">{t('no_active_desc')}</p>
+                    <h3 className="text-lg font-medium text-gray-900">No Active Training Sessions</h3>
+                    <p className="text-gray-500">You are not currently enrolled in any upcoming or ongoing training sessions. Check your schedule for historical records.</p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {sessions.map((session) => (
                         <div
                             key={session.id}
-                            className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm hover:shadow-md transition-shadow group"
+                            className="bg-white border border-gray-200 rounded-[32px] p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group min-h-[260px]"
                         >
-                            <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <span className="text-xs font-bold text-blue-600 font-mono bg-blue-50 px-2 py-1 rounded">
-                                        {session.training_standard.code}
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide
-                                        ${session.status === 'active' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : 'bg-blue-100 text-blue-700'}
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full uppercase tracking-widest border border-blue-100/50">
+                                            {session.training_standard.code}
+                                        </span>
+                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Enrollment Verified</span>
+                                    </div>
+                                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border
+                                        ${session.status === 'active' 
+                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100 animate-pulse' 
+                                            : 'bg-gray-50 text-gray-500 border-gray-100'}
                                      `}>
                                         {session.status}
                                     </span>
-                                    <span className="text-[10px] font-bold uppercase text-gray-400 border border-gray-200 px-2 py-0.5 rounded">
-                                        {session.participants_link_status}
-                                    </span>
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900">{session.training_standard.title}</h3>
-                                <div className="flex items-center gap-6 mt-3 text-sm text-gray-500">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4" />
-                                        <span>
-                                            {new Date(session.start_date).toLocaleDateString(locale)} — {new Date(session.end_date).toLocaleDateString(locale)}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="h-4 w-4" />
-                                        <span>{session.location} ({session.delivery_mode})</span>
+                                
+                                <div className="space-y-3">
+                                    <h3 className="text-2xl font-black text-gray-900 leading-[1.2] group-hover:text-blue-700 transition-colors line-clamp-2 tracking-tight">
+                                        {session.training_standard.title}
+                                    </h3>
+                                    <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50" />
+                                            {session.delivery_mode}
+                                        </div>
+                                        <span className="h-1 w-1 bg-gray-300 rounded-full" />
+                                        <div className="flex items-center gap-1.5 uppercase">
+                                            {session.participants_link_status}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <button className="mt-4 md:mt-0 w-full md:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors">
-                                {t('access_materials')}
-                            </button>
+                            <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                                <div className="grid grid-cols-1 gap-2">
+                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">
+                                        <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                                            <Calendar className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-500" />
+                                        </div>
+                                        {format(new Date(session.start_date), 'MMMM d')} — {format(new Date(session.end_date), 'MMMM d, yyyy')}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">
+                                        <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-emerald-50 transition-colors">
+                                            <MapPin className="h-3.5 w-3.5 text-gray-400 group-hover:text-emerald-500" />
+                                        </div>
+                                        {session.location}
+                                    </div>
+                                </div>
+
+                                <button className="w-full sm:w-auto px-8 py-3.5 bg-gray-900 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-black hover:-translate-y-0.5 transition-all shadow-lg shadow-black/5 active:scale-95">
+                                    Launch Studio
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>

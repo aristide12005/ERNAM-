@@ -3,20 +3,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { useTranslations } from 'next-intl';
 import { Search, Trash2, Pencil, ChevronLeft, ChevronRight, MessageSquare, GraduationCap, ClipboardCheck, Send, X, User as UserIcon, Calendar } from 'lucide-react';
 
-/* Grade styling (labels come from translations) */
-const GRADE_STYLE: Record<string, { key: string; bg: string; text: string; dot: string }> = {
-    good: { key: 'grade_good', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
-    medium: { key: 'grade_medium', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
-    low: { key: 'grade_low', bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' },
+/* Grade styling */
+const GRADE_STYLE: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+    good: { label: 'Excellent', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+    medium: { label: 'Satisfactory', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
+    low: { label: 'Needs Review', bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' },
 };
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 
 export default function InstructorParticipantsView() {
-    const t = useTranslations('TraineesList');
     const [participants, setParticipants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
@@ -54,13 +52,12 @@ export default function InstructorParticipantsView() {
                 .select(`
                     id,
                     attendance_status,
-                    user:users!participant_id(id, full_name, email, avatar_url)
+                    user:profiels!participant_id(id, full_name, email, avatar_url)
                 `)
                 .in('session_id', sessionIds);
 
             if (partData) {
                 const uniqueTrainees = Array.from(new Map(partData.map((item: any) => [item.user?.id, item])).values());
-                // Assign mock codes and grades for UI demo
                 const enriched = (uniqueTrainees as any[]).map((item, idx) => ({
                     ...item,
                     code: `#${String(idx + 1).padStart(2, '0')}`,
@@ -119,21 +116,20 @@ export default function InstructorParticipantsView() {
 
     const handleBulkDelete = () => {
         if (selectedIds.length === 0) return;
-        if (confirm(t('confirm_delete', { count: selectedIds.length }))) {
-            alert(t('delete_success', { count: selectedIds.length }));
+        if (confirm(`Are you sure you want to remove ${selectedIds.length} trainee(s)?`)) {
+            alert(`Successfully removed ${selectedIds.length} trainee(s).`);
             setSelectedIds([]);
         }
     };
 
     const handleEditGrades = () => {
-        alert(t('edit_grades_msg', { count: selectedIds.length }));
+        alert(`Opening grade editor for ${selectedIds.length} trainee(s)...`);
     };
 
     const handleEditAttendance = () => {
-        alert(t('edit_attendance_msg', { count: selectedIds.length }));
+        alert(`Opening attendance audit for ${selectedIds.length} trainee(s)...`);
     };
 
-    // Pagination range generation
     const getPageNumbers = () => {
         const pages: (number | string)[] = [];
         if (totalPages <= 7) {
@@ -155,15 +151,14 @@ export default function InstructorParticipantsView() {
             {/* ===== Page Header ===== */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t('page_title')}</h1>
+                    <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Trainee Management</h1>
                     <p className="text-sm text-gray-400 mt-1 font-medium">
-                        <span className="hover:text-gray-600 cursor-pointer">{t('breadcrumb_home')}</span>
+                        <span className="hover:text-gray-600 cursor-pointer">Home</span>
                         <span className="mx-2">/</span>
-                        <span className="text-purple-600 dark:text-purple-400 font-semibold">{t('breadcrumb_trainees')}</span>
+                        <span className="text-purple-600 dark:text-purple-400 font-semibold">Trainee List</span>
                     </p>
                 </div>
 
-                {/* Bulk Action Buttons – appear when trainees are selected */}
                 <div className="flex items-center gap-2">
                     {hasSelection && (
                         <>
@@ -172,46 +167,43 @@ export default function InstructorParticipantsView() {
                                 className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
                             >
                                 <MessageSquare className="w-4 h-4" />
-                                {t('btn_message')}
+                                Send Message
                             </button>
                             <button
                                 onClick={handleBulkDelete}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-sm font-bold transition-all border border-red-200 dark:border-red-800/50"
                             >
                                 <Trash2 className="w-4 h-4" />
-                                {t('btn_delete')}
+                                Remove Access
                             </button>
                             <button
                                 onClick={handleEditGrades}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl text-sm font-bold transition-all border border-amber-200 dark:border-amber-800/50"
                             >
                                 <GraduationCap className="w-4 h-4" />
-                                {t('btn_edit_grades')}
+                                Modify Grades
                             </button>
                             <button
                                 onClick={handleEditAttendance}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-xl text-sm font-bold transition-all border border-blue-200 dark:border-blue-800/50"
                             >
                                 <ClipboardCheck className="w-4 h-4" />
-                                {t('btn_edit_attendance')}
+                                Audit Attendance
                             </button>
                         </>
                     )}
                 </div>
             </div>
 
-            {/* ===== Main Card ===== */}
             <div className="bg-white dark:bg-[#1a1a2e] border border-gray-100 dark:border-white/5 rounded-[1.5rem] shadow-[0_2px_16px_rgba(0,0,0,0.03)] overflow-hidden">
-
-                {/* Card Header – Trainees Information + Search + Filter */}
                 <div className="px-7 py-5 flex items-center justify-between border-b border-gray-100 dark:border-white/5">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">{t('section_title')}</h2>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">Enrolled Trainees</h2>
                     <div className="flex items-center gap-3">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder={t('search_placeholder')}
+                                placeholder="Search by name, ID or email..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 className="w-[220px] pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 transition-all font-medium text-sm"
@@ -219,21 +211,20 @@ export default function InstructorParticipantsView() {
                         </div>
                         <button className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-all">
                             <Calendar className="w-4 h-4" />
-                            {t('filter_last_30')}
+                            Last 30 Days
                             <ChevronRight className="w-3 h-3 rotate-90" />
                         </button>
                     </div>
                 </div>
 
-                {/* Table */}
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="p-16 text-center text-gray-400 flex flex-col items-center">
                             <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin mb-4" />
-                            {t('loading')}
+                            Fetching trainee data...
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="p-16 text-center text-gray-500">{t('no_results')}</div>
+                        <div className="p-16 text-center text-gray-500">No trainees matching your criteria.</div>
                     ) : (
                         <table className="w-full text-left text-sm">
                             <thead>
@@ -246,11 +237,11 @@ export default function InstructorParticipantsView() {
                                             onChange={toggleSelectAll}
                                         />
                                     </th>
-                                    <th className="px-4 py-4">{t('col_name')}</th>
-                                    <th className="px-4 py-4">{t('col_code')}</th>
-                                    <th className="px-4 py-4">{t('col_email')}</th>
-                                    <th className="px-4 py-4">{t('col_action')}</th>
-                                    <th className="px-4 py-4">{t('col_grade')}</th>
+                                    <th className="px-4 py-4">Name</th>
+                                    <th className="px-4 py-4">ID Code</th>
+                                    <th className="px-4 py-4">Email Address</th>
+                                    <th className="px-4 py-4">Actions</th>
+                                    <th className="px-4 py-4">Grade Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-white/5">
@@ -263,7 +254,6 @@ export default function InstructorParticipantsView() {
                                             key={item.user?.id}
                                             className={`transition-colors hover:bg-purple-50/40 dark:hover:bg-purple-900/10 ${isSelected ? 'bg-purple-50/60 dark:bg-purple-900/15' : ''}`}
                                         >
-                                            {/* Checkbox */}
                                             <td className="px-7 py-4">
                                                 <input
                                                     type="checkbox"
@@ -273,7 +263,6 @@ export default function InstructorParticipantsView() {
                                                 />
                                             </td>
 
-                                            {/* Trainee Name + Avatar */}
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-3">
                                                     {item.user?.avatar_url ? (
@@ -289,28 +278,25 @@ export default function InstructorParticipantsView() {
                                                 </div>
                                             </td>
 
-                                            {/* Code */}
                                             <td className="px-4 py-4 text-gray-600 dark:text-gray-400 font-medium">
                                                 {item.code}
                                             </td>
 
-                                            {/* Email */}
                                             <td className="px-4 py-4 text-gray-500 dark:text-gray-400">
                                                 {item.user?.email || '—'}
                                             </td>
 
-                                            {/* Action Icons */}
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-2">
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); alert(t('delete_trainee', { name: item.user?.full_name })); }}
+                                                        onClick={(e) => { e.stopPropagation(); alert(`Delete ${item.user?.full_name}?`); }}
                                                         className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors"
                                                         title="Delete"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); alert(t('edit_trainee', { name: item.user?.full_name })); }}
+                                                        onClick={(e) => { e.stopPropagation(); alert(`Edit ${item.user?.full_name}'s profile?`); }}
                                                         className="p-2 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 text-gray-400 hover:text-purple-500 transition-colors"
                                                         title="Edit"
                                                     >
@@ -319,11 +305,10 @@ export default function InstructorParticipantsView() {
                                                 </div>
                                             </td>
 
-                                            {/* Grade Badge */}
                                             <td className="px-4 py-4">
                                                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${gradeStyle.bg} ${gradeStyle.text}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${gradeStyle.dot}`} />
-                                                    {t(gradeStyle.key)}
+                                                    {gradeStyle.label}
                                                 </span>
                                             </td>
                                         </tr>
@@ -334,11 +319,9 @@ export default function InstructorParticipantsView() {
                     )}
                 </div>
 
-                {/* Pagination Footer */}
                 {!loading && filtered.length > 0 && (
                     <div className="px-7 py-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between bg-white dark:bg-transparent">
                         <div className="flex items-center gap-2">
-                            {/* Previous */}
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
@@ -347,7 +330,6 @@ export default function InstructorParticipantsView() {
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
 
-                            {/* Page Numbers */}
                             {getPageNumbers().map((page, idx) => (
                                 typeof page === 'number' ? (
                                     <button
@@ -366,7 +348,6 @@ export default function InstructorParticipantsView() {
                                 )
                             ))}
 
-                            {/* Next */}
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
@@ -376,7 +357,6 @@ export default function InstructorParticipantsView() {
                             </button>
                         </div>
 
-                        {/* Items per page */}
                         <div className="flex items-center gap-2">
                             <select
                                 value={itemsPerPage}
@@ -401,9 +381,9 @@ export default function InstructorParticipantsView() {
                     >
                         <div className="flex items-center justify-between mb-5">
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('modal_title')}</h3>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Broadcast Message</h3>
                                 <p className="text-sm text-gray-500 mt-0.5">
-                                    {t('modal_to', { count: selectedIds.length })}
+                                    To {selectedIds.length} selected recipients
                                 </p>
                             </div>
                             <button onClick={() => setShowMessageModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 transition-colors">
@@ -413,7 +393,7 @@ export default function InstructorParticipantsView() {
                         <textarea
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
-                            placeholder={t('modal_placeholder')}
+                            placeholder="Type your message here..."
                             className="w-full min-h-[120px] bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-purple-500 resize-y text-sm"
                             rows={4}
                             autoFocus
@@ -423,7 +403,7 @@ export default function InstructorParticipantsView() {
                                 onClick={() => setShowMessageModal(false)}
                                 className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
                             >
-                                {t('modal_cancel')}
+                                Discard
                             </button>
                             <button
                                 onClick={handleSendMessage}
@@ -431,7 +411,7 @@ export default function InstructorParticipantsView() {
                                 className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-md transition-all"
                             >
                                 <Send className="w-4 h-4" />
-                                {sending ? t('modal_sending') : t('modal_send')}
+                                {sending ? "Delivering..." : "Send Now"}
                             </button>
                         </div>
                     </div>

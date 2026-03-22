@@ -3,11 +3,11 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Building2, User, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { User, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function ApplicationForm() {
-    const [type, setType] = useState<'organization' | 'instructor'>('organization');
+    const [type, setType] = useState<'trainer'>('trainer');
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -17,8 +17,7 @@ export default function ApplicationForm() {
         name: '',
         email: '',
         phone: '',
-        details: '',
-        org_type: 'airline' // specific for orgs
+        details: ''
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -28,13 +27,11 @@ export default function ApplicationForm() {
 
         const payload = {
             application_type: type,
-            organization_name: type === 'organization' ? formData.name : null,
             details: {
                 full_name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
-                message: formData.details,
-                org_type: type === 'organization' ? formData.org_type : undefined
+                message: formData.details
             },
             status: 'pending'
         };
@@ -59,7 +56,7 @@ export default function ApplicationForm() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Application Received</h2>
                 <p className="text-gray-600 mb-6">
-                    Thank you! Your request to join ERNAM as a {type === 'organization' ? 'Partner Organization' : 'Certified Instructor'} has been submitted.
+                    Thank you! Your request to join ERNAM as a Certified Trainer has been submitted.
                     Our team will review your details and contact you via <b>{formData.email}</b> shortly.
                 </p>
                 <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-500">
@@ -76,45 +73,20 @@ export default function ApplicationForm() {
         <div className="max-w-2xl mx-auto">
             <div className="text-center mb-10">
                 <h1 className="text-3xl font-bold text-gray-900 mb-3">Join the ERNAM Network</h1>
-                <p className="text-gray-600">Apply to become an accredited partner or certified instructor.</p>
+                <p className="text-gray-600">Apply to become a certified trainer.</p>
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-                {/* Type Selection */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                    <button
-                        onClick={() => setType('organization')}
-                        className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${type === 'organization'
-                                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                : 'border-gray-200 hover:border-blue-200 text-gray-500'
-                            }`}
-                    >
-                        <Building2 className="h-6 w-6" />
-                        <span className="font-bold text-sm">Organization</span>
-                    </button>
-                    <button
-                        onClick={() => setType('instructor')}
-                        className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${type === 'instructor'
-                                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                : 'border-gray-200 hover:border-blue-200 text-gray-500'
-                            }`}
-                    >
-                        <User className="h-6 w-6" />
-                        <span className="font-bold text-sm">Instructor</span>
-                    </button>
-                </div>
-
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Dynamic Fields */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">
-                            {type === 'organization' ? 'Organization Name' : 'Full Name'}
+                            Full Name
                         </label>
                         <input
                             required
                             type="text"
                             className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder={type === 'organization' ? 'e.g. Acme Airlines' : 'e.g. Jane Doe'}
+                            placeholder="e.g. Jane Doe"
                             value={formData.name}
                             onChange={e => setFormData({ ...formData, name: e.target.value })}
                         />
@@ -145,28 +117,11 @@ export default function ApplicationForm() {
                         </div>
                     </div>
 
-                    {type === 'organization' && (
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Organization Type</label>
-                            <select
-                                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-                                value={formData.org_type}
-                                onChange={e => setFormData({ ...formData, org_type: e.target.value })}
-                            >
-                                <option value="airline">Airline</option>
-                                <option value="airport">Airport</option>
-                                <option value="security_company">Security Company</option>
-                                <option value="government">Government Body</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                    )}
-
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Additional Details / Motivation</label>
                         <textarea
                             className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all min-h-[120px]"
-                            placeholder="Tell us about your accreditation needs or teaching experience..."
+                            placeholder="Tell us about your teaching experience..."
                             value={formData.details}
                             onChange={e => setFormData({ ...formData, details: e.target.value })}
                         />
@@ -186,7 +141,7 @@ export default function ApplicationForm() {
                     >
                         {loading ? 'Submitting...' : (
                             <>
-                                Determine Eligibility <Send className="h-4 w-4" />
+                                Submit Application <Send className="h-4 w-4" />
                             </>
                         )}
                     </button>

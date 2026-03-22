@@ -28,6 +28,7 @@ type ParticipantRecord = {
 };
 
 export default function ManageSessionView({ sessionId, onBack }: ManageSessionViewProps) {
+    const { user } = useAuth();
     const [participants, setParticipants] = useState<ParticipantRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);

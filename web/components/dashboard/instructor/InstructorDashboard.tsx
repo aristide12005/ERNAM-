@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { supabase } from '@/lib/supabaseClient';
-import { useTranslations } from 'next-intl';
-import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Clock, MapPin, Calendar, Users, FolderKanban, User, CheckCircle, ArrowRight } from 'lucide-react';
 import NotificationsDialog from '@/components/dashboard/NotificationsDialog';
@@ -25,8 +23,6 @@ import InstructorHomeView from './InstructorHomeView';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function InstructorDashboard() {
-    const t = useTranslations('InstructorDashboard');
-    const locale = useLocale();
     const { user, profile } = useAuth();
     const router = useRouter();
     const [showNotifications, setShowNotifications] = useState(false);

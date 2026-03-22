@@ -6,7 +6,6 @@ import MessageBubble from './MessageBubble';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 import { Loader2, ArrowLeft, MoreVertical, Phone, Video } from 'lucide-react';
 import InputArea from './InputArea';
-import { useTranslations } from 'next-intl';
 
 interface Message {
     id: string;
@@ -43,28 +42,24 @@ export default function ChatWindow({
     onCall,
     disableCalls = false
 }: ChatWindowProps) {
-    const t = useTranslations('Messaging');
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [isTyping, setIsTyping] = useState(false); // Mock for now, can be real-time later
+    const [isTyping, setIsTyping] = useState(false); 
 
-    // Helper for date headers (Moved inside to use translations)
     const getDateLabel = (date: Date) => {
         try {
-            if (isNaN(date.getTime())) return t('unknown_date');
-            if (isToday(date)) return t('today');
-            if (isYesterday(date)) return t('yesterday');
-            return format(date, 'MMMM d, yyyy'); // We could use localized format here too if needed
+            if (isNaN(date.getTime())) return "Unknown Date";
+            if (isToday(date)) return "Today";
+            if (isYesterday(date)) return "Yesterday";
+            return format(date, 'MMMM d, yyyy');
         } catch (e) {
-            return t('unknown_date');
+            return "Unknown Date";
         }
     };
 
-    // Scroll to bottom on new messages
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isTyping]);
 
-    // Group messages by date
     const groupedMessages = useMemo(() => {
         const groups: { date: string; msgs: any[] }[] = [];
         let currentDate = '';
@@ -76,9 +71,7 @@ export default function ChatWindow({
                     const parsed = new Date(msg.created_at);
                     if (!isNaN(parsed.getTime())) date = parsed;
                 }
-            } catch (e) {
-                // Fallback to now
-            }
+            } catch (e) {}
 
             const dateLabel = getDateLabel(date);
 
@@ -90,24 +83,18 @@ export default function ChatWindow({
         });
 
         return groups;
-    }, [messages, t]); // Added t dependency
+    }, [messages]);
 
     if (!conversationId) {
         return (
             <div className="hidden md:flex flex-1 items-center justify-center bg-slate-50 flex-col gap-4 text-center p-8">
                 <div className="bg-white p-6 rounded-full shadow-sm mb-2">
-                    <img
-                        src="/placeholder-chat.svg" // Just a placeholder, fallback to icon
-                        alt=""
-                        className="w-24 h-24 opacity-20"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
                     <div className="text-6xl">💬</div>
                 </div>
                 <div>
-                    <h3 className="text-xl font-bold text-slate-800">{t('your_messages')}</h3>
+                    <h3 className="text-xl font-bold text-slate-800">Your Messages</h3>
                     <p className="text-slate-500 mt-2 max-w-sm">
-                        {t('select_conversation')}
+                        Select a conversation from the list or start a new one to begin chatting.
                     </p>
                 </div>
             </div>
@@ -127,7 +114,6 @@ export default function ChatWindow({
                         <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm">
                             {partnerName.charAt(0)}
                         </div>
-                        {/* Status Indicator (Mock - assume online for demo feel) */}
                         <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
                     </div>
 
@@ -166,9 +152,8 @@ export default function ChatWindow({
                     </div>
                 ) : (
                     <>
-                        {groupedMessages.map((group, groupIdx) => (
+                        {groupedMessages.map((group) => (
                             <div key={group.date} className="space-y-4">
-                                {/* Date Divider */}
                                 <div className="flex justify-center sticky top-2 z-10 opacity-90 hover:opacity-100 transition-opacity">
                                     <span className="bg-slate-200/80 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold text-slate-600 uppercase tracking-wide shadow-sm border border-white/50">
                                         {group.date}
@@ -178,16 +163,8 @@ export default function ChatWindow({
                                 {group.msgs.map((msg, idx) => {
                                     const isFromMe = msg.sender_id === currentUserId;
                                     const nextMsg = group.msgs[idx + 1];
-                                    const prevMsg = group.msgs[idx - 1];
-
-                                    // Logic for avatars and spacing
-                                    // Show avatar if it's the LAST message in a sequence from this person
                                     const showAvatar = !isFromMe && (!nextMsg || nextMsg.sender_id !== msg.sender_id);
-
-                                    let isRead = false;
-                                    // If I sent it, isRead logic based on message_read_status check or is_read field we pass down?
-                                    // For now, let's assume if it has is_read property from our RPC
-                                    isRead = msg.is_read || false;
+                                    const isRead = msg.is_read || false;
 
                                     return (
                                         <MessageBubble
@@ -196,7 +173,7 @@ export default function ChatWindow({
                                             createdAt={msg.created_at}
                                             isFromMe={isFromMe}
                                             isRead={isRead}
-                                            senderName={msg.sender?.full_name} // Need to ensure we pass this
+                                            senderName={msg.sender?.full_name}
                                             showAvatar={showAvatar}
                                         />
                                     );
@@ -204,7 +181,6 @@ export default function ChatWindow({
                             </div>
                         ))}
 
-                        {/* Typing Indicator */}
                         {isTyping && (
                             <div className="flex items-center gap-2 ml-4 mb-4">
                                 <div className="h-8 w-8 rounded-full bg-slate-200 flex-shrink-0" />

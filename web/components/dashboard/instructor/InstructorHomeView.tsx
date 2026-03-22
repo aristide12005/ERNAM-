@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations, useLocale } from 'next-intl';
+import React, { useState } from 'react';
 import { ComposedChart, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Line, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { MoreHorizontal } from 'lucide-react';
 
@@ -23,7 +23,7 @@ const DotsRow = () => (
 );
 
 export default function InstructorHomeView({ session, stats }: { session: any, stats: any }) {
-    const t = useTranslations('InstructorDashboard');
+    const [reportRange, setReportRange] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
 
     /* ====== Data Mapping ====== */
     const totalParticipants = stats?.participants || 0;
@@ -31,24 +31,7 @@ export default function InstructorHomeView({ session, stats }: { session: any, s
     const totalMaterials = stats?.materials || 0;
     const totalCompleted = totalParticipants - totalPending;
 
-    // Summary card items (maps to existing data)
-    const summaryItems = [
-        { label: 'Trainees', value: totalParticipants.toLocaleString(), color: '#6366f1' },
-        { label: 'Pending Assessments', value: totalPending.toLocaleString(), color: '#f59e0b' },
-        { label: 'Completed', value: totalCompleted.toLocaleString(), color: '#ef4444' },
-        { label: 'Documents', value: totalMaterials.toLocaleString(), color: '#ec4899' },
-    ];
-
-    // Donut chart for attendance overview
-    const presentRate = 75; // placeholder from real attendance data
-    const absentRate = 25;
-    const totalScore = totalParticipants || 10034;
-    const donutData = [
-        { name: 'Present', value: presentRate, color: '#c4b5fd' },
-        { name: 'Absent', value: absentRate, color: '#f9a8d4' },
-        { name: 'Late', value: 10, color: '#fde68a' },
-        { name: 'Excused', value: 5, color: '#e9d5ff' },
-    ];
+    // Top metrics variables adapted for new layout
 
     // Document store table
     const documentRows = [
@@ -60,17 +43,31 @@ export default function InstructorHomeView({ session, stats }: { session: any, s
     ];
 
     // Attendance trend (bar + line mixed chart)
-    const attendanceMonths = [
-        { name: 'Week 1', present: 3, absent: 2, rate: 8.15 },
-        { name: 'Week 2', present: 5, absent: 1, rate: 35 },
-        { name: 'Week 3', present: 7, absent: 2, rate: 55 },
-        { name: 'Week 4', present: 6, absent: 3, rate: 75.25 },
-    ];
+    const attendanceDataMap = {
+        weekly: [
+            { name: 'Week 1', present: 3, absent: 2, rate: 8.15 },
+            { name: 'Week 2', present: 5, absent: 1, rate: 35 },
+            { name: 'Week 3', present: 7, absent: 2, rate: 55 },
+            { name: 'Week 4', present: 6, absent: 3, rate: 75.25 },
+        ],
+        monthly: [
+            { name: 'Sep', present: 22, absent: 5, rate: 78.5 },
+            { name: 'Oct', present: 25, absent: 3, rate: 89.2 },
+            { name: 'Nov', present: 24, absent: 4, rate: 85.7 },
+            { name: 'Dec', present: 20, absent: 8, rate: 71.4 },
+        ],
+        yearly: [
+            { name: '2023', present: 240, absent: 45, rate: 84.2 },
+            { name: '2024', present: 280, absent: 30, rate: 90.3 },
+            { name: '2025', present: 295, absent: 20, rate: 93.6 },
+        ]
+    };
+    const currentAttendanceData = attendanceDataMap[reportRange];
 
     const courseTitle = session?.training_standard?.title || 'Training Overview';
 
     /* ====== Card Styling ====== */
-    const cardClass = "bg-white dark:bg-[#1a1a2e] border border-gray-100 dark:border-white/5 rounded-[1.5rem] p-7 shadow-[0_2px_16px_rgba(0,0,0,0.03)] relative";
+    const cardClass = "bg-white dark:bg-[#1a1a2e] border border-gray-100 dark:border-white/5 rounded-[1.5rem] p-7 shadow-[0_2px_16px_rgba(0,0,0,0.03)] relative animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both";
     const headerClass = "flex items-center justify-between mb-6";
     const titleClass = "text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight";
 
@@ -87,93 +84,81 @@ export default function InstructorHomeView({ session, stats }: { session: any, s
                 </div>
             </div>
 
-            {/* 2×2 Widget Grid - Exact reference layout */}
+            {/* Top Metrics Row */}
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-6">
+                {/* Total Trainees */}
+                <div className={`${cardClass} flex flex-col justify-between hover:shadow-md transition-all`} style={{ animationDelay: '100ms' }}>
+                    <div className="flex justify-between items-start mb-6">
+                        <div className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-900/20 text-orange-500 font-bold flex items-center justify-center shrink-0">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        </div>
+                        <DotsGrid />
+                    </div>
+                    <div>
+                        <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-tight">Total Trainee</p>
+                        <p className="text-3xl font-black text-gray-900 dark:text-white">{totalParticipants ? totalParticipants.toLocaleString() : '30,000'}</p>
+                    </div>
+                </div>
+
+                {/* Attendance */}
+                <div className={`${cardClass} xl:col-span-2 flex flex-col justify-between hover:shadow-md transition-all`} style={{ animationDelay: '200ms' }}>
+                    <div className="flex justify-between items-start mb-6">
+                        <h3 className="font-bold text-gray-900 dark:text-white tracking-tight">Attendance</h3>
+                        <DotsRow />
+                    </div>
+                    <div className="grid grid-cols-2 gap-8 lg:gap-12 w-full mt-auto">
+                        <div className="w-full">
+                            <p className="text-xs font-bold text-gray-400 mb-3 tracking-tight">Last class : Sat, Jan 31</p>
+                            <div className="flex gap-4 mb-2 items-center">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Present</span>
+                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">75%</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Absent</span>
+                                    <span className="text-xs font-bold text-red-500">25%</span>
+                                </div>
+                            </div>
+                            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                <div className="bg-emerald-500" style={{ width: '75%' }}></div>
+                                <div className="bg-red-500" style={{ width: '25%' }}></div>
+                            </div>
+                        </div>
+                        <div className="w-full">
+                            <p className="text-xs font-bold text-gray-400 mb-3 tracking-tight">Today: Tue, Feb 3</p>
+                            <div className="flex gap-4 mb-2 items-center">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Present</span>
+                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">--%</span>
+                                </div>
+                            </div>
+                            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                <div className="bg-emerald-500" style={{ width: '0%' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Total Documents */}
+                <div className={`${cardClass} flex flex-col justify-between hover:shadow-md transition-all`} style={{ animationDelay: '300ms' }}>
+                    <div className="flex justify-between items-start mb-6">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 font-bold flex items-center justify-center shrink-0">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <DotsGrid />
+                    </div>
+                    <div>
+                        <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-tight">Total Documents</p>
+                        <p className="text-3xl font-black text-gray-900 dark:text-white">{totalMaterials ? totalMaterials.toLocaleString() : '32'}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom 2-Column Grid for Table and Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-                {/* ============ CARD 1: Summary ============ */}
-                <div className={cardClass}>
-                    <div className={headerClass}>
-                        <h3 className={titleClass}>Summary</h3>
-                        <div className="flex items-center gap-2">
-                            <DotsGrid />
-                            <DotsRow />
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        {summaryItems.map((item, idx) => (
-                            <div
-                                key={idx}
-                                className="flex items-center justify-between bg-gray-50 dark:bg-white/5 rounded-2xl px-5 py-4 border border-gray-100 dark:border-white/5 hover:shadow-sm transition-shadow"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div
-                                        className="w-3 h-3 rounded-sm shrink-0 border"
-                                        style={{ borderColor: item.color, backgroundColor: `${item.color}20` }}
-                                    />
-                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{item.label}</span>
-                                </div>
-                                <span className="text-sm font-black text-blue-600 dark:text-blue-400 tabular-nums bg-blue-50 dark:bg-blue-900/20 px-4 py-1.5 rounded-xl">
-                                    {item.value}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* ============ CARD 2: Attendance Overview (Donut) ============ */}
-                <div className={cardClass}>
-                    <div className={headerClass}>
-                        <h3 className={titleClass}>Attendance Overview</h3>
-                        <div className="flex items-center gap-2">
-                            <DotsGrid />
-                            <DotsRow />
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <p className="text-sm text-gray-400 font-semibold mb-1">Total Trainees</p>
-                        <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter mb-4">{totalScore.toLocaleString()}</p>
-                        <div className="w-[220px] h-[220px] relative">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={donutData}
-                                        innerRadius={65}
-                                        outerRadius={100}
-                                        paddingAngle={3}
-                                        dataKey="value"
-                                        startAngle={90}
-                                        endAngle={-270}
-                                        stroke="none"
-                                    >
-                                        {donutData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '12px' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            {/* Center label */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-lg font-black text-gray-900 dark:text-white">{presentRate}%</span>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Present</span>
-                            </div>
-                        </div>
-                        {/* Legend */}
-                        <div className="flex items-center gap-5 mt-4">
-                            {donutData.map((d, i) => (
-                                <div key={i} className="flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                                    <span className="text-xs font-semibold text-gray-500">{d.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
                 {/* ============ CARD 3: Document Store (Table) ============ */}
-                <div className={cardClass}>
+                <div className={cardClass} style={{ animationDelay: '400ms' }}>
                     <div className={headerClass}>
                         <h3 className={titleClass}>Document Store</h3>
                         <div className="flex items-center gap-2">
@@ -217,11 +202,19 @@ export default function InstructorHomeView({ session, stats }: { session: any, s
                 </div>
 
                 {/* ============ CARD 4: Attendance Trend (Bar + Line) ============ */}
-                <div className={cardClass}>
+                <div className={cardClass} style={{ animationDelay: '500ms' }}>
                     <div className={headerClass}>
                         <div className="flex items-center gap-4">
                             <h3 className={titleClass}>Attendance Trend</h3>
-                            <span className="text-xs text-gray-400 font-semibold">Weekly Report</span>
+                            <select
+                                value={reportRange}
+                                onChange={(e) => setReportRange(e.target.value as any)}
+                                className="text-xs text-gray-500 bg-gray-50 dark:bg-[#252542] border border-gray-100 dark:border-white/10 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold cursor-pointer transition-colors"
+                            >
+                                <option value="weekly">Weekly Report</option>
+                                <option value="monthly">Monthly Report</option>
+                                <option value="yearly">Yearly Report</option>
+                            </select>
                         </div>
                         <div className="flex items-center gap-3">
                             {[
@@ -243,7 +236,7 @@ export default function InstructorHomeView({ session, stats }: { session: any, s
                     </div>
                     <div className="h-[280px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={attendanceMonths} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2}>
+                            <ComposedChart data={currentAttendanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2}>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
                                 <XAxis
                                     dataKey="name"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Search, Award, AlertTriangle, CheckCircle, Clock, FileText, Download } from 'lucide-react';
 
 // Mock data type until backend is ready
@@ -16,7 +15,6 @@ type Certificate = {
 };
 
 export default function CertificatesView() {
-    const t = useTranslations('CertificatesView');
     const [searchTerm, setSearchTerm] = useState("");
     const [filter, setFilter] = useState<'all' | 'valid' | 'expiring' | 'expired'>('all');
 
@@ -39,10 +37,10 @@ export default function CertificatesView() {
                 <div>
                     <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                         <Award className="text-orange-500" />
-                        {t('title')}
+                        Certificate Management
                     </h1>
                     <p className="text-gray-400 text-sm mt-1">
-                        {t('subtitle')}
+                        Monitor and verify professional certifications
                     </p>
                 </div>
 
@@ -51,13 +49,13 @@ export default function CertificatesView() {
                         onClick={() => setFilter('all')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${filter === 'all' ? 'bg-white text-black border-white' : 'text-gray-400 border-white/10 hover:border-white/30'}`}
                     >
-                        {t('filters.all')}
+                        All
                     </button>
                     <button
                         onClick={() => setFilter('expiring')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${filter === 'expiring' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500' : 'text-gray-400 border-white/10 hover:border-yellow-500/30'}`}
                     >
-                        {t('filters.expiring')}
+                        Expiring
                     </button>
                 </div>
             </div>
@@ -69,7 +67,7 @@ export default function CertificatesView() {
                     </div>
                     <div>
                         <div className="text-2xl font-bold text-white">1,245</div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">{t('stats.active')}</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider">Active</div>
                     </div>
                 </div>
                 <div className="bg-[#141414] border border-white/5 p-6 rounded-xl flex items-center gap-4">
@@ -78,7 +76,7 @@ export default function CertificatesView() {
                     </div>
                     <div>
                         <div className="text-2xl font-bold text-white">38</div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">{t('stats.expiring_soon')}</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider">Expiring Soon</div>
                     </div>
                 </div>
                 <div className="bg-[#141414] border border-white/5 p-6 rounded-xl flex items-center gap-4">
@@ -87,7 +85,7 @@ export default function CertificatesView() {
                     </div>
                     <div>
                         <div className="text-2xl font-bold text-white">12</div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">{t('stats.expired')}</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider">Expired</div>
                     </div>
                 </div>
             </div>
@@ -98,7 +96,7 @@ export default function CertificatesView() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                         <input
                             type="text"
-                            placeholder={t('search_placeholder')}
+                            placeholder="Search by recipient or course..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full bg-black/20 border border-white/5 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-orange-500 outline-none"
@@ -109,11 +107,11 @@ export default function CertificatesView() {
                 <table className="w-full text-left">
                     <thead className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
                         <tr>
-                            <th className="px-6 py-4">{t('headers.recipient')}</th>
-                            <th className="px-6 py-4">{t('headers.course')}</th>
-                            <th className="px-6 py-4">{t('headers.issued')}</th>
-                            <th className="px-6 py-4">{t('headers.validity')}</th>
-                            <th className="px-6 py-4 text-right">{t('headers.action')}</th>
+                            <th className="px-6 py-4">Recipient</th>
+                            <th className="px-6 py-4">Course</th>
+                            <th className="px-6 py-4">Issued</th>
+                            <th className="px-6 py-4">Validity</th>
+                            <th className="px-6 py-4 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -138,7 +136,7 @@ export default function CertificatesView() {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                    <button className="text-gray-400 hover:text-white transition-colors" title={t('download')}>
+                                    <button className="text-gray-400 hover:text-white transition-colors" title="Download">
                                         <Download className="h-4 w-4" />
                                     </button>
                                 </td>

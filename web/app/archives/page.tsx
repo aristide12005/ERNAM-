@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Search, Download, Database, ShieldCheck, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
 
 // Mock types for now
 type ArchiveRecord = {
@@ -19,20 +18,18 @@ type ArchiveRecord = {
 }
 
 export default function ArchivesPage() {
-    const t = useTranslations('Archives');
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
     const searchArchives = async (searchTerm: string) => {
         setLoading(true);
-        // Join with users table to get names
         const { data, error } = await supabase
             .from('archives')
             .select(`
-        *,
-        user:users (full_name)
-      `)
+                *,
+                user:users (full_name)
+            `)
             .or(`license_number.ilike.%${searchTerm}%,course_name_snapshot.ilike.%${searchTerm}%`)
             .limit(20);
 
@@ -42,13 +39,11 @@ export default function ArchivesPage() {
         setLoading(false);
     };
 
-    // Debounce search
     useEffect(() => {
         const timer = setTimeout(() => {
             if (query.length > 1) {
                 searchArchives(query);
             } else {
-                // Load recent by default
                 searchArchives('');
             }
         }, 500);
@@ -57,21 +52,19 @@ export default function ArchivesPage() {
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
-            {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-12"
             >
                 <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-                    {t('title')}
+                    Global Training Archives
                 </h1>
                 <p className="text-muted-foreground mt-2 text-lg">
-                    {t('subtitle')}
+                    Official registry of certified aeronautical personnel and tactical training records.
                 </p>
             </motion.div>
 
-            {/* Search Bar */}
             <div className="relative mb-12 max-w-2xl">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Search className="h-5 w-5 text-muted-foreground" />
@@ -79,7 +72,7 @@ export default function ArchivesPage() {
                 <input
                     type="text"
                     className="block w-full pl-12 pr-4 py-4 bg-secondary/50 border border-border rounded-xl text-white placeholder-muted-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-xl backdrop-blur-sm"
-                    placeholder={t('search_placeholder')}
+                    placeholder="Search by license number or course title..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                 />
@@ -88,7 +81,6 @@ export default function ArchivesPage() {
                 </div>
             </div>
 
-            {/* Results Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {results.map((item, index) => (
                     <motion.div
@@ -98,7 +90,6 @@ export default function ArchivesPage() {
                         transition={{ delay: index * 0.1 }}
                         className="group relative bg-card/50 border border-border hover:border-blue-500/50 rounded-xl p-6 transition-all hover:bg-secondary/60 hover:shadow-2xl overflow-hidden cursor-pointer"
                     >
-                        {/* Cinematic Glow Effect */}
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                         <div className="flex justify-between items-start mb-4">
@@ -106,7 +97,7 @@ export default function ArchivesPage() {
                                 <ShieldCheck className="h-6 w-6" />
                             </div>
                             <div className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-mono border border-emerald-500/20">
-                                {t('verified')}
+                                VERIFIED
                             </div>
                         </div>
 
@@ -115,7 +106,7 @@ export default function ArchivesPage() {
                         </h3>
 
                         <p className="text-muted-foreground text-sm mb-6">
-                            {t('issued_to')} <span className="text-white font-medium">{item.user?.full_name}</span> in <span className="text-white font-medium">{item.year}</span>
+                            Issued to <span className="text-white font-medium">{item.user?.full_name}</span> in <span className="text-white font-medium">{item.year}</span>
                         </p>
 
                         <div className="flex items-center gap-4 text-sm text-gray-500 font-mono border-t border-border pt-4">
@@ -125,7 +116,7 @@ export default function ArchivesPage() {
                             </div>
                             <div className="ml-auto flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors">
                                 <Download className="h-4 w-4" />
-                                {t('pdf')}
+                                Download PDF Certificate
                             </div>
                         </div>
                     </motion.div>
@@ -135,7 +126,7 @@ export default function ArchivesPage() {
             {results.length === 0 && !loading && (
                 <div className="text-center py-20 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                    <p>{t('no_records')}</p>
+                    <p>No tactical records found in the secure vault.</p>
                 </div>
             )}
 

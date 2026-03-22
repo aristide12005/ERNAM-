@@ -3,10 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Search, UserCheck, UserX, MoreVertical, Mail, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
 
 export default function Students({ instructorId }: { instructorId: string }) {
-    const t = useTranslations('InstructorDashboard');
     const [activeTab, setActiveTab] = useState<'active' | 'pending'>('active');
     const [students, setStudents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -15,7 +13,6 @@ export default function Students({ instructorId }: { instructorId: string }) {
     useEffect(() => {
         fetchStudents();
 
-        // Realtime subscription
         const channel = supabase
             .channel('enrollments-students-view')
             .on(
@@ -32,7 +29,6 @@ export default function Students({ instructorId }: { instructorId: string }) {
 
     const fetchStudents = async () => {
         setLoading(true);
-        // Fetch enrollments for courses owned by this instructor (simplified for now to all enrollments pending RLS)
         const { data, error } = await supabase
             .from('enrollments')
             .select(`
@@ -46,8 +42,6 @@ export default function Students({ instructorId }: { instructorId: string }) {
         if (error) {
             console.error('Error fetching students:', error);
         } else {
-            // Client-side filter for instructor ownership if RLS doesn't cover it fully yet
-            // For safety, we assume RLS handles it, but we can double check 'course.instructor_id' if needed.
             setStudents(data || []);
         }
         setLoading(false);
@@ -71,8 +65,8 @@ export default function Students({ instructorId }: { instructorId: string }) {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-foreground tracking-tight">{t('students_title')}</h1>
-                    <p className="text-muted-foreground text-sm">{t('students_desc')}</p>
+                    <h1 className="text-2xl font-black text-foreground tracking-tight">Trainee Directory</h1>
+                    <p className="text-muted-foreground text-sm">Manage your students, approve enrollments, and track progress.</p>
                 </div>
 
                 <div className="flex bg-secondary/50 p-1 rounded-xl w-fit">
@@ -83,7 +77,7 @@ export default function Students({ instructorId }: { instructorId: string }) {
                             : 'text-muted-foreground hover:text-foreground'
                             }`}
                     >
-                        {t('active_students')}
+                        Active Trainees
                     </button>
                     <button
                         onClick={() => setActiveTab('pending')}
@@ -92,7 +86,7 @@ export default function Students({ instructorId }: { instructorId: string }) {
                             : 'text-muted-foreground hover:text-foreground'
                             }`}
                     >
-                        {t('pending_requests')}
+                        Enrollment Requests
                     </button>
                 </div>
             </div>
@@ -102,7 +96,7 @@ export default function Students({ instructorId }: { instructorId: string }) {
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <input
                     type="text"
-                    placeholder={t('search_students')}
+                    placeholder="Search by name, email or course..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -114,17 +108,16 @@ export default function Students({ instructorId }: { instructorId: string }) {
                 {loading ? (
                     <div className="text-center py-12">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                        <p className="text-muted-foreground">{t('loading_students')}</p>
+                        <p className="text-muted-foreground">Loading trainee data...</p>
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="text-center py-12 bg-card border border-border rounded-xl border-dashed">
-                        <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+                        <UsersIcon className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
                         <p className="text-muted-foreground font-medium">
-                            {activeTab === 'active' ? t('no_active_students') : t('no_pending_requests')}
+                            {activeTab === 'active' ? "No active trainees found." : "No pending enrollment requests."}
                         </p>
                     </div>
                 ) : (
-                    // Deduplicate logic: groupBy student ID
                     Object.values(
                         filtered.reduce((acc: any, item: any) => {
                             if (!item.student?.id) return acc;
@@ -144,7 +137,6 @@ export default function Students({ instructorId }: { instructorId: string }) {
                             animate={{ opacity: 1, y: 0 }}
                             className="bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all cursor-pointer group"
                             onClick={() => {
-                                // Future: Open student detail modal
                                 console.log("Open details for", student.full_name);
                             }}
                         >
@@ -159,16 +151,15 @@ export default function Students({ instructorId }: { instructorId: string }) {
                                         <span>{student.email || 'No Email'}</span>
                                         <span className="w-1 h-1 bg-border rounded-full" />
 
-                                        {/* Course Display Logic */}
                                         <span className="bg-secondary px-2 py-0.5 rounded-md text-foreground font-medium">
                                             {student.enrollments.length > 1
-                                                ? `${student.enrollments.length} ${t('active_courses')}`
+                                                ? `${student.enrollments.length} Active Courses`
                                                 : student.enrollments[0]?.course?.title_en || 'Unknown Course'}
                                         </span>
                                     </div>
                                     {student.enrollments.length > 1 && (
                                         <div className="text-[10px] text-muted-foreground mt-1 pl-5">
-                                            {t('includes')} {student.enrollments.map((e: any) => e.course?.title_en).join(', ')}
+                                            Includes: {student.enrollments.map((e: any) => e.course?.title_en).join(', ')}
                                         </div>
                                     )}
                                 </div>
@@ -187,7 +178,6 @@ export default function Students({ instructorId }: { instructorId: string }) {
                                     </div>
                                 ) : (
                                     <div className="flex items-center gap-2">
-                                        {/* Simplification: Just show actions for the FIRST request for now, or expand to show all */}
                                         {student.enrollments.map((enrollment: any) => (
                                             <div key={enrollment.id} className="flex gap-2">
                                                 {student.enrollments.length > 1 && <span className="text-[10px] self-center truncate max-w-[100px]">{enrollment.course?.title_en}</span>}
@@ -196,7 +186,7 @@ export default function Students({ instructorId }: { instructorId: string }) {
                                                     className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center gap-1.5"
                                                 >
                                                     <UserCheck className="h-3 w-3" />
-                                                    {t('approve')}
+                                                    Approve
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleAction(enrollment.id, 'failed'); }}
@@ -217,7 +207,7 @@ export default function Students({ instructorId }: { instructorId: string }) {
     );
 }
 
-function Users(props: any) {
+function UsersIcon(props: any) {
     return (
         <svg
             {...props}

@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useTranslations } from 'next-intl';
 import { Search, Users, GraduationCap, Clock, Award } from 'lucide-react';
 
 type Participant = {
@@ -17,8 +16,7 @@ type Participant = {
     progress?: number;
 };
 
-export default function ParticipantsView() {
-    const t = useTranslations('ParticipantsView');
+export default function TraineesView() {
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -32,7 +30,7 @@ export default function ParticipantsView() {
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('role', 'participant')
+            .eq('role', 'trainee')
             .order('full_name', { ascending: true });
 
         if (!error && data) {
@@ -58,10 +56,10 @@ export default function ParticipantsView() {
                 <div>
                     <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                         <Users className="text-purple-500" />
-                        {t('title')}
+                        Trainee Directory
                     </h1>
                     <p className="text-gray-400 text-sm mt-1">
-                        {t('subtitle')}
+                        Manage and monitor all registered participants
                     </p>
                 </div>
 
@@ -69,7 +67,7 @@ export default function ParticipantsView() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <input
                         type="text"
-                        placeholder={t('search_placeholder')}
+                        placeholder="Search participants..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full bg-[#141414] border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-purple-500 outline-none"
@@ -84,17 +82,17 @@ export default function ParticipantsView() {
             ) : filtered.length === 0 ? (
                 <div className="text-center py-20 bg-[#141414] rounded-xl border border-white/5">
                     <GraduationCap className="h-12 w-12 text-gray-700 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-300">{t('no_results')}</h3>
+                    <h3 className="text-lg font-medium text-gray-300">No participants found</h3>
                 </div>
             ) : (
                 <div className="bg-[#141414] border border-white/5 rounded-xl overflow-hidden">
                     <table className="w-full text-left">
                         <thead className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
                             <tr>
-                                <th className="px-6 py-4">{t('headers.name')}</th>
-                                <th className="px-6 py-4">{t('headers.status')}</th>
-                                <th className="px-6 py-4">{t('headers.progress')}</th>
-                                <th className="px-6 py-4 text-right">{t('headers.action')}</th>
+                                <th className="px-6 py-4">Name</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4">Progress</th>
+                                <th className="px-6 py-4 text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -116,7 +114,7 @@ export default function ParticipantsView() {
                                                 p.status === 'enrolled' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
                                                     'bg-gray-500/10 text-gray-500 border-gray-500/20'
                                             }`}>
-                                            {t(`status.${p.status}`)}
+                                            {p.status}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -134,7 +132,7 @@ export default function ParticipantsView() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <button className="text-gray-400 hover:text-white transition-colors">
-                                            {t('view_details')}
+                                            View Details
                                         </button>
                                     </td>
                                 </tr>

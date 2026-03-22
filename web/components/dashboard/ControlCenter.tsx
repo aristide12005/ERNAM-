@@ -37,22 +37,6 @@ export default function ControlCenter({ isOpen, onClose }: ControlCenterProps) {
         return date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
     };
 
-    // Locale Switcher Logic
-    const switchLocale = (newLocale: string) => {
-        // Simple regex replace for /en/ or /fr/ in path
-        const currentPath = pathname || '/';
-        const segments = currentPath.split('/');
-        // segments[1] is usually the locale
-        if (['en', 'fr'].includes(segments[1])) {
-            segments[1] = newLocale;
-            const newPath = segments.join('/');
-            router.push(newPath);
-        } else {
-            router.push(`/${newLocale}${currentPath}`);
-        }
-    };
-
-    const currentLocale = pathname?.split('/')[1] === 'fr' ? 'fr' : 'en';
 
     return (
         <AnimatePresence>
@@ -121,32 +105,6 @@ export default function ControlCenter({ isOpen, onClose }: ControlCenterProps) {
                                 </button>
                             </div>
 
-                            {/* 3. Language Slider */}
-                            <div className="bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl flex relative">
-                                {/* Sliding Background */}
-                                <motion.div
-                                    className="absolute top-1.5 bottom-1.5 bg-white dark:bg-slate-700 rounded-lg shadow-sm w-[calc(50%-6px)]"
-                                    animate={{
-                                        left: currentLocale === 'en' ? '6px' : 'calc(50% + 3px)'
-                                    }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-
-                                <button
-                                    onClick={() => switchLocale('en')}
-                                    className={`flex-1 relative z-10 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-colors ${currentLocale === 'en' ? 'text-slate-900 dark:text-white' : 'text-slate-400'
-                                        }`}
-                                >
-                                    <span className="text-lg">🇬🇧</span> English
-                                </button>
-                                <button
-                                    onClick={() => switchLocale('fr')}
-                                    className={`flex-1 relative z-10 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-colors ${currentLocale === 'fr' ? 'text-slate-900 dark:text-white' : 'text-slate-400'
-                                        }`}
-                                >
-                                    <span className="text-lg">🇫🇷</span> Français
-                                </button>
-                            </div>
 
                             {/* 4. Mini Profile & Logout */}
                             <div className="flex items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
