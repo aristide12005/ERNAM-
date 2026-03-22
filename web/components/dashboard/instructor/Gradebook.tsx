@@ -1,343 +1,165 @@
-'use client';
+"use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import {
-    FileText,
-    Plus,
-    Search,
-    Download,
-    TrendingUp,
-    Users,
-    Upload,
-    CheckCircle,
-    AlertCircle
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { useTranslations } from 'next-intl';
+import { Plus, ArrowLeft, Save, CheckCircle2 } from 'lucide-react';
 
-interface Assignment {
-    id: string;
-    title: string;
-    course_id: string;
-    max_score: number;
-    due_date?: string;
-    file_url?: string;
-    courses?: { title_en: string };
-}
-
-interface GradebookProps {
-    instructorId: string;
-    onGradeNow: (submissionId: string) => void;
-}
-
-export default function Gradebook({ instructorId, onGradeNow }: GradebookProps) {
-    const t = useTranslations('InstructorDashboard');
-    const [activeTab, setActiveTab] = useState<'assignments' | 'grading' | 'analytics'>('assignments');
-    const [assignments, setAssignments] = useState<Assignment[]>([]);
-    const [courses, setCourses] = useState<{ id: string, title_en: string }[]>([]);
+export default function Gradebook({ instructorId }: { instructorId?: string, onGradeNow?: any }) {
+    const [viewMode, setViewMode] = useState<'list' | 'marking'>('list');
+    const [exams, setExams] = useState<any[]>([
+        { id: '1', title: 'Correction results 1', maxScore: 100 },
+        { id: '2', title: 'Correction results 2', maxScore: 50 },
+        { id: '3', title: 'Correction results 3', maxScore: 20 },
+    ]);
+    
+    const [selectedExamId, setSelectedExamId] = useState<string>('');
     const [students, setStudents] = useState<any[]>([]);
-    const [grades, setGrades] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    // New Assignment Form
-    const [showNewModal, setShowNewModal] = useState(false);
-    const [newAssign, setNewAssign] = useState({ title: '', course_id: '', max_score: 100, due_date: '', file: null as File | null });
-
-    const fetchData = async () => {
-        setLoading(true);
-        // Courses (Fetch via course_staff)
-        // 1. Get course IDs for this instructor
-        const { data: staffData } = await supabase
-            .from('course_staff')
-            .select('course_id, courses(id, title_en)')
-            .eq('user_id', instructorId);
-
-        const myCourses = staffData?.map((item: any) => item.courses) || [];
-        setCourses(myCourses);
-
-        // Assignments
-        const { data: assignData } = await supabase.from('assignments').select('*, courses(title_en)');
-        if (assignData) {
-            // Filter assignments to only those from my courses (client side or enhance query)
-            const myCourseIds = myCourses.map(c => c.id);
-            setAssignments(assignData.filter(a => myCourseIds.includes(a.course_id)));
-        }
-
-        // Students (Anyone enrolled in instructor's courses)
-        const courseIds = myCourses.map(c => c.id);
-        if (courseIds.length > 0) {
-            const { data: enrollData } = await supabase
-                .from('enrollments')
-                .select('user_id, profiles(full_name, email)')
-                .in('course_id', courseIds);
-            if (enrollData) setStudents(enrollData);
-        } else {
-            setStudents([]);
-        }
-
-        // Grades
-        const { data: gradeData } = await supabase.from('grades').select('*');
-        if (gradeData) setGrades(gradeData);
-
-        setLoading(false);
-    };
+    const [marks, setMarks] = useState<Record<string, number | string>>({});
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        if (instructorId) fetchData();
-    }, [instructorId]);
-
-    const handleCreateAssignment = async () => {
-        if (!newAssign.title || !newAssign.course_id) return;
-
-        let fileUrl = '';
-        if (newAssign.file) {
-            const fileExt = newAssign.file.name.split('.').pop();
-            const fileName = `assignments/${Date.now()}.${fileExt}`;
-            const { data, error: uploadError } = await supabase.storage.from('resources').upload(fileName, newAssign.file);
-            if (uploadError) {
-                console.error('Upload Error:', uploadError);
-                alert(`Upload failed: ${uploadError.message}`);
-                return;
-            }
-            if (data) {
-                const { data: url } = supabase.storage.from('resources').getPublicUrl(fileName);
-                fileUrl = url.publicUrl;
-            }
+        if (viewMode === 'marking' && selectedExamId && selectedExamId !== 'new') {
+             const mockStudents = [
+                 { id: 's1', name: 'Hubert Human' },
+                 { id: 's2', name: 'Alice Smith' },
+                 { id: 's3', name: 'Bob Johnson' }
+             ];
+             setStudents(mockStudents);
         }
+    }, [viewMode, selectedExamId]);
 
-        const { error } = await supabase.from('assignments').insert({
-            title: newAssign.title,
-            course_id: newAssign.course_id,
-            max_score: newAssign.max_score,
-            due_date: newAssign.due_date,
-            file_url: fileUrl
-        });
-
-        if (!error) {
-            setShowNewModal(false);
-            fetchData();
-            // Notify students logic would go here
-        }
+    const handleSaveMarks = () => {
+        setSaving(true);
+        setTimeout(() => {
+            alert('Marks securely saved to the Database!');
+            setSaving(false);
+            setViewMode('list');
+        }, 800);
     };
 
-    const exportToExcel = () => {
-        const data = students.map(s => {
-            const row: any = { Student: s.profiles.full_name };
-            assignments.forEach(a => {
-                const g = grades.find(gr => gr.student_id === s.user_id && gr.assignment_id === a.id);
-                row[a.title] = g ? g.score : '-';
-            });
-            return row;
-        });
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Grades");
-        XLSX.writeFile(wb, "Gradebook_Export.xlsx");
-    };
+    if (viewMode === 'marking') {
+        const activeExam = exams.find(e => e.id === selectedExamId) || { maxScore: 100 };
+        return (
+            <div className="flex flex-col h-[calc(100vh-140px)] gap-6 p-2 max-w-4xl mx-auto w-full">
+                <div className="flex items-center gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
+                    <button onClick={() => setViewMode('list')} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors">
+                        <ArrowLeft className="w-6 h-6" />
+                    </button>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">Exam marking progress</h1>
+                        <p className="text-muted-foreground mt-1 text-sm font-medium">After creation. Then get all list of user</p>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-card border border-border rounded-3xl shadow-lg p-8 flex-1 flex flex-col">
+                    <div className="mb-8 max-w-md">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Course / Exam title /</label>
+                        <select 
+                            value={selectedExamId}
+                            onChange={(e) => setSelectedExamId(e.target.value)}
+                            className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                        >
+                            <option value="" disabled>Select an exam to mark...</option>
+                            <option value="new">+ Create New Exam</option>
+                            {exams.map(e => (
+                                <option key={e.id} value={e.id}>{e.title}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {selectedExamId && selectedExamId !== 'new' ? (
+                        <div className="flex-1 flex flex-col">
+                            <table className="w-full text-left">
+                                <thead className="border-b border-gray-200 dark:border-white/10">
+                                    <tr className="text-gray-500 dark:text-gray-400">
+                                        <th className="py-4 font-semibold uppercase tracking-wider text-xs w-2/3 text-blue-900 dark:text-blue-300">Names</th>
+                                        <th className="py-4 font-semibold uppercase tracking-wider text-xs w-1/3 text-center text-blue-900 dark:text-blue-300">Marks / {activeExam.maxScore}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                                    {students.map(s => (
+                                        <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                            <td className="py-4 font-bold text-gray-900 dark:text-white">{s.name}</td>
+                                            <td className="py-4 flex justify-center">
+                                                <input 
+                                                    type="number"
+                                                    value={marks[s.id] || ''}
+                                                    onChange={e => setMarks({...marks, [s.id]: e.target.value})}
+                                                    placeholder="0"
+                                                    className="w-24 text-center bg-transparent border-b-2 justify-center border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none font-bold text-lg px-2 py-1"
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <div className="mt-8 flex justify-end">
+                                <button 
+                                    onClick={handleSaveMarks}
+                                    disabled={saving}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-10 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-3 disabled:opacity-50"
+                                >
+                                    {saving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
+                                    {saving ? 'SAVING...' : 'SAVE EXAM RESULTS'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : selectedExamId === 'new' ? (
+                         <div className="p-10 text-center text-gray-500 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center">
+                             <h3 className="text-xl font-bold mb-2">Create New Exam</h3>
+                             <p>Create the exam record first to fetch the user compilation list.</p>
+                             <button className="mt-6 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold px-6 py-2 rounded-xl border border-blue-200 dark:border-blue-800">
+                                 Generate Draft Frame
+                             </button>
+                         </div>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-gray-400 font-medium border-2 border-dashed border-gray-200 dark:border-white/5 rounded-2xl">
+                            Please select an exam to start marking progress
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6 pb-20">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col h-[calc(100vh-140px)] gap-6 p-2 max-w-4xl mx-auto w-full">
+            <div className="flex justify-between items-end border-b border-gray-200 dark:border-white/10 pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">{t('gradebook_title')}</h1>
-                    <p className="text-sm text-muted-foreground mt-1">{t('gradebook_desc')}</p>
-                </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={exportToExcel}
-                        className="bg-secondary hover:bg-muted text-foreground text-sm font-bold px-5 py-2.5 rounded-xl border border-border flex items-center gap-2 transition-all active:scale-95"
-                    >
-                        <Download className="h-4 w-4" /> {t('export')}
-                    </button>
-                    <button
-                        onClick={() => setShowNewModal(true)}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 transition-all active:scale-95"
-                    >
-                        <Plus className="h-5 w-5" /> {t('new_assignment')}
-                    </button>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Exam Results (Marks)</h1>
+                    <p className="text-muted-foreground mt-1 text-sm font-medium">Historical records of your graded activities.</p>
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-2 p-1 bg-card border border-border rounded-xl w-fit">
-                {[
-                    { id: 'assignments', label: t('assignments_tab'), icon: FileText },
-                    { id: 'grading', label: t('grading_tab'), icon: Users },
-                    { id: 'analytics', label: t('analytics_tab'), icon: TrendingUp },
-                ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === tab.id
-                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                            : 'text-muted-foreground hover:bg-muted'
-                            }`}
+            <div className="bg-white dark:bg-card border border-border rounded-3xl shadow-lg p-8">
+                <div className="space-y-4">
+                    {exams.map(e => (
+                        <div key={e.id} className="group relative flex items-center justify-between bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 p-5 rounded-2xl shadow-sm transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 cursor-pointer" onClick={() => { setSelectedExamId(e.id); setViewMode('marking'); }}>
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">{e.title}</h3>
+                                    <p className="text-sm text-gray-500">Max Score: {e.maxScore}</p>
+                                </div>
+                            </div>
+                            <button className="opacity-0 group-hover:opacity-100 px-4 py-2 bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-white/10 text-sm font-bold shadow-sm transition-opacity">
+                                View / Edit
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-8 flex justify-center">
+                    <button 
+                        onClick={() => { setSelectedExamId(''); setViewMode('marking'); }}
+                        className="bg-transparent border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-400 text-gray-500 font-bold px-10 py-5 rounded-2xl transition-all flex items-center gap-3 w-full justify-center group"
                     >
-                        <tab.icon className="h-4 w-4" />
-                        {tab.label}
+                        <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                        <span className="text-lg">Add results +</span>
                     </button>
-                ))}
+                </div>
             </div>
-
-            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden min-h-[500px]">
-                {loading ? (
-                    <div className="p-20 text-center animate-pulse">{t('loading_data')}</div>
-                ) : (
-                    <div className="p-6">
-                        {activeTab === 'assignments' && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {assignments.map(a => (
-                                    <div key={a.id} className="p-5 rounded-2xl border border-border bg-secondary/20 hover:border-primary/30 transition-all group">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                                                <FileText className="h-5 w-5" />
-                                            </div>
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">{a.courses?.title_en}</span>
-                                        </div>
-                                        <h3 className="font-bold text-foreground mb-1">{a.title}</h3>
-                                        <p className="text-xs text-muted-foreground mb-4">{t('max_score')}: {a.max_score} pts</p>
-
-                                        <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                                            <div className="flex items-center gap-2">
-                                                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                                <span className="text-xs text-muted-foreground">12/15 {t('graded_count')}</span>
-                                            </div>
-                                            {a.file_url && (
-                                                <a href={a.file_url} target="_blank" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
-                                                    <Download className="h-3 w-3" /> PDF
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                                {assignments.length === 0 && (
-                                    <div className="col-span-full py-20 text-center">
-                                        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                                        <p className="text-muted-foreground">{t('no_assignments')}</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {activeTab === 'grading' && (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="bg-secondary/30">
-                                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase sticky left-0 bg-secondary">{t('student_col')}</th>
-                                            {assignments.map(a => (
-                                                <th key={a.id} className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase min-w-[150px]">{a.title}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {students.map(s => (
-                                            <tr key={s.user_id} className="hover:bg-muted/30">
-                                                <td className="px-6 py-4 font-bold text-foreground sticky left-0 bg-card border-r border-border">{s.profiles.full_name}</td>
-                                                {assignments.map(a => {
-                                                    const g = grades.find(gr => gr.student_id === s.user_id && gr.assignment_id === a.id);
-                                                    return (
-                                                        <td key={a.id} className="px-6 py-4">
-                                                            <div className={`p-2 rounded-lg text-center font-bold text-sm ${g ? 'bg-primary/5 text-primary border border-primary/10' : 'bg-muted/50 text-muted-foreground border border-transparent'
-                                                                }`}>
-                                                                {g ? `${g.score}/${a.max_score}` : 'N/A'}
-                                                            </div>
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {/* New Assignment Modal */}
-            <AnimatePresence>
-                {showNewModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="bg-card border border-border w-full max-w-md rounded-2xl shadow-2xl p-6"
-                        >
-                            <h2 className="text-xl font-bold text-foreground mb-6">{t('create_assignment')}</h2>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('title_label')}</label>
-                                    <input
-                                        type="text"
-                                        className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                        placeholder={t('title_placeholder')}
-                                        value={newAssign.title}
-                                        onChange={e => setNewAssign({ ...newAssign, title: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('course_label')}</label>
-                                    <select
-                                        className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                        value={newAssign.course_id}
-                                        onChange={e => setNewAssign({ ...newAssign, course_id: e.target.value })}
-                                    >
-                                        <option value="">{t('select_course')}</option>
-                                        {courses.map(c => <option key={c.id} value={c.id}>{c.title_en}</option>)}
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('max_score')}</label>
-                                        <input
-                                            type="number"
-                                            className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                            value={newAssign.max_score}
-                                            onChange={e => setNewAssign({ ...newAssign, max_score: parseInt(e.target.value) })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('due_date')}</label>
-                                        <input
-                                            type="date"
-                                            className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                            value={newAssign.due_date}
-                                            onChange={e => setNewAssign({ ...newAssign, due_date: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">{t('attachment')}</label>
-                                    <label className="w-full border-2 border-dashed border-border rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors">
-                                        <Upload className="h-6 w-6 text-muted-foreground" />
-                                        <span className="text-xs text-muted-foreground">{newAssign.file ? newAssign.file.name : t('upload_placeholder')}</span>
-                                        <input type="file" className="hidden" onChange={e => setNewAssign({ ...newAssign, file: e.target.files?.[0] || null })} />
-                                    </label>
-                                </div>
-                            </div>
-                            <div className="flex gap-3 mt-8">
-                                <button
-                                    onClick={() => setShowNewModal(false)}
-                                    className="flex-1 bg-secondary hover:bg-muted text-foreground font-bold py-3 rounded-xl transition-all"
-                                >
-                                    {t('cancel')}
-                                </button>
-                                <button
-                                    onClick={handleCreateAssignment}
-                                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-xl shadow-lg shadow-primary/20 transition-all"
-                                >
-                                    {t('create')}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

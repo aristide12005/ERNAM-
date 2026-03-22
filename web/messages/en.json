@@ -108,7 +108,12 @@
       "training_ops": "Training Operations",
       "training_content": "Training Content",
       "evaluation": "Evaluation",
-      "learning_resources": "Learning Resources"
+      "learning_resources": "Learning Resources",
+      "teaching": "Teaching",
+      "learning": "Learning",
+      "records": "Records",
+      "monitoring": "Monitoring",
+      "management": "Management"
     },
     "items": {
       "dashboard": "Dashboard",
@@ -142,7 +147,16 @@
       "assessments": "Assessments",
       "my_trainings": "My Trainings",
       "users": "Users & Roles",
-      "audit_logs": "Security Audit Logs"
+      "audit_logs": "Security Audit Logs",
+      "overview": "Overview",
+      "session_details": "Session Details",
+      "messages": "Messages",
+      "profile_settings": "Profile & Settings",
+      "org_profile": "Organization Profile",
+      "trainees": "Trainees",
+      "notes": "Notes",
+      "attendance": "Attendance",
+      "grades": "Grades"
     },
     "role": {
       "ernam_admin": "ERNAM Admin",
@@ -943,5 +957,41 @@
       "title": "Classroom Chat",
       "empty": "No messages yet."
     }
+  },
+  "TraineesList": {
+    "page_title": "Trainees List",
+    "breadcrumb_home": "Home",
+    "breadcrumb_trainees": "Trainees",
+    "section_title": "Trainees Information",
+    "search_placeholder": "Search by name or roll",
+    "filter_last_30": "Last 30 days",
+    "col_name": "Trainees Name",
+    "col_code": "Code",
+    "col_email": "Email",
+    "col_action": "Action",
+    "col_grade": "Grade",
+    "grade_good": "Good",
+    "grade_medium": "Medium",
+    "grade_low": "Low",
+    "btn_message": "Message",
+    "btn_delete": "Delete",
+    "btn_edit_grades": "Edit Grades",
+    "btn_edit_attendance": "Edit Attendance",
+    "loading": "Loading your trainees...",
+    "no_results": "No trainees found matching your search.",
+    "per_page": "{count} / page",
+    "modal_title": "Send Message",
+    "modal_to": "To {count} selected trainee(s)",
+    "modal_placeholder": "Type your message here...",
+    "modal_cancel": "Cancel",
+    "modal_send": "Send Message",
+    "modal_sending": "Sending...",
+    "confirm_delete": "Are you sure you want to remove {count} selected trainee(s)?",
+    "delete_success": "{count} trainee(s) removed (demo).",
+    "message_success": "Message sent to {count} trainee(s).",
+    "edit_grades_msg": "Edit grades for {count} selected trainee(s) (demo).",
+    "edit_attendance_msg": "Edit attendance for {count} selected trainee(s) (demo).",
+    "delete_trainee": "Delete trainee: {name} (demo)",
+    "edit_trainee": "Edit trainee: {name} (demo)"
   }
 }

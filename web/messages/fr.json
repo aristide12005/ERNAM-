@@ -152,7 +152,11 @@
             "session_details": "Détails de Session",
             "messages": "Messages",
             "profile_settings": "Profil & Paramètres",
-            "org_profile": "Profil Organisation"
+            "org_profile": "Profil Organisation",
+            "trainees": "Stagiaires",
+            "notes": "Notes",
+            "attendance": "Présence",
+            "grades": "Résultats"
         },
         "role": {
             "ernam_admin": "Admin ERNAM",
@@ -1192,5 +1196,41 @@
             "title": "Chat de la classe",
             "empty": "Aucun message pour le moment."
         }
+    },
+    "TraineesList": {
+        "page_title": "Liste des Stagiaires",
+        "breadcrumb_home": "Accueil",
+        "breadcrumb_trainees": "Stagiaires",
+        "section_title": "Informations des Stagiaires",
+        "search_placeholder": "Rechercher par nom ou matricule",
+        "filter_last_30": "30 derniers jours",
+        "col_name": "Nom du Stagiaire",
+        "col_code": "Code",
+        "col_email": "Email",
+        "col_action": "Action",
+        "col_grade": "Note",
+        "grade_good": "Bon",
+        "grade_medium": "Moyen",
+        "grade_low": "Faible",
+        "btn_message": "Message",
+        "btn_delete": "Supprimer",
+        "btn_edit_grades": "Modifier Notes",
+        "btn_edit_attendance": "Modifier Présence",
+        "loading": "Chargement des stagiaires...",
+        "no_results": "Aucun stagiaire trouvé correspondant à votre recherche.",
+        "per_page": "{count} / page",
+        "modal_title": "Envoyer un Message",
+        "modal_to": "À {count} stagiaire(s) sélectionné(s)",
+        "modal_placeholder": "Tapez votre message ici...",
+        "modal_cancel": "Annuler",
+        "modal_send": "Envoyer le Message",
+        "modal_sending": "Envoi en cours...",
+        "confirm_delete": "Êtes-vous sûr de vouloir retirer {count} stagiaire(s) sélectionné(s) ?",
+        "delete_success": "{count} stagiaire(s) retiré(s) (démo).",
+        "message_success": "Message envoyé à {count} stagiaire(s).",
+        "edit_grades_msg": "Modifier les notes de {count} stagiaire(s) sélectionné(s) (démo).",
+        "edit_attendance_msg": "Modifier la présence de {count} stagiaire(s) sélectionné(s) (démo).",
+        "delete_trainee": "Supprimer le stagiaire : {name} (démo)",
+        "edit_trainee": "Modifier le stagiaire : {name} (démo)"
     }
 }
