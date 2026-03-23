@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -29,7 +28,6 @@ export async function POST(req: NextRequest) {
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'STANDARD_CREATED',
-                target_resource: data.id,
                 actor_id: adminId,
                 entity_type: 'standard',
                 entity_id: data.id
@@ -60,7 +58,6 @@ export async function PUT(req: NextRequest) {
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'STANDARD_UPDATED',
-                target_resource: id,
                 actor_id: adminId,
                 entity_type: 'standard',
                 entity_id: id
@@ -87,7 +84,6 @@ export async function DELETE(req: NextRequest) {
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'STANDARD_DELETED',
-                target_resource: id,
                 actor_id: adminId,
                 entity_type: 'standard',
                 entity_id: id

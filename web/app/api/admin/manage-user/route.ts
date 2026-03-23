@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -18,6 +17,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
+        // Validate role against schema constraints
+        const validRoles = ['participant', 'instructor', 'org_admin', 'ernam_admin', 'maintainer', 'developer'];
+        if (!validRoles.includes(role)) {
+            return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+        }
+
         // 1. Create Auth User
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
@@ -28,24 +33,29 @@ export async function POST(req: NextRequest) {
 
         if (authError) throw authError;
 
-        // 2. Update/Insert into public.users (Profile)
-        // Usually handled by a trigger, but many devs do it explicitly too
+        // 2. Upsert into public.users (Profile)
         const { error: profileError } = await supabaseAdmin
             .from('users')
-            .update({ role, full_name: fullName, status: 'approved' })
-            .eq('id', authUser.user.id);
+            .upsert({
+                id: authUser.user.id,
+                email,
+                full_name: fullName,
+                role,
+                status: 'approved'
+            });
 
         if (profileError) {
-            console.error("Profile sync error:", profileError);
+            console.error("Profile upsert error:", profileError);
+            throw profileError;
         }
 
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'USER_CREATED',
-                target_resource: authUser.user.id,
-                actor_id: adminId,
                 entity_type: 'user',
-                entity_id: authUser.user.id
+                entity_id: authUser.user.id,
+                actor_id: adminId,
+                ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
             });
         }
 
@@ -62,6 +72,21 @@ export async function PUT(req: NextRequest) {
 
         if (!id) return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
 
+        // Validate role and status against schema constraints if provided
+        if (role) {
+            const validRoles = ['participant', 'instructor', 'org_admin', 'ernam_admin', 'maintainer', 'developer'];
+            if (!validRoles.includes(role)) {
+                return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+            }
+        }
+
+        if (status) {
+            const validStatuses = ['pending', 'approved', 'rejected', 'suspended'];
+            if (!validStatuses.includes(status)) {
+                return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+            }
+        }
+
         const { data, error } = await supabaseAdmin
             .from('users')
             .update({ role, status, full_name })
@@ -73,10 +98,10 @@ export async function PUT(req: NextRequest) {
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'USER_UPDATED',
-                target_resource: id,
-                actor_id: adminId,
                 entity_type: 'user',
                 entity_id: id,
+                actor_id: adminId,
+                ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
                 details: { role, status }
             });
         }
@@ -95,18 +120,25 @@ export async function DELETE(req: NextRequest) {
 
         if (!id) return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
 
-        // Deleting from Auth deletes from public users if mapped via Trigger
-        // But let's be safe and delete profile if it lives
+        // 1. Delete from public.users first to avoid foreign key violations
+        const { error: profileError } = await supabaseAdmin
+            .from('users')
+            .delete()
+            .eq('id', id);
+
+        if (profileError) throw profileError;
+
+        // 2. Delete from Auth
         const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
         if (authError) throw authError;
 
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'USER_DELETED',
-                target_resource: id,
-                actor_id: adminId,
                 entity_type: 'user',
-                entity_id: id
+                entity_id: id,
+                actor_id: adminId,
+                ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
             });
         }
 

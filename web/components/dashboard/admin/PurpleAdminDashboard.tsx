@@ -11,23 +11,6 @@ import SessionFormModal from "./SessionFormModal";
 import DocumentFormModal from "./DocumentFormModal";
 import StandardFormModal from "./StandardFormModal";
 import UserDetailModal from './UserDetailModal';
-import { 
-    SYSTEM_HEALTH_DATA, 
-    KEY_INDICATORS_DATA, 
-    SKILLS_EVALUATION_DATA, 
-    EVOLUTION_DATA, 
-    COURSE_AVG_DATA, 
-    TRAINEE_KPI_CARDS, 
-    LEVEL2_KPI_CARDS, 
-    TRAINER_KPI_CARDS, 
-    ADMIN_KPI_CARDS, 
-    TRAINEE_ROSTER_DATA, 
-    LEVEL2_ROSTER_DATA, 
-    TRAINER_ROSTER_DATA, 
-    ADMIN_ROSTER_DATA,
-    USERS_DATA
-} from "@/lib/mockData";
-
 
 const getDynamicStatsCategories = (stats: any) => [
     { name: "Documents", current: stats?.docs24h || 0, last24h: stats?.docs24h || 0, thisWeek: stats?.documents || 0, thisMonth: stats?.documents || 0, total: stats?.documents?.toLocaleString() || "0" },
@@ -117,20 +100,62 @@ export default function PurpleAdminDashboard() {
             const now = new Date();
             const last24hDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-            const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
-            const { count: participantCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'participant');
-            const { count: trainerCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'instructor');
-            const { count: adminCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'ernam_admin');
-            const { count: sessionCount } = await supabase.from('sessions').select('*', { count: 'exact', head: true });
-            const { count: certCount } = await supabase.from('certificates').select('*', { count: 'exact', head: true });
-            const { count: attendanceCount } = await supabase.from('session_participants').select('*', { count: 'exact', head: true }).eq('attendance_status', 'attended');
-            const { count: docCount } = await supabase.from('documents').select('*', { count: 'exact', head: true });
-            const { count: examCount } = await supabase.from('assessments').select('*', { count: 'exact', head: true });
+            // Get counts using proper Supabase v2 syntax
+            const { count: usersCount } = await supabase
+                .from('users')
+                .select('*', { count: 'exact' });
+            
+            const { count: participantCount } = await supabase
+                .from('users')
+                .select('*', { count: 'exact' })
+                .eq('role', 'participant');
+            
+            const { count: trainerCount } = await supabase
+                .from('users')
+                .select('*', { count: 'exact' })
+                .eq('role', 'instructor');
+            
+            const { count: adminCount } = await supabase
+                .from('users')
+                .select('*', { count: 'exact' })
+                .eq('role', 'ernam_admin');
+            
+            const { count: sessionCount } = await supabase
+                .from('sessions')
+                .select('*', { count: 'exact' });
+            
+            const { count: certCount } = await supabase
+                .from('certificates')
+                .select('*', { count: 'exact' });
+            
+            const { count: attendanceCount } = await supabase
+                .from('session_participants')
+                .select('*', { count: 'exact' })
+                .eq('attendance_status', 'attended');
+            
+            const { count: docCount } = await supabase
+                .from('documents')
+                .select('*', { count: 'exact' });
+            
+            const { count: examCount } = await supabase
+                .from('assessments')
+                .select('*', { count: 'exact' });
 
-            // Activity filters for 24h
-            const { count: u24 } = await supabase.from('users').select('*', { count: 'exact', head: true }).gt('created_at', last24hDate);
-            const { count: d24 } = await supabase.from('documents').select('*', { count: 'exact', head: true }).gt('created_at', last24hDate);
-            const { count: c24 } = await supabase.from('certificates').select('*', { count: 'exact', head: true }).gt('created_at', last24hDate);
+            // 24h activity counts
+            const { count: u24 } = await supabase
+                .from('users')
+                .select('*', { count: 'exact' })
+                .gt('created_at', last24hDate);
+            
+            const { count: d24 } = await supabase
+                .from('documents')
+                .select('*', { count: 'exact' })
+                .gt('created_at', last24hDate);
+            
+            const { count: c24 } = await supabase
+                .from('certificates')
+                .select('*', { count: 'exact' })
+                .gt('created_at', last24hDate);
 
             setDashboardStats({
                 totalUsers: usersCount || 0,
@@ -163,6 +188,7 @@ export default function PurpleAdminDashboard() {
                     created_at,
                     phone,
                     status,
+                    organization_id,
                     session_instructors (
                         sessions (id)
                     ),
@@ -177,7 +203,8 @@ export default function PurpleAdminDashboard() {
                         action,
                         created_at
                     )
-                `);
+                `)
+                .order('created_at', { ascending: false });
 
             if (error) throw error;
             if (!data) return;
@@ -186,928 +213,621 @@ export default function PurpleAdminDashboard() {
             setAllUsers(data.map(u => ({
                 id: u.id,
                 name: u.full_name || "Unknown",
-                role: u.role === 'ernam_admin' ? 'Administrator' : u.role === 'instructor' ? 'Trainer' : 'Trainee',
+                role: u.role === 'ernam_admin' ? 'Administrator' : 
+                      u.role === 'instructor' ? 'Trainer' : 
+                      u.role === 'participant' ? 'Trainee' : u.role,
                 email: u.email,
                 phone: u.phone || "N/A",
-                status: u.status === 'approved' ? 'excellent' : 'average',
+                status: u.status === 'approved' ? 'excellent' : 
+                        u.status === 'pending' ? 'average' : 
+                        u.status === 'suspended' ? 'poor' : 'average',
                 avatar: (u.full_name || "U").substring(0, 2).toUpperCase(),
-                color: u.role === 'ernam_admin' ? '#388E3C' : u.role === 'instructor' ? '#FF9800' : '#1976D2'
+                color: u.role === 'ernam_admin' ? '#388E3C' : 
+                       u.role === 'instructor' ? '#FF9800' : '#1976D2'
             })));
 
             // Map Trainees
-            const tData = data.filter(u => u.role === 'participant').map(u => {
-                const latest = u.session_participants?.[0];
-                const session: any = Array.isArray(latest?.sessions) ? latest.sessions[0] : latest?.sessions;
-                const standard: any = Array.isArray(session?.training_standards) ? session.training_standards[0] : session?.training_standards;
-                
-                return {
-                    id: u.id,
-                    date: session?.start_date ? format(new Date(session.start_date), "dd MMM yyyy") : "N/A",
-                    time: session?.start_date ? format(new Date(session.start_date), "HH:mm a") : "",
-                    trainee: u.full_name || "Unknown",
-                    role: "Student",
-                    status: latest?.attendance_status?.toUpperCase().replace('_', ' ') || "PENDING",
-                    statusColor: latest?.attendance_status === 'enrolled' ? "#3B82F6" : 
-                                 latest?.attendance_status === 'attended' ? "#10B981" : "#EF4444",
-                    moduleTitle: standard?.title || "No Module",
-                    moduleProgress: "N/A",
-                    performanceNum: "N/A",
-                    performanceText: "Grade: -",
-                    traineeId: `#TRN-${u.id.substring(0,6).toUpperCase()}`,
-                    email: u.email
-                };
-            });
+            const tData = data
+                .filter(u => u.role === 'participant')
+                .map(u => {
+                    const latest = u.session_participants?.[0];
+                    const session: any = Array.isArray(latest?.sessions) ? latest.sessions[0] : latest?.sessions;
+                    const standard: any = Array.isArray(session?.training_standards) ? session.training_standards[0] : session?.training_standards;
+                    
+                    return {
+                        id: u.id,
+                        date: u.created_at ? format(new Date(u.created_at), "dd MMM yyyy") : "N/A",
+                        time: u.created_at ? format(new Date(u.created_at), "HH:mm a") : "",
+                        trainee: u.full_name || "Unknown",
+                        role: "Student",
+                        status: u.status === 'approved' ? "ACTIVE" : 
+                                u.status === 'pending' ? "PENDING" : 
+                                u.status === 'suspended' ? "SUSPENDED" : "UNKNOWN",
+                        statusColor: u.status === 'approved' ? "#10B981" : 
+                                     u.status === 'pending' ? "#F59E0B" : 
+                                     u.status === 'suspended' ? "#EF4444" : "#6B7280",
+                        moduleTitle: standard?.title || "No Module",
+                        moduleProgress: "N/A",
+                        performanceNum: "N/A",
+                        performanceText: "Grade: -",
+                        traineeId: `#TRN-${u.id.substring(0,6).toUpperCase()}`,
+                        email: u.email
+                    };
+                });
             setTrainees(tData);
+
+            // Map Trainers
+            const trData = data
+                .filter(u => u.role === 'instructor')
+                .map(u => {
+                    const sessionCount = u.session_instructors?.length || 0;
+                    const latestAudit = u.audit_logs?.[0];
+                    
+                    return {
+                        id: u.id,
+                        date: latestAudit?.created_at ? 
+                              format(new Date(latestAudit.created_at), "dd MMM yyyy") : 
+                              (u.created_at ? format(new Date(u.created_at), "dd MMM yyyy") : "N/A"),
+                        time: latestAudit?.created_at ? 
+                              format(new Date(latestAudit.created_at), "HH:mm a") : "",
+                        trainer: u.full_name || "Unknown",
+                        role: "Instructor",
+                        status: u.status === 'approved' ? "AVAILABLE" : 
+                                u.status === 'pending' ? "PENDING APPROVAL" : 
+                                u.status === 'suspended' ? "UNAVAILABLE" : "UNKNOWN",
+                        statusColor: u.status === 'approved' ? "#10B981" : 
+                                     u.status === 'pending' ? "#F59E0B" : 
+                                     u.status === 'suspended' ? "#EF4444" : "#6B7280",
+                        specialization: "Aviation Faculty",
+                        activeSessions: `${sessionCount} Classes`,
+                        performanceNum: "4.5",
+                        performanceText: "Rating: Good",
+                        trainerId: `#INS-${u.id.substring(0,6).toUpperCase()}`,
+                        email: u.email
+                    };
+                });
+            setTrainers(trData);
+
+            // Map Administrators
+            const adminData = data
+                .filter(u => u.role === 'ernam_admin')
+                .map(u => {
+                    const latestAudit = u.audit_logs?.[0];
+                    
+                    return {
+                        id: u.id,
+                        admin: u.full_name || "Unknown",
+                        lastAction: latestAudit?.action || "System Login",
+                        securityLevel: "TIER 1",
+                        adminId: `#ADM-${u.id.substring(0,6).toUpperCase()}`,
+                        email: u.email,
+                        full_name: u.full_name,
+                        status: u.status,
+                        created_at: u.created_at
+                    };
+                });
+            setAdministrators(adminData);
 
             // Fetch Drill-down data if active
             if (activeNav === "Home" && drillDownView) {
                 fetchDrillDownData(drillDownView);
             }
 
-            // Map Trainers ... (rest of function)
-            const trData = data.filter(u => u.role === 'instructor').map(u => ({
-                id: u.id,
-                date: u.created_at ? format(new Date(u.created_at), "dd MMM yyyy") : "N/A",
-                time: "",
-                trainer: u.full_name || "Unknown",
-                role: "Instructor",
-                status: u.status === 'approved' ? "AVAILABLE" : "UNAVAILABLE",
-                statusColor: u.status === 'approved' ? "#10B981" : "#EF4444",
-                specialization: "Aviation Faculty",
-                activeSessions: `${u.session_instructors?.length || 0} Classes`,
-                performanceNum: "4.5",
-                performanceText: "Rating: Good",
-                trainerId: `#INS-${u.id.substring(0,6).toUpperCase()}`,
-                email: u.email
-            }));
-            setTrainers(trData);
-
-            // Map Admins
-            const aData = data.filter(u => u.role === 'ernam_admin' || u.role === 'admin').map(u => {
-                const lastLog = u.audit_logs?.[0];
-                return {
-                    id: u.id,
-                    date: u.created_at ? format(new Date(u.created_at), "dd MMM yyyy") : "N/A",
-                    time: "",
-                    admin: u.full_name || "Unknown",
-                    role: "System Admin",
-                    status: "ACTIVE",
-                    statusColor: "#10B981",
-                    lastAction: lastLog?.action || "System Login",
-                    securityLevel: "Lv. 4",
-                    adminId: `#ADM-${u.id.substring(0,6).toUpperCase()}`,
-                    email: u.email
-                };
-            });
-            setAdministrators(aData);
-
         } catch (err) {
             console.error("Error fetching users:", err);
         }
     }
 
-    async function handleDeleteUser(id: string) {
-        if (!confirm("Are you sure you want to delete this user? This will remove their authentication and profile.")) return;
-        
-        try {
-            const adminId = (await supabase.auth.getUser()).data.user?.id;
-            const res = await fetch(`/api/admin/manage-user?id=${id}${adminId ? `&adminId=${adminId}` : ''}`, {
-                method: 'DELETE',
-            });
-            
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Failed to delete user');
-            }
-            
-            alert("User deleted successfully");
-            fetchUsers(); // Refresh
-            fetchStats(); // Refresh stats
-        } catch (err: any) {
-            alert(err.message);
-        }
-    }
-
-    function handleEditUser(user: any) {
-        const rawUser = allUsersRaw.find(u => u.id === user.id);
-        if (rawUser) {
-            setSelectedUserForEdit(rawUser);
-            setIsEditModalOpen(true);
-        } else {
-            console.error("Raw user not found for ID:", user.id);
-            // Fallback: try to use the user object directly if it has enough info
-            if (user.email) {
-                setSelectedUserForEdit(user);
-                setIsEditModalOpen(true);
-            }
-        }
-    }
-
-    const navItems = ["Home", "Trainees", "Trainers", "Administrators"];
-
-    // Home Methods
-    const currentStats = getDynamicStatsCategories(dashboardStats);
-    const nextStat = () => setStatsIndex((prev) => (prev + 1) % currentStats.length);
-    const prevStat = () => setStatsIndex((prev) => (prev === 0 ? currentStats.length - 1 : prev - 1));
-    const nextExpertView = () => setExpertViewIndex((prev) => (prev + 1) % expertViews.length);
-    const prevExpertView = () => setExpertViewIndex((prev) => (prev === 0 ? expertViews.length - 1 : prev - 1));
-
-    const expertViews = [
-        {
-            title: "Course Tracking",
-            content: (
-                <div className="grid grid-cols-2 gap-3 h-full pb-2">
-                    <div className="bg-blue-600 text-white p-3 rounded-xl flex flex-col justify-center shadow-sm">
-                        <span className="text-[11px] font-semibold opacity-90 mb-1">Tracked Students</span>
-                        <span className="text-2xl font-black">{dashboardStats?.trainees || 0}</span>
-                    </div>
-                    <div className="bg-emerald-600 text-white p-3 rounded-xl flex flex-col justify-center shadow-sm">
-                        <span className="text-[11px] font-semibold opacity-90 mb-1">Global Certs</span>
-                        <span className="text-2xl font-black">{dashboardStats?.certificates || 0}</span>
-                    </div>
-                    <div className="bg-gray-50 border border-gray-200 text-gray-800 p-3 rounded-xl flex flex-col justify-center col-span-2 shadow-sm">
-                        <span className="text-[11px] font-bold text-gray-500 mb-1">Active Sessions</span>
-                        <span className="text-2xl font-black">{dashboardStats?.sessions || 0}</span>
-                    </div>
-                </div>
-            )
-        },
-        {
-            title: "Average Evolution",
-            content: (
-                <div className="h-full pb-2">
-                    {isMounted && (
-                        <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={EVOLUTION_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }} dy={10} />
-                            <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #E5E7EB" }} />
-                            <Line type="basis" dataKey="val" stroke="#1D4ED8" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                        </LineChart>
-                        </ResponsiveContainer>
-                    )}
-                </div>
-            )
-        },
-        {
-            title: "Average by Course",
-            content: (
-                <div className="h-full pb-2">
-                    {isMounted && (
-                        <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={COURSE_AVG_DATA} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 'bold' }} dy={10} />
-                            <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: "8px", border: "1px solid #E5E7EB" }} />
-                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                {COURSE_AVG_DATA.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                        </ResponsiveContainer>
-                    )}
-                </div>
-            )
-        },
-        {
-            title: "Insights & Impact",
-            content: (
-                <div className="grid grid-cols-1 gap-3 h-full pb-2 overflow-y-auto custom-scrollbar pr-1">
-                    <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
-                        <h4 className="font-bold text-sm text-gray-900 mb-2">Empirical Observation</h4>
-                        <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
-                            <li>Scattered reports</li>
-                            <li>Unclear follow-ups to decisions</li>
-                        </ul>
-                    </div>
-                    <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
-                        <h4 className="font-bold text-sm text-gray-900 mb-2">Strategic Impact</h4>
-                        <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
-                            <li>Traceability of decisions</li>
-                            <li>Institutional coherence</li>
-                        </ul>
-                    </div>
-                </div>
-            )
-        }
-    ];
-
-    async function fetchDrillDownData(view: string) {
-        setLoading(true);
+    async function fetchDrillDownData(viewType: string) {
         try {
             let data: any[] = [];
-            switch (view) {
-                case "Certificates":
-                    const { data: certs } = await supabase
-                        .from('certificates')
-                        .select('*, user:users(full_name), session:sessions(training_standard:training_standards(title))')
-                        .order('created_at', { ascending: false });
-                    data = certs || [];
-                    break;
-                case "Attendances":
-                    const { data: atts } = await supabase
-                        .from('session_participants')
-                        .select('*, user:participant_id(full_name), session:sessions(training_standard:training_standards(title))')
-                        .eq('attendance_status', 'attended')
-                        .order('id', { ascending: false });
-                    data = atts || [];
-                    break;
-                case "Courses":
+            
+            switch(viewType) {
+                case "Sessions":
                     const { data: sessions } = await supabase
                         .from('sessions')
-                        .select('*, training_standard:training_standards(code, title), session_instructors(instructor:users(full_name))')
+                        .select(`
+                            *,
+                            training_standards (title, code),
+                            session_instructors (users (full_name)),
+                            session_participants (count)
+                        `)
                         .order('start_date', { ascending: false });
-                    data = sessions || [];
+                    
+                    data = (sessions || []).map(s => ({
+                        id: s.id,
+                        title: s.training_standards?.title || "Unknown",
+                        code: s.training_standards?.code || "N/A",
+                        date: s.start_date ? format(new Date(s.start_date), "dd MMM yyyy") : "N/A",
+                        instructor: s.session_instructors?.[0]?.users?.full_name || "Not assigned",
+                        participants: s.session_participants?.[0]?.count || 0,
+                        status: s.status,
+                        color: s.status === 'active' ? '#10B981' : 
+                               s.status === 'completed' ? '#3B82F6' : 
+                               s.status === 'cancelled' ? '#EF4444' : '#F59E0B'
+                    }));
                     break;
-                case "Signups":
-                    const { data: users } = await supabase
-                        .from('users')
-                        .select('*')
-                        .order('created_at', { ascending: false })
-                        .limit(100);
-                    data = users || [];
-                    break;
+                    
                 case "Documents":
-                    const { data: docs } = await supabase
+                    const { data: documents } = await supabase
                         .from('documents')
-                        .select('*, uploader:uploaded_by(full_name), session:sessions(training_standard:training_standards(title))')
+                        .select(`
+                            *,
+                            sessions (training_standards (title)),
+                            users!documents_uploaded_by_fkey (full_name)
+                        `)
                         .order('created_at', { ascending: false });
-                    data = docs || [];
+                    
+                    data = (documents || []).map(d => ({
+                        id: d.id,
+                        title: d.title,
+                        type: d.document_type,
+                        session: d.sessions?.training_standards?.title || "Unknown",
+                        uploadedBy: d.users?.full_name || "Unknown",
+                        date: d.created_at ? format(new Date(d.created_at), "dd MMM yyyy") : "N/A",
+                        fileUrl: d.file_url
+                    }));
                     break;
-                case "Exams":
-                    const { data: exams } = await supabase
-                        .from('assessments')
-                        .select('*, user:participant_id(full_name), session:sessions(training_standard:training_standards(title))')
+                    
+                case "Standards":
+                    const { data: standards } = await supabase
+                        .from('training_standards')
+                        .select('*')
                         .order('created_at', { ascending: false });
-                    data = exams || [];
+                    
+                    data = (standards || []).map(s => ({
+                        id: s.id,
+                        code: s.code,
+                        title: s.title,
+                        description: s.description,
+                        validity: s.validity_months,
+                        active: s.active,
+                        created: s.created_at ? format(new Date(s.created_at), "dd MMM yyyy") : "N/A"
+                    }));
+                    break;
+                    
+                case "Applications":
+                    const { data: applications } = await supabase
+                        .from('applications')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    data = (applications || []).map(a => ({
+                        id: a.id,
+                        type: a.application_type,
+                        applicant: a.applicant_name,
+                        organization: a.organization_name,
+                        status: a.status,
+                        date: a.created_at ? format(new Date(a.created_at), "dd MMM yyyy") : "N/A",
+                        color: a.status === 'approved' ? '#10B981' : 
+                               a.status === 'rejected' ? '#EF4444' : '#F59E0B'
+                    }));
                     break;
             }
+            
             setDrillDownData(data);
         } catch (err) {
             console.error("Error fetching drill-down data:", err);
-        } finally {
-            setLoading(false);
         }
     }
 
-    useEffect(() => {
-        if (drillDownView) fetchDrillDownData(drillDownView);
-    }, [drillDownView]);
+    function loadDashboardStats() {
+        // This would fetch updated stats after operations
+        fetchStats();
+    }
 
-    const handleAddRecord = (view: string) => {
-        setSelectedRecord(null);
-        if (view === "Courses") setIsSessionModalOpen(true);
-        else if (view === "Documents") setIsDocumentModalOpen(true);
-        else if (view === "Signups") setActiveNav("Trainees");
-        else if (view === "Certificates") setIsStandardModalOpen(true); // Temporary: issue through standard
-    };
+    function handleEditUser(user: any) {
+        setSelectedUserForEdit(user);
+        setIsEditModalOpen(true);
+    }
 
-    const renderDrillDownView = (view: string) => (
-        <div className="min-h-screen bg-gray-50 flex flex-col p-8 animate-in slide-in-from-right duration-500">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8 bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-6">
-                    <button 
-                        onClick={() => setDrillDownView(null)}
-                        className="p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all border border-gray-200 group"
-                    >
-                        <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
-                    </button>
-                    <div>
-                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">{view}</h2>
-                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">
-                            {drillDownData.length} records found in {view.toLowerCase()}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-2xl text-xs font-black uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-all shadow-sm">
-                        <Download className="w-4 h-4" /> Export CSV
-                    </button>
-                    {["Courses", "Documents", "Certificates", "Signups"].includes(view) && (
-                        <button 
-                            onClick={() => handleAddRecord(view)}
-                            className="flex items-center gap-2 px-6 py-3 bg-[#12388D] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-                        >
-                            <Plus className="w-4 h-4" /> Add New {view === "Signups" ? "User" : "Entry"}
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* List Table */}
-            <div className="flex-1 bg-white rounded-[32px] border border-gray-200 shadow-xl overflow-hidden flex flex-col">
-                <div className="overflow-x-auto">
-                    {loading ? (
-                        <div className="flex items-center justify-center p-20 flex-col gap-4">
-                            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Records...</span>
-                        </div>
-                    ) : drillDownData.length === 0 ? (
-                        <div className="flex items-center justify-center p-20 flex-col gap-4">
-                            <Focus className="w-12 h-12 text-gray-200" />
-                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">No Records Match This Criteria</span>
-                        </div>
-                    ) : (
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50/50 border-b border-gray-100">
-                                <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                                    <th className="px-8 py-5">
-                                        {view === "Certificates" ? "CERT # / HOLDER" : 
-                                         view === "Documents" ? "TITLE / UPLOADER" : 
-                                         view === "Courses" ? "COURSE CODE / TITLE" :
-                                         view === "Signups" ? "NAME / EMAIL" : "NAME / SUBJECT"}
-                                    </th>
-                                    <th className="px-8 py-5">
-                                        {view === "Courses" ? "INSTRUCTORS" : 
-                                         view === "Documents" ? "ASSOCIATED SESSION" : 
-                                         view === "Certificates" ? "TRAINING STANDARD" :
-                                         view === "Exams" ? "SESSION" : "CATEGORY / DETAILS"}
-                                    </th>
-                                    <th className="px-8 py-5 text-center">STATUS</th>
-                                    <th className="px-8 py-5 text-right">{view === "Exams" ? "SCORE" : "DATE"}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {drillDownData.map((item, idx) => (
-                                    <tr 
-                                        key={idx} 
-                                        onClick={() => {
-                                            setSelectedRecord(item);
-                                            if (view === "Courses") setIsSessionModalOpen(true);
-                                            else if (view === "Documents") setIsDocumentModalOpen(true);
-                                        }}
-                                        className="group hover:bg-blue-50/30 transition-all cursor-pointer"
-                                    >
-                                        <td className="px-8 py-5">
-                                            <div className="font-black text-sm text-gray-900 leading-tight">
-                                                {view === "Courses" ? (item.training_standard?.code || item.id.substring(0,8)) :
-                                                 item.certificate_number || item.title || item.full_name || item.user?.full_name || "Unidentified Record"}
-                                            </div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-                                                {view === "Courses" ? item.training_standard?.title :
-                                                 view === "Documents" ? `By ${item.uploader?.full_name || 'System'}` :
-                                                 item.user?.full_name || item.email || item.id.substring(0,8)}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="text-[12px] font-bold text-gray-600">
-                                                {view === "Courses" ? (item.session_instructors?.map((si: any) => si.instructor?.full_name).join(", ") || "No Trainer") :
-                                                 view === "Documents" ? item.session?.training_standard?.title :
-                                                 view === "Certificates" ? item.standard?.title :
-                                                 view === "Attendances" ? item.session?.training_standard?.title :
-                                                 view === "Exams" ? item.session?.training_standard?.title :
-                                                 item.role || "Global"}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className={cn(
-                                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                                                item.status === 'valid' || item.attendance_status === 'attended' || item.status === 'active' || item.status === 'approved' || item.result === 'pass'
-                                                    ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                                                    : "bg-red-50 text-red-600 border-red-100"
-                                            )}>
-                                                {item.status || item.attendance_status || item.result || "N/A"}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5 text-right font-mono text-xs font-bold text-gray-500">
-                                            {view === "Exams" ? `${item.score}%` : 
-                                             item.issue_date ? format(new Date(item.issue_date), 'dd/MM/yyyy') :
-                                             item.start_date ? format(new Date(item.start_date), 'dd/MM/yy') :
-                                             item.created_at ? format(new Date(item.created_at), 'dd/MM/yy') : 'N/A'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+    function handleDeleteUser(userId: string) {
+        if (confirm("Are you sure you want to delete this user?")) {
+            // Implement delete logic
+            console.log("Delete user:", userId);
+        }
+    }
 
     const renderHomeView = () => {
-        if (drillDownView) return renderDrillDownView(drillDownView);
+        const statsCategories = getDynamicStatsCategories(dashboardStats);
+        const currentStats = statsCategories[statsIndex];
         
         return (
-            <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-12">
-            {/* Top Navigation - LIGHT MODE */}
-            <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
-                <div className="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200 rounded-full pr-5 pl-1.5 py-1.5 shadow-sm cursor-pointer group">
-                    <div className="flex items-center -space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-10 group-hover:-translate-x-1 transition-transform">
-                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-20 shadow-sm group-hover:translate-x-1 transition-transform">
-                            <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-full h-full object-contain rounded-full" />
-                        </div>
+            <div className="min-h-screen bg-gray-50 text-gray-900 p-6 font-sans">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-8">
+                    <div>
+                        <h1 className="text-3xl font-black text-gray-900">ERN<span className="text-purple-600">A</span>M Dashboard</h1>
+                        <p className="text-gray-500 text-sm font-medium">Real-time aviation training insights & administration</p>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA - ERNAM</span>
-                        <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                            Dashboard <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                        </span>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-8">
-                    {navItems.map((item) => (
-                        <button
-                            key={item}
-                            onClick={() => setActiveNav(item)}
-                            className={`text-sm font-semibold transition-colors pb-1 ${activeNav === item ? "text-blue-700 border-b-2 border-blue-700" : "text-gray-500 hover:text-gray-900"}`}
-                        >
-                            {item}
+                    <div className="flex items-center gap-3">
+                        <button className="p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50">
+                            <Bell className="w-5 h-5 text-gray-600" />
                         </button>
-                    ))}
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <button className="text-gray-500 hover:text-gray-900"><Bell className="w-5 h-5" /></button>
-                    <button className="text-gray-500 hover:text-gray-900" onClick={() => setDarkMode(!darkMode)}>
-                        {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                    </button>
-                    <button className="text-gray-500 hover:text-gray-900"><Settings className="w-5 h-5" /></button>
-                    <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors">
-                        <span className="text-gray-800 text-sm font-semibold">Edward Day</span>
-                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">E</div>
+                        <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50">
+                            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                        </button>
+                        <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold text-sm hover:opacity-90 shadow-sm">
+                            System Controls
+                        </button>
                     </div>
                 </div>
-            </nav>
 
-            {/* Main Content */}
-            <div className="px-8 py-8 space-y-4 max-w-[1600px] mx-auto">
-                <div className="grid grid-cols-3 gap-6">
-                    {/* Key Indicators */}
-                    <div className="bg-white rounded-2xl p-5 flex flex-col shadow-sm border border-gray-200 h-[240px]">
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-gray-900 font-black text-lg tracking-tight">Key Indicators</h3>
-                        </div>
-                        <div className="flex-1 w-full mt-2">
-                            {isMounted && (
-                                <ResponsiveContainer width="100%" height="80%">
-                                    <LineChart data={KEY_INDICATORS_DATA} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }} dy={10} />
-                                        <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #E5E7EB" }} />
-                                        <Line type="basis" dataKey="blue" stroke="#00AAE4" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                                        <Line type="basis" dataKey="green" stroke="#26A17B" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Skills Evaluation */}
-                    <div className="bg-white rounded-2xl p-5 flex flex-col shadow-sm border border-gray-200 h-[240px]">
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-gray-900 font-black text-lg tracking-tight">Skills Evaluation</h3>
-                        </div>
-                        <div className="flex-1 w-full mt-2">
-                            {isMounted && (
-                                <ResponsiveContainer width="100%" height="80%">
-                                    <BarChart data={SKILLS_EVALUATION_DATA} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barCategoryGap="20%">
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 'bold' }} dy={10} />
-                                        <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: "8px", border: "1px solid #E5E7EB" }} />
-                                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                            {SKILLS_EVALUATION_DATA.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Expert Carousel */}
-                    <div className="bg-white rounded-2xl p-5 flex flex-col shadow-sm border border-gray-200 h-[240px] relative">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-gray-900 font-black text-lg tracking-tight">{expertViews[expertViewIndex].title}</h3>
-                            <div className="flex items-center gap-1">
-                                <button onClick={prevExpertView} className="p-1 rounded-md text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-                                    <ChevronLeft className="w-5 h-5" />
+                {/* Stats Overview */}
+                <div className="grid grid-cols-3 gap-6 mb-8">
+                    <div className="col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-xl font-black text-gray-900">Live Activity Metrics</h2>
+                                <p className="text-gray-500 text-sm">Real-time system performance</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setStatsIndex(Math.max(0, statsIndex - 1))} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50">
+                                    <ChevronLeft className="w-4 h-4" />
                                 </button>
-                                <button onClick={nextExpertView} className="p-1 rounded-md text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-                                    <ChevronRight className="w-5 h-5" />
+                                <button onClick={() => setStatsIndex(Math.min(statsCategories.length - 1, statsIndex + 1))} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50">
+                                    <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
-                        <div className="flex-1 w-full overflow-hidden">
-                            {expertViews[expertViewIndex].content}
+                        <div className="space-y-4">
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-gray-500 text-sm font-medium">{currentStats.name}</span>
+                                    <span className="text-green-600 text-sm font-bold">+{currentStats.last24h} last 24h</span>
+                                </div>
+                                <div className="text-4xl font-black text-gray-900">{currentStats.total}</div>
+                            </div>
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full" style={{ width: `${(currentStats.current / Math.max(currentStats.thisMonth, 1)) * 100}%` }}></div>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-500">
+                                <span>Today: {currentStats.current}</span>
+                                <span>This Week: {currentStats.thisWeek}</span>
+                                <span>This Month: {currentStats.thisMonth}</span>
+                            </div>
                         </div>
-                        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-                            {expertViews.map((_, idx) => (
-                                <div key={idx} className={`h-1.5 rounded-full transition-all ${idx === expertViewIndex ? 'w-4 bg-blue-600' : 'w-1.5 bg-gray-300'}`} />
-                            ))}
+                    </div>
+                    
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                        <h3 className="text-lg font-black text-gray-900 mb-4">Quick Actions</h3>
+                        <div className="space-y-3">
+                            <button onClick={() => setIsSessionModalOpen(true)} className="w-full p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100 rounded-xl text-purple-700 font-semibold text-sm hover:from-purple-100 hover:to-blue-100 transition-colors">
+                                + New Training Session
+                            </button>
+                            <button onClick={() => setIsDocumentModalOpen(true)} className="w-full p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 rounded-xl text-blue-700 font-semibold text-sm hover:from-blue-100 hover:to-cyan-100 transition-colors">
+                                + Upload Document
+                            </button>
+                            <button onClick={() => setIsStandardModalOpen(true)} className="w-full p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-xl text-green-700 font-semibold text-sm hover:from-green-100 hover:to-emerald-100 transition-colors">
+                                + Add Training Standard
+                            </button>
+                            <button onClick={() => setActiveNav("Trainees")} className="w-full p-3 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl text-gray-700 font-semibold text-sm hover:from-gray-100 hover:to-gray-200 transition-colors">
+                                Manage Users
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-6 pb-2">
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col justify-center">
-                        <button 
-                            onClick={() => setDrillDownView(getDynamicStatsCategories(dashboardStats)[statsIndex].name)}
-                            className="text-left group/opt"
-                        >
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="text-gray-500 font-bold text-[10px] uppercase tracking-wider group-hover/opt:text-blue-600 transition-colors">Options</span>
-                                <div className="flex items-center space-x-0.5">
-                                    <button onClick={(e) => { e.stopPropagation(); prevStat(); }} className="p-0.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={(e) => { e.stopPropagation(); nextStat(); }} className="p-0.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                        <ChevronRight className="w-4 h-4" />
+                {/* KPI Cards */}
+                <div className="mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-black text-gray-900">Performance KPIs</h2>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setDrillDownView("Trainees")} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-50">
+                                Trainee View
+                            </button>
+                            <button onClick={() => setDrillDownView("Trainers")} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-50">
+                                Trainer View
+                            </button>
+                            <button onClick={() => setDrillDownView("Administrators")} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-50">
+                                Admin View
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-6">
+                        {getDynamicTraineeKpis(dashboardStats).slice(0, 3).map((kpi, idx) => (
+                            <div key={idx} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${kpi.color}20` }}>
+                                        <div style={{ color: kpi.color }}>{kpi.icon}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-black text-gray-900">{kpi.balance}</div>
+                                        <div className="text-xs text-gray-500">{kpi.crypto}</div>
+                                    </div>
+                                </div>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">{kpi.name}</div>
+                                <div className="text-xs text-gray-500 mb-3">{kpi.rate}</div>
+                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width: `${kpi.progress}%`, backgroundColor: kpi.color }}></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-black text-gray-900">Recent System Activity</h2>
+                        <button className="text-sm text-blue-600 font-semibold hover:text-blue-800">
+                            View All Logs →
+                        </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        {allUsers.slice(0, 5).map((user, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style={{ backgroundColor: user.color }}>
+                                        {user.avatar}
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold text-gray-900">{user.name}</div>
+                                        <div className="text-sm text-gray-500">{user.role} • {user.email}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${user.status === 'excellent' ? 'bg-green-100 text-green-800' : user.status === 'average' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                        {user.status.toUpperCase()}
+                                    </span>
+                                    <button className="p-1 hover:bg-gray-100 rounded">
+                                        <MoreVertical className="w-4 h-4 text-gray-500" />
                                     </button>
                                 </div>
                             </div>
-                            <div className="text-blue-700 font-black text-xl truncate group-hover/opt:underline decoration-2 underline-offset-4">
-                                {getDynamicStatsCategories(dashboardStats)[statsIndex].name}
-                            </div>
-                        </button>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-4 flex flex-col justify-center shadow-sm border border-gray-200">
-                        <div className="text-gray-500 font-bold text-[10px] uppercase tracking-wider mb-1">Current</div>
-                        <div className="text-gray-900 font-black text-2xl">{getDynamicStatsCategories(dashboardStats)[statsIndex].current}</div>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-4 flex flex-col justify-center shadow-sm border border-gray-200">
-                        <div className="text-gray-500 font-bold text-[10px] uppercase tracking-wider mb-1">Last 24h</div>
-                        <div className="text-gray-900 font-black text-2xl">{getDynamicStatsCategories(dashboardStats)[statsIndex].last24h}</div>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-4 flex flex-col justify-center shadow-sm border border-gray-200">
-                        <div className="text-gray-500 font-bold text-[10px] uppercase tracking-wider mb-1">This Week</div>
-                        <div className="text-gray-900 font-black text-2xl">{getDynamicStatsCategories(dashboardStats)[statsIndex].thisWeek}</div>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-4 flex flex-col justify-center shadow-sm border border-gray-200">
-                        <div className="text-gray-500 font-bold text-[10px] uppercase tracking-wider mb-1">This Month</div>
-                        <div className="text-gray-900 font-black text-2xl">{getDynamicStatsCategories(dashboardStats)[statsIndex].thisMonth}</div>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-4 flex flex-col justify-center shadow-sm border border-gray-200">
-                        <div className="text-gray-500 font-bold text-[10px] uppercase tracking-wider mb-1">Total</div>
-                        <div className="text-emerald-600 font-black text-2xl">{getDynamicStatsCategories(dashboardStats)[statsIndex].total}</div>
+                        ))}
                     </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-6 pb-12 h-[380px]">
-                    <div className="col-span-9 bg-white rounded-2xl overflow-hidden flex flex-col shadow-sm border border-gray-200 h-full">
-                        <div className="p-5 pb-3 flex-shrink-0 z-20 bg-gray-50 border-b border-gray-200">
-                            <h3 className="text-gray-900 font-black text-lg">System Users</h3>
+                {/* Drill-down Cards */}
+                <div className="grid grid-cols-4 gap-6">
+                    {["Sessions", "Documents", "Standards", "Applications"].map((item) => (
+                        <div key={item} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setDrillDownView(item)}>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="text-lg font-black text-gray-900">{item}</div>
+                                <div className="p-2 rounded-lg bg-gray-100">
+                                    <Focus className="w-4 h-4 text-gray-600" />
+                                </div>
+                            </div>
+                            <div className="text-sm text-gray-500 mb-2">Click to view details</div>
+                            <div className="text-xs text-gray-400">Manage all {item.toLowerCase()} in one place</div>
                         </div>
-                        <div className="overflow-auto flex-1 custom-scrollbar pb-16">
-                            <table className="w-full text-left relative">
-                                <thead className="sticky top-0 z-20 bg-white shadow-sm border-b border-gray-100">
-                                    <tr className="text-gray-500 text-[11px] uppercase tracking-wider">
-                                        <th className="px-5 py-3 font-bold">Names</th>
-                                        <th className="px-3 py-3 font-bold">Role</th>
-                                        <th className="px-3 py-3 font-bold">Email</th>
-                                        <th className="px-3 py-3 font-bold">Number</th>
-                                        <th className="px-3 py-3 font-bold text-center">Status</th>
-                                        <th className="px-3 py-3 font-bold text-center">Preview</th>
-                                        <th className="px-3 py-3 font-bold text-center">ACTION</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {(activeNav === "Home" ? allUsers : []).map((user) => (
-                                        <tr key={user.id} className="hover:bg-gray-50 transition-colors group">
-                                            <td className="px-5 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-sm" style={{ background: user.color + "15", color: user.color }}>
-                                                        {user.avatar}
-                                                    </div>
-                                                    <span className="text-gray-900 font-bold text-[13px] whitespace-nowrap">{user.name}</span>
-                                                </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const renderDrillDownView = (viewType: string) => {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setDrillDownView(null)} className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50">
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-black text-gray-900">{viewType} Management</h1>
+                            <p className="text-gray-500 text-sm">View and manage all {viewType.toLowerCase()}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => {
+                        setSelectedRecord(null);
+                        if (viewType === "Sessions") setIsSessionModalOpen(true);
+                        if (viewType === "Documents") setIsDocumentModalOpen(true);
+                        if (viewType === "Standards") setIsStandardModalOpen(true);
+                    }} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold text-sm hover:opacity-90">
+                        + Add New
+                    </button>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider font-bold border-b border-gray-100">
+                                {viewType === "Sessions" && (
+                                    <>
+                                        <th className="px-6 py-4">Session Title</th>
+                                        <th className="px-4 py-4">Date</th>
+                                        <th className="px-4 py-4">Instructor</th>
+                                        <th className="px-4 py-4">Participants</th>
+                                        <th className="px-4 py-4">Status</th>
+                                        <th className="px-6 py-4">Actions</th>
+                                    </>
+                                )}
+                                {viewType === "Documents" && (
+                                    <>
+                                        <th className="px-6 py-4">Document Title</th>
+                                        <th className="px-4 py-4">Type</th>
+                                        <th className="px-4 py-4">Session</th>
+                                        <th className="px-4 py-4">Uploaded By</th>
+                                        <th className="px-4 py-4">Date</th>
+                                        <th className="px-6 py-4">Actions</th>
+                                    </>
+                                )}
+                                {viewType === "Standards" && (
+                                    <>
+                                        <th className="px-6 py-4">Code</th>
+                                        <th className="px-4 py-4">Title</th>
+                                        <th className="px-4 py-4">Description</th>
+                                        <th className="px-4 py-4">Validity (months)</th>
+                                        <th className="px-4 py-4">Status</th>
+                                        <th className="px-6 py-4">Actions</th>
+                                    </>
+                                )}
+                                {viewType === "Applications" && (
+                                    <>
+                                        <th className="px-6 py-4">Type</th>
+                                        <th className="px-4 py-4">Applicant</th>
+                                        <th className="px-4 py-4">Organization</th>
+                                        <th className="px-4 py-4">Status</th>
+                                        <th className="px-4 py-4">Date</th>
+                                        <th className="px-6 py-4">Actions</th>
+                                    </>
+                                )}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {drillDownData.map((item) => (
+                                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                    {viewType === "Sessions" && (
+                                        <>
+                                            <td className="px-6 py-4">
+                                                <div className="font-semibold text-gray-900">{item.title}</div>
+                                                <div className="text-sm text-gray-500">{item.code}</div>
                                             </td>
-                                            <td className="px-3 py-3">
-                                                <span className={`text-[10px] px-2.5 py-1 uppercase tracking-wider rounded-md font-bold whitespace-nowrap ${
-                                                    user.role === 'Administrator' ? 'bg-purple-100 text-purple-700' : 
-                                                    user.role === 'Trainer' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
-                                                }`}>
-                                                    {user.role}
+                                            <td className="px-4 py-4 text-gray-900 font-medium">{item.date}</td>
+                                            <td className="px-4 py-4 text-gray-900">{item.instructor}</td>
+                                            <td className="px-4 py-4">
+                                                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-bold">
+                                                    {item.participants}
                                                 </span>
                                             </td>
-                                            <td className="px-3 py-3 text-gray-600 font-semibold text-xs whitespace-nowrap">{user.email}</td>
-                                            <td className="px-3 py-3 text-gray-600 font-medium text-xs whitespace-nowrap">{user.phone}</td>
-                                            <td className="px-3 py-3">
-                                                <div className="flex justify-center group/tooltip relative">
-                                                    <div className={`w-2.5 h-2.5 rounded-full shadow-sm cursor-help ${
-                                                        user.status === 'excellent' ? 'bg-emerald-500' : 
-                                                        user.status === 'average' ? 'bg-blue-500' : 'bg-red-500 animate-pulse'
-                                                    }`} />
-                                                    <div className="absolute bottom-full mb-1.5 hidden group-hover/tooltip:flex items-center justify-center bg-gray-900 border border-gray-800 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-1.5 rounded shadow-lg whitespace-nowrap z-50">
-                                                        {user.status === 'failing' ? 'Needs Attention' : user.status}
-                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
-                                                    </div>
-                                                </div>
+                                            <td className="px-4 py-4">
+                                                <span className="px-2 py-1 rounded text-xs font-bold" style={{ backgroundColor: `${item.color}20`, color: item.color }}>
+                                                    {item.status.toUpperCase()}
+                                                </span>
                                             </td>
-                                            <td className="px-3 py-3 relative text-center">
-                                                <div className="relative inline-block">
-                                                    <button onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)} className={`p-1.5 rounded-md transition-colors ${openDropdownId === user.id ? 'bg-gray-200 text-gray-900' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-900'}`}>
-                                                        <MoreVertical className="w-4 h-4" />
-                                                    </button>
-                                                    
-                                                    {openDropdownId === user.id && (
-                                                        <div className="absolute right-8 top-full -mt-2 w-44 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 py-1.5 z-50 animate-in fade-in zoom-in duration-150">
-                                                            <button className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 font-semibold transition-colors">
-                                                                <User className="w-3.5 h-3.5 text-gray-400" /> View Profile
-                                                            </button>
-                                                            <button className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 font-semibold transition-colors">
-                                                                <Mail className="w-3.5 h-3.5 text-gray-400" /> Send Message
-                                                            </button>
-                                                            <div className="h-px bg-gray-100 my-1 mx-3" />
-                                                            <button 
-                                                                onClick={() => {
-                                                                    const rawUser = allUsersRaw.find(u => u.id === user.id);
-                                                                    if (rawUser) startImpersonation(rawUser);
-                                                                }}
-                                                                className="w-full text-left px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-2.5 font-bold transition-colors"
-                                                            >
-                                                                <UserCheck className="w-3.5 h-3.5 text-indigo-500" /> Act As
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-3">
-                                                <div className="flex items-center justify-center gap-1.5">
-                                                    <button 
-                                                        onClick={() => handleEditUser(user)}
-                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                                    >
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100">
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
-                                                    <button 
-                                                        onClick={() => handleDeleteUser(user.id)}
-                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                                    >
+                                                    <button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100">
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div className="col-span-3 bg-white rounded-2xl p-5 shadow-sm border border-gray-200 flex flex-col h-full">
-                        <h3 className="text-gray-900 font-black text-[15px] mb-3 flex-shrink-0">System Security & Health</h3>
-                        <div className="relative w-full flex-1 min-h-0">
-                            {isMounted && (
-                        <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={SYSTEM_HEALTH_DATA}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius="65%"
-                                        outerRadius="95%"
-                                        strokeWidth={2}
-                                        stroke="#fff"
-                                        dataKey="value"
-                                    >
-                                        {SYSTEM_HEALTH_DATA.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)", color: "#111827", fontWeight: "bold", fontSize: "11px", padding: "4px 8px" }}
-                                        formatter={(value) => [`${value}%`, ""]}
-                                        itemStyle={{ margin: 0 }}
-                                    />
-                                </PieChart>
-                                </ResponsiveContainer>
-                    )}
-                            <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                                <span className="text-emerald-500 font-black text-2xl leading-none">98%</span>
-                                <span className="text-gray-400 font-bold text-[8px] uppercase tracking-widest mt-0.5">Health</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-4 mt-4 border-t border-gray-100 pt-4 flex-shrink-0">
-                            <div className="flex flex-col">
-                                <span className="text-gray-500 font-medium text-[8px] uppercase tracking-wider mb-0.5">Response</span>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)] flex-shrink-0" />
-                                    <span className="text-gray-900 font-bold text-[11px] truncate">42 ms</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-gray-500 font-medium text-[8px] uppercase tracking-wider mb-0.5">Error Rate</span>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                                    <span className="text-gray-900 font-bold text-[11px] truncate">0.02%</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-gray-500 font-medium text-[8px] uppercase tracking-wider mb-0.5">Blocked</span>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-                                    <span className="text-gray-900 font-bold text-[11px] truncate">1,432 Today</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-gray-500 font-medium text-[8px] uppercase tracking-wider mb-0.5">Uptime</span>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                                    <span className="text-gray-900 font-bold text-[11px] truncate">99.99%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                                        </>
+                                    )}
+                                    {viewType === "Documents" && (
+                                        <>
+                                            <td className="px-6 py-4 font-semibold text-gray-900">{item.title}</td>
+                                            <td className="px-4 py-4">
+                                                <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs font-bold">
+                                                    {item.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-gray-900">{item.session}</td>
+                                            <td className="px-4 py-4 text-gray-900">{item.uploadedBy}</td>
+                                            <td className="px-4 py-4 text-gray-900">{item.date}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100">
+                                                        <Download className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100">
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </>
+                                    )}
+                                    {viewType === "Standards" && (
+                                        <>
+                                            <td className="px-6 py-4 font-bold text-gray-900">{item.code}</td>
+                                            <td className="px-4 py-4 font-semibold text-gray-900">{item.title}</td>
+                                            <td className="px-4 py-4 text-gray-900 text-sm max-w-xs truncate">{item.description}</td>
+                                            <td className="px-4 py-4 text-gray-900">{item.validity}</td>
+                                            <td className="px-4 py-4">
+                                                <span className={`px-2 py-1 rounded text-xs font-bold ${item.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                    {item.active ? 'ACTIVE' : 'INACTIVE'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100">
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </>
+                                    )}
+                                    {viewType === "Applications" && (
+                                        <>
+                                            <td className="px-6 py-4">
+                                                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-bold">
+                                                    {item.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 font-semibold text-gray-900">{item.applicant}</td>
+                                            <td className="px-4 py-4 text-gray-900">{item.organization}</td>
+                                            <td className="px-4 py-4">
+                                                <span className="px-2 py-1 rounded text-xs font-bold" style={{ backgroundColor: `${item.color}20`, color: item.color }}>
+                                                    {item.status.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-gray-900">{item.date}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <button className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700">
+                                                        Review
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
         );
     };
 
     const renderTraineesView = () => {
-        const currentKpis = traineeLevel === "Level 1" ? getDynamicTraineeKpis(dashboardStats) : LEVEL2_KPI_CARDS;
-        const currentRoster = traineeLevel === "Level 1" ? trainees : [];
-        
         return (
-        <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20">
-            {/* Top Navigation - LIGHT MODE (Same as Home) */}
-            <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
-                <div className="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200 rounded-full pr-5 pl-1.5 py-1.5 shadow-sm cursor-pointer group">
-                    <div className="flex items-center -space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-10 group-hover:-translate-x-1 transition-transform">
-                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-20 shadow-sm group-hover:translate-x-1 transition-transform">
-                            <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-full h-full object-contain rounded-full" />
-                        </div>
+            <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20 p-8">
+                <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
+                    <div>
+                        <h2 className="text-2xl font-black text-gray-900 leading-tight">Trainee Management</h2>
+                        <p className="text-gray-500 text-sm font-medium">Monitor and manage all enrolled trainees.</p>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA - ERNAM</span>
-                        <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                            Dashboard <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                        </span>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-8">
-                    {navItems.map((item) => (
-                        <button
-                            key={item}
-                            onClick={() => setActiveNav(item)}
-                            className={`text-sm font-semibold transition-colors pb-1 ${activeNav === item ? "text-blue-700 border-b-2 border-blue-700" : "text-gray-500 hover:text-gray-900"}`}
-                        >
-                            {item}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <button className="text-gray-500 hover:text-gray-900"><Bell className="w-5 h-5" /></button>
-                    <button className="text-gray-500 hover:text-gray-900" onClick={() => setDarkMode(!darkMode)}>
-                        {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                    </button>
-                    <button className="text-gray-500 hover:text-gray-900"><Settings className="w-5 h-5" /></button>
-                    <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors">
-                        <span className="text-gray-800 text-sm font-semibold">Edward Day</span>
-                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">E</div>
-                    </div>
-                </div>
-            </nav>
-
-            {/* Main Wallet Content */}
-            <div className="px-8 py-10 space-y-6 max-w-[1600px] mx-auto mt-4">
-                {/* Header: Tabs & Networks */}
-                <div className="flex justify-between items-center mb-8">
-                    <div className="flex gap-8">
-                        <button 
-                            onClick={() => setTraineeLevel("Level 1")}
-                            className={`text-2xl font-black pb-2 border-b-2 transition-colors ${traineeLevel === "Level 1" ? "border-blue-600 text-gray-900" : "border-transparent text-gray-300 hover:text-gray-500"}`}>
-                                Level 1
-                        </button>
-                        <button 
-                            onClick={() => setTraineeLevel("Level 2")}
-                            className={`text-2xl font-black pb-2 border-b-2 transition-colors ${traineeLevel === "Level 2" ? "border-blue-600 text-gray-900" : "border-transparent text-gray-300 hover:text-gray-500"}`}>
-                                Level 2
-                        </button>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                        <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
-                            <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Networks:</span>
-                            <Triangle className="w-4 h-4 text-emerald-500" fill="currentColor" />
-                            <Circle className="w-4 h-4 text-amber-500" fill="currentColor" />
-                            <Hexagon className="w-4 h-4 text-gray-400" fill="currentColor" />
-                            <Diamond className="w-4 h-4 text-blue-500" fill="currentColor" />
-                            <Circle className="w-4 h-4 text-green-500" fill="currentColor" />
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center bg-white rounded-xl border border-gray-200 p-1 shadow-sm">
+                            {["Level 1", "Level 2", "Level 3"].map(level => (
+                                <button
+                                    key={level}
+                                    onClick={() => setTraineeLevel(level)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${traineeLevel === level ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
+                                >
+                                    {level}
+                                </button>
+                            ))}
                         </div>
-                    </div>
-                </div>
-
-                {/* Learning & Training KPI Cards */}
-                <div className="grid grid-cols-6 gap-5">
-                    {currentKpis.map((card: any, idx: number) => (
-                        <div key={idx} className="bg-white border border-gray-200 rounded-[20px] p-5 flex flex-col relative overflow-hidden group hover:shadow-md transition-all cursor-pointer">
-                            {/* Background Glow Line & Blur */}
-                            <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-[40px] opacity-10 group-hover:opacity-15 transition-opacity" style={{ background: card.color }} />
-                            
-                            {/* Header */}
-                            <div className="flex justify-between items-center mb-4 relative z-10">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-sm" style={{ background: `${card.color}15` }}>
-                                        {card.icon}
-                                    </div>
-                                    <span className="text-gray-800 font-bold text-[14px]">{card.name}</span>
-                                </div>
-                                <div className="w-2.5 h-2.5 rounded-full border border-gray-200 group-hover:border-blue-400 transition-colors bg-gray-50" />
-                            </div>
-
-                            {/* Balances */}
-                            <div className="relative z-10 mb-5">
-                                <div className="text-gray-900 font-black text-2xl tracking-tight mb-0.5">{card.balance}</div>
-                                <div className="text-gray-500 font-medium text-[11px]">{card.crypto}</div>
-                            </div>
-
-                            {/* Rate Slider / Bottom element */}
-                            <div className="relative z-10 w-full mt-auto">
-                                <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3 overflow-hidden">
-                                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${card.progress}%`, backgroundColor: card.color }} />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-gray-50" style={{ color: card.color }}>Status</span>
-                                    <span className="text-[10px] text-gray-500 font-medium tracking-tight truncate">{card.rate}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Trainee Roster Header */}
-                <div className="pt-10 pb-4 flex flex-col gap-4 border-b border-gray-200">
-                    <div className="flex justify-between items-end">
-                        <div className="transition-all">
-                            <h2 className="text-2xl font-black text-gray-900 leading-tight mb-1">Trainee Roster</h2>
-                            <p className="text-gray-500 text-sm font-medium">Monitor enrolled trainees, course progress, and recent system activity.</p>
-                        </div>
-                        <div className="flex gap-3 pb-1 relative">
-                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"><Download className="w-4 h-4"/></button>
+                        <div className="flex items-center gap-2">
+                            <button className="p-2 rounded-lg bg-white text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors border border-gray-100 shadow-sm">
+                                <Download className="w-4 h-4"/>
+                            </button>
                             <button 
                                 onClick={() => setShowTraineeFilter(!showTraineeFilter)}
                                 className={`p-2 rounded-lg transition-colors border shadow-sm ${showTraineeFilter ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-400 hover:text-blue-600 hover:bg-blue-50 border-gray-100'}`}
                             >
                                 <SlidersHorizontal className="w-4 h-4"/>
                             </button>
-
-                            {/* Dropdown Filter */}
-                            {showTraineeFilter && (
-                                <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-50">
-                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Filter by Status</h4>
-                                    <div className="space-y-2 mb-4">
-                                        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                                            <input type="checkbox" className="rounded text-blue-600 border-gray-300 focus:ring-blue-500" defaultChecked />
-                                            On Track
-                                        </label>
-                                        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                                            <input type="checkbox" className="rounded text-amber-500 border-gray-300 focus:ring-amber-500" defaultChecked />
-                                            In Progress
-                                        </label>
-                                        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                                            <input type="checkbox" className="rounded text-red-500 border-gray-300 focus:ring-red-500" defaultChecked />
-                                            At Risk
-                                        </label>
-                                    </div>
-                                    
-                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 pt-3 border-t border-gray-100">Sort By</h4>
-                                    <select className="w-full text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 bg-gray-50 text-gray-700">
-                                        <option>Recently Active</option>
-                                        <option>Highest Score First</option>
-                                        <option>Lowest Score First</option>
-                                        <option>Alphabetical (A-Z)</option>
-                                    </select>
-                                </div>
-                            )}
                         </div>
                     </div>
-
-                    {/* Batch Actions Bar */}
-                    {selectedTrainees.length > 0 && (
-                        <div className="flex items-center gap-6 bg-blue-50 text-blue-800 px-5 py-3 rounded-xl border border-blue-200 shadow-sm w-full animate-in fade-in slide-in-from-top-2">
-                            <span className="font-bold whitespace-nowrap">{selectedTrainees.length} selected</span>
-                            <div className="w-px h-5 bg-blue-200"></div>
-                            <div className="flex items-center gap-3 w-full">
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Details</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">View As</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit</button>
-                                <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Delete</button>
-                            </div>
-                            <button onClick={() => setSelectedTrainees([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 flex items-center justify-center">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                    )}
                 </div>
+
+                {/* Batch Actions Bar for Trainees */}
+                {selectedTrainees.length > 0 && (
+                    <div className="flex items-center gap-6 bg-blue-50 text-blue-800 px-5 py-3 rounded-xl border border-blue-200 shadow-sm w-full animate-in fade-in slide-in-from-top-2 mb-6">
+                        <span className="font-bold whitespace-nowrap">{selectedTrainees.length} selected</span>
+                        <div className="w-px h-5 bg-blue-200"></div>
+                        <div className="flex items-center gap-3 w-full">
+                            <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Message</button>
+                            <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Reassign</button>
+                            <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit Status</button>
+                            <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Remove Trainee</button>
+                        </div>
+                        <button onClick={() => setSelectedTrainees([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 text-xl leading-none">
+                            &times;
+                        </button>
+                    </div>
+                )}
 
                 {/* Trainee Roster Table */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1118,27 +838,27 @@ export default function PurpleAdminDashboard() {
                                     <input 
                                         type="checkbox" 
                                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
-                                        checked={currentRoster.length > 0 && selectedTrainees.length === currentRoster.length}
+                                        checked={trainees.length > 0 && selectedTrainees.length === trainees.length}
                                         onChange={(e) => {
                                             if (e.target.checked) {
-                                                setSelectedTrainees(currentRoster.map(t => t.id));
+                                                setSelectedTrainees(trainees.map(t => t.id));
                                             } else {
                                                 setSelectedTrainees([]);
                                             }
                                         }}
                                     />
                                 </th>
-                                <th className="px-2 py-4">Last Active</th>
+                                <th className="px-2 py-4">Enrollment Date</th>
                                 <th className="px-4 py-4">Trainee</th>
                                 <th className="px-4 py-4">Status</th>
                                 <th className="px-4 py-4">Current Module</th>
                                 <th className="px-4 py-4">Performance</th>
-                                <th className="px-6 py-4">Trainee ID / Contact</th>
+                                <th className="px-6 py-4">Trainee ID / Email</th>
                                 <th className="px-6 py-4 text-center">ACTION</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {currentRoster.map((tx) => (
+                            {trainees.map((tx) => (
                                 <tr key={tx.id} className={`transition-colors group ${selectedTrainees.includes(tx.id) ? 'bg-blue-50/40' : 'hover:bg-gray-50'}`}>
                                     <td className="px-6 py-5 w-12 text-center">
                                         <input 
@@ -1169,12 +889,12 @@ export default function PurpleAdminDashboard() {
                                     <td className="px-4 py-5">
                                         <div className="text-gray-800 font-bold text-xs mb-0.5">{tx.moduleTitle}</div>
                                         <div className="flex items-center gap-1.5">
-                                            <Circle className="w-1.5 h-1.5 fill-blue-600 text-blue-600" />
+                                            <span className="text-blue-600 font-bold text-[10px]">●</span>
                                             <span className="text-gray-500 font-medium text-[11px]">{tx.moduleProgress}</span>
                                         </div>
                                     </td>
                                     <td className="px-4 py-5">
-                                        <div className={`font-black text-sm tracking-wide ${tx.statusColor === '#EF4444' ? 'text-red-600' : tx.statusColor === '#F59E0B' ? 'text-amber-600' : 'text-emerald-600'}`}>{tx.performanceNum}</div>
+                                        <div className="font-black text-sm tracking-wide text-gray-900">{tx.performanceNum}</div>
                                         <div className="text-gray-400 text-[10px] font-bold mt-0.5 uppercase">{tx.performanceText}</div>
                                     </td>
                                     <td className="px-6 py-5 max-w-[200px]">
@@ -1203,119 +923,22 @@ export default function PurpleAdminDashboard() {
                     </table>
                 </div>
             </div>
-        </div>
         );
     };
 
     const renderTrainersView = () => {
         return (
-        <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20">
-            {/* Top Navigation - LIGHT MODE (Same as Home) */}
-            <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
-                <div className="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200 rounded-full pr-5 pl-1.5 py-1.5 shadow-sm cursor-pointer group">
-                    <div className="flex items-center -space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-10 group-hover:-translate-x-1 transition-transform">
-                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-20 shadow-sm group-hover:translate-x-1 transition-transform">
-                            <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-full h-full object-contain rounded-full" />
-                        </div>
+            <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20 p-8">
+                <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
+                    <div>
+                        <h2 className="text-2xl font-black text-gray-900 leading-tight">Trainer Faculty</h2>
+                        <p className="text-gray-500 text-sm font-medium">Manage instructors and their assigned sessions.</p>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA - ERNAM</span>
-                        <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                            Dashboard <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                        </span>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-8">
-                    {navItems.map((item) => (
-                        <button
-                            key={item}
-                            onClick={() => setActiveNav(item)}
-                            className={`text-sm font-semibold transition-colors pb-1 ${activeNav === item ? "text-blue-700 border-b-2 border-blue-700" : "text-gray-500 hover:text-gray-900"}`}
-                        >
-                            {item}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <button className="text-gray-500 hover:text-gray-900"><Bell className="w-5 h-5" /></button>
-                    <button className="text-gray-500 hover:text-gray-900" onClick={() => setDarkMode(!darkMode)}>
-                        {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                    </button>
-                    <button className="text-gray-500 hover:text-gray-900"><Settings className="w-5 h-5" /></button>
-                    <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors">
-                        <span className="text-gray-800 text-sm font-semibold">Edward Day</span>
-                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">E</div>
-                    </div>
-                </div>
-            </nav>
-
-            {/* Main Trainer Content */}
-            <div className="px-8 py-10 space-y-6 max-w-[1600px] mx-auto mt-4">
-                {/* Header structure: Trainee view has "Level 1" / "Level 2". For Trainers, NO TABS. */}
-                <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
-                    <div className="flex gap-8">
-                        <h2 className="text-2xl font-black text-gray-900 leading-tight">Trainer Directory</h2>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                        <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
-                            <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Networks:</span>
-                            <Triangle className="w-4 h-4 text-emerald-500" fill="currentColor" />
-                            <Circle className="w-4 h-4 text-amber-500" fill="currentColor" />
-                            <Hexagon className="w-4 h-4 text-gray-400" fill="currentColor" />
-                            <Diamond className="w-4 h-4 text-blue-500" fill="currentColor" />
-                            <Circle className="w-4 h-4 text-green-500" fill="currentColor" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Trainer KPI Cards */}
-                <div className="grid grid-cols-6 gap-5">
-                    {getDynamicTrainerKpis(dashboardStats).map((card: any, idx: number) => (
-                        <div key={idx} className="bg-white border border-gray-200 rounded-[20px] p-5 flex flex-col relative overflow-hidden group hover:shadow-md transition-all cursor-pointer">
-                            <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-[40px] opacity-10 group-hover:opacity-15 transition-opacity" style={{ background: card.color }} />
-                            
-                            <div className="flex justify-between items-center mb-4 relative z-10">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-sm" style={{ background: `${card.color}15` }}>
-                                        {card.icon}
-                                    </div>
-                                    <span className="text-gray-800 font-bold text-[14px]">{card.name}</span>
-                                </div>
-                                <div className="w-2.5 h-2.5 rounded-full border border-gray-200 group-hover:border-blue-400 transition-colors bg-gray-50" />
-                            </div>
-
-                            <div className="relative z-10 mb-5">
-                                <div className="text-gray-900 font-black text-2xl tracking-tight mb-0.5">{card.balance}</div>
-                                <div className="text-gray-500 font-medium text-[11px]">{card.crypto}</div>
-                            </div>
-
-                            <div className="relative z-10 w-full mt-auto">
-                                <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3 overflow-hidden">
-                                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${card.progress}%`, backgroundColor: card.color }} />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-gray-50" style={{ color: card.color }}>Status</span>
-                                    <span className="text-[10px] text-gray-500 font-medium tracking-tight truncate">{card.rate}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Trainer Roster Header */}
-                <div className="pt-10 pb-4 flex flex-col gap-4 border-b border-gray-200">
-                    <div className="flex justify-between items-end">
-                        <div className="transition-all">
-                            <h2 className="text-2xl font-black text-gray-900 leading-tight mb-1">Trainer List</h2>
-                            <p className="text-gray-500 text-sm font-medium">Manage faculty, track specializations, and review recent sessions.</p>
-                        </div>
-                        <div className="flex gap-3 pb-1 relative">
-                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"><Download className="w-4 h-4"/></button>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <button className="p-2 rounded-lg bg-white text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors border border-gray-100 shadow-sm">
+                                <Download className="w-4 h-4"/>
+                            </button>
                             <button 
                                 onClick={() => setShowTrainerFilter(!showTrainerFilter)}
                                 className={`p-2 rounded-lg transition-colors border shadow-sm ${showTrainerFilter ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-400 hover:text-blue-600 hover:bg-blue-50 border-gray-100'}`}
@@ -1324,24 +947,24 @@ export default function PurpleAdminDashboard() {
                             </button>
                         </div>
                     </div>
-
-                    {/* Batch Actions Bar for Trainers */}
-                    {selectedTrainers.length > 0 && (
-                        <div className="flex items-center gap-6 bg-blue-50 text-blue-800 px-5 py-3 rounded-xl border border-blue-200 shadow-sm w-full animate-in fade-in slide-in-from-top-2">
-                            <span className="font-bold whitespace-nowrap">{selectedTrainers.length} selected</span>
-                            <div className="w-px h-5 bg-blue-200"></div>
-                            <div className="flex items-center gap-3 w-full">
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Profile</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Reassign</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit</button>
-                                <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Remove Faculty</button>
-                            </div>
-                            <button onClick={() => setSelectedTrainers([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 text-xl leading-none">
-                                &times;
-                            </button>
-                        </div>
-                    )}
                 </div>
+
+                {/* Batch Actions Bar for Trainers */}
+                {selectedTrainers.length > 0 && (
+                    <div className="flex items-center gap-6 bg-blue-50 text-blue-800 px-5 py-3 rounded-xl border border-blue-200 shadow-sm w-full animate-in fade-in slide-in-from-top-2 mb-6">
+                        <span className="font-bold whitespace-nowrap">{selectedTrainers.length} selected</span>
+                        <div className="w-px h-5 bg-blue-200"></div>
+                        <div className="flex items-center gap-3 w-full">
+                            <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Profile</button>
+                            <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Reassign</button>
+                            <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit</button>
+                            <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Remove Faculty</button>
+                        </div>
+                        <button onClick={() => setSelectedTrainers([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 text-xl leading-none">
+                            &times;
+                        </button>
+                    </div>
+                )}
 
                 {/* Trainer Roster Table */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1403,7 +1026,7 @@ export default function PurpleAdminDashboard() {
                                     <td className="px-4 py-5">
                                         <div className="text-gray-800 font-bold text-xs mb-0.5">{tx.specialization}</div>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-blue-600 font-bold text-[10px]">â—</span>
+                                            <span className="text-blue-600 font-bold text-[10px]">●</span>
                                             <span className="text-gray-500 font-medium text-[11px]">{tx.activeSessions}</span>
                                         </div>
                                     </td>
@@ -1437,9 +1060,9 @@ export default function PurpleAdminDashboard() {
                     </table>
                 </div>
             </div>
-        </div>
         );
     };
+
     const renderAdministratorsView = () => {
         return (
             <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20 p-8">
@@ -1526,7 +1149,7 @@ export default function PurpleAdminDashboard() {
                 }}
                 onSuccess={() => {
                     fetchDrillDownData("Documents");
-                    loadDashboardStats();
+                    fetchStats();
                 }}
                 documentToEdit={selectedRecord}
                 onAddNewSession={() => setIsSessionModalOpen(true)}

@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -12,7 +11,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { training_standard_id, location, start_date, end_date, status, adminId } = body;
+        const { training_standard_id, location, start_date, end_date, status, adminId, max_participants, delivery_mode } = body;
 
         if (!training_standard_id || !start_date || !end_date) 
             return NextResponse.json({ error: 'Missing required session fields' }, { status: 400 });
@@ -24,7 +23,9 @@ export async function POST(req: NextRequest) {
                 location,
                 start_date: new Date(start_date).toISOString(),
                 end_date: new Date(end_date).toISOString(),
-                status: status || 'planned'
+                status: status || 'planned',
+                max_participants: max_participants || 15,
+                delivery_mode: delivery_mode || 'onsite'
             })
             .select().single();
 
@@ -33,7 +34,6 @@ export async function POST(req: NextRequest) {
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'SESSION_CREATED',
-                target_resource: data.id,
                 actor_id: adminId,
                 entity_type: 'session',
                 entity_id: data.id
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
     try {
         const body = await req.json();
-        const { id, training_standard_id, location, start_date, end_date, status, adminId } = body;
+        const { id, training_standard_id, location, start_date, end_date, status, adminId, max_participants, delivery_mode } = body;
 
         if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
@@ -57,6 +57,8 @@ export async function PUT(req: NextRequest) {
         if (training_standard_id) updateData.training_standard_id = training_standard_id;
         if (start_date) updateData.start_date = new Date(start_date).toISOString();
         if (end_date) updateData.end_date = new Date(end_date).toISOString();
+        if (max_participants !== undefined) updateData.max_participants = max_participants;
+        if (delivery_mode) updateData.delivery_mode = delivery_mode;
 
         const { data, error } = await supabaseAdmin
             .from('sessions')
@@ -69,7 +71,6 @@ export async function PUT(req: NextRequest) {
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'SESSION_UPDATED',
-                target_resource: id,
                 actor_id: adminId,
                 entity_type: 'session',
                 entity_id: id
@@ -96,7 +97,6 @@ export async function DELETE(req: NextRequest) {
         if (adminId) {
             await supabaseAdmin.from('audit_logs').insert({
                 action: 'SESSION_DELETED',
-                target_resource: id,
                 actor_id: adminId,
                 entity_type: 'session',
                 entity_id: id
