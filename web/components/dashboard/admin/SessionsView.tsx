@@ -53,6 +53,7 @@ export default function SessionsView() {
                 delivery_mode,
                 status,
                 training_standard:training_standards(code, title),
+                instructors:session_instructors(instructor:users(full_name)),
                 participants:session_participants(count)
             `)
             .order('start_date', { ascending: true });
@@ -146,10 +147,11 @@ export default function SessionsView() {
                                 <th className="px-6 py-4">Standard</th>
                                 <th className="px-6 py-4">Dates</th>
                                 <th className="px-6 py-4">Location</th>
+                                <th className="px-6 py-4">Instructor</th>
                                 <th className="px-6 py-4">Mode</th>
                                 <th className="px-6 py-4">Status</th>
                                 <th className="px-6 py-4 text-center">Participants</th>
-                                <th className="px-6 py-4 text-right">Action</th>
+                                <th className="px-6 py-4 text-right">ACTION</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -186,6 +188,12 @@ export default function SessionsView() {
                                             <div className="flex items-center gap-1.5">
                                                 <MapPin className="w-3.5 h-3.5" />
                                                 {session.location}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-muted-foreground">
+                                            <div className="flex items-center gap-1.5 capitalize">
+                                                <Users className="w-3.5 h-3.5" />
+                                                {(session as any).instructors?.[0]?.instructor?.full_name || 'Unassigned'}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">

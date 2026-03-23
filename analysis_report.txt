@@ -1,0 +1,484 @@
+Thinking...
+We are given a database schema and code snippets (API routes and UI component) for an Admin UI.
+ We need to identify integration failures by comparing the code against the schema.
+
+ Steps:
+ 1. Check API routes for incorrect table names, column names, or data types.
+ 2. Check UI data fetching logic for incorrect table names, column names, or data types.
+ 3. Look for logical errors in data mapping (e.g., role names, status values).
+ 4. Identify other bugs that would cause 400 or 500 errors.
+
+ Let's break down by each code snippet:
+
+ ## API: manage-user
+   - Table: `users` (exists in schema)
+   - Columns used in POST: 
+        - In auth: `email`, `password`, `full_name` (as user_metadata)
+        - In public.users: `role`, `full_name`, `status` (set to 'approved')
+   - Columns used in PUT: `role`, `status`, `full_name`
+   - Columns used in DELETE: deleting by `id`
+
+   Potential issues:
+   - The `users` table in the schema has a check constraint on `role` and `status`. 
+        Allowed roles: ['participant', 'instructor', 'org_admin', 'ernam_admin', 'maintainer', 'developer']
+        Allowed statuses: ['pending', 'approved', 'rejected', 'suspended']
+   - In the POST, the code sets the status to 'approved'. That is allowed.
+   - However, note that the `users` table has a foreign key to `auth.users` (via `id`). 
+        The code creates a user in auth and then updates the public.users table. 
+        But note: the public.users table might not have a row for that user yet. 
+        The code uses `update` which will only work if the row already exists. 
+        This is a problem because the trigger (if any) that creates the row in public.users might not exist or might be delayed.
+
+        The schema does not specify any trigger. So we must check if the row is inserted by the trigger or not.
+        If not, then we should use `insert` instead of `update`.
+
+        Actually, looking at the schema, there is no trigger defined in the provided schema. 
+        Therefore, the code in the POST should insert a row in public.users, not update.
+
+        This is a critical integration failure.
+
+   - Also, in the POST, the code does not set `organization_id` for the user. The schema allows it to be null, so that's okay.
+
+   - In the DELETE, the code deletes the auth user and then deletes the row in public.users (if the trigger doesn't do it). 
+        But note: the foreign key constraint in public.users (id) references auth.users(id) with ON DELETE? 
+        The schema does not specify ON DELETE CASCADE. So deleting the auth user might fail if there is a row in public.users.
+
+        Actually, the constraint is:
+            CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+
+        Without ON DELETE CASCADE, we cannot delete the auth user until the row in public.users is deleted.
+
+        The code deletes the auth user first, which will fail because of the foreign key constraint.
+
+        This is a critical integration failure.
+
+   - Also, note that the `audit_logs` table has a column `target_resource` which is used in the code, but in the schema, 
+        the table has columns: `actor_id`, `action`, `entity_type`, `entity_id`, `created_at`, `ip_address`. 
+        There is no `target_resource` column. This is a mismatch.
+
+        Looking at the schema for `audit_logs`:
+            CREATE TABLE public.audit_logs (
+                id uuid NOT NULL DEFAULT gen_random_uuid(),
+                actor_id uuid,
+                action text NOT NULL,
+                entity_type text NOT NULL,
+                entity_id uuid,
+                created_at timestamp with time zone DEFAULT now(),
+                ip_address text,
+                ...);
+
+        So the code is trying to insert into `target_resource` which does not exist. This will cause an error.
+
+        Similarly, in the PUT and DELETE, the same issue.
+
+   - Also, in the audit logs, the code uses `entity_id` and `entity_type` which are in the schema, but also `target_resource` which is not.
+
+   - Another issue: the code in POST uses `adminId` to set `actor_id` in audit_logs, but note that the `audit_logs` table has an `actor_id` column. 
+        However, the code is passing `adminId` as `actor_id` and then also setting `target_resource` (which doesn't exist) and `entity_id` and `entity_type`.
+
+        We need to adjust the audit log insertion to match the schema.
+
+   - In the PUT, the code updates the user and then inserts an audit log. The same issue with `target_resource`.
+
+   - In the DELETE, the same issue.
+
+   - Also, note that the `audit_logs` table has an `ip_address` column, but the code does not provide it. It can be null, so that's okay.
+
+ ## API: manage-session
+   - Table: `sessions` (exists in schema)
+   - Columns used in POST: `training_standard_id`, `location`, `start_date`, `end_date`, `status`
+   - The schema for `sessions` also has `delivery_mode`, `max_participants`, but the code does not set them. They have defaults, so that's okay.
+
+   Potential issues:
+   - The `sessions` table has a foreign key to `training_standards` (training_standard_id). The code uses the provided `training_standard_id` which must exist.
+
+   - The `status` in the schema is one of: ['planned', 'scheduled', 'confirmed', 'active', 'in_progress', 'completed', 'cancelled', 'audited']
+        The code sets `status` to `status || 'planned'` in POST. That is allowed.
+
+   - The same issue with `audit_logs` as above: using `target_resource` which does not exist.
+
+   - In the PUT, the code allows updating the same fields, and also the same audit log issue.
+
+   - In the DELETE, the same audit log issue.
+
+ ## API: manage-standard
+   - Table: `training_standards` (exists in schema)
+   - Columns used in POST: `code`, `title`, `description`, `validity_months`, `active`
+   - The code uses `code.toUpperCase()` and inserts.
+
+   Potential issues:
+   - The `code` column is unique, so if there is a duplicate, it will throw an error (which is handled).
+
+   - The same issue with `audit_logs` as above.
+
+ ## UI COMPONENT: PurpleAdminDashboard (Data Fetching Logic)
+   - The UI component fetches data from the database using the `supabase` client.
+
+   Let's look at the `fetchStats` function:
+
+        async function fetchStats() {
+            try {
+                const now = new Date();
+                const last24hDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+                const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+                const { count: participantCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'participant');
+                const { count: trainerCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'instructor');
+                const { count: adminCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'ernam_admin');
+                const { count: sessionCount } = await supabase.from('sessions').select('*', { count: 'exact', head: true });
+                const { count: certCount } = await supabase.from('certificates').select('*', { count: 'exact', head: true });
+                const { count: attendanceCount } = await supabase.from('session_participants').select('*', { count: 'exact', head: true }).eq('attendance_status', 'attended');
+                const { count: docCount } = await supabase.from('documents').select('*', { count: 'exact', head: true });
+                const { count: examCount } = await supabase.from('assessments').select('*', { count: 'exact', head: true });
+
+                // ... and then there is a comment about activity filters for 24h but the code is cut off.
+
+   Potential issues:
+   - The table names and column names seem to match the schema.
+
+   However, note that in the schema, the table for participants in a session is `session_participants` (which is used) and the column `attendance_status` is present.
+
+   - The `fetchStats` function is incomplete in the provided code snippet, but we can see it's trying to get counts for various tables.
+
+   - The UI also uses `session_participants` and `assessments` which exist.
+
+   - One issue: in the `fetchStats` function, the `last24hDate` is defined but not used in the provided snippet. 
+        The code is cut off, but note that the comment says "Activity filters for 24h". 
+        We need to check if the code is filtering by `created_at` for the last 24 hours for some of the counts.
+
+   - Also, note that the `users` table has a `created_at` column, so if we want to count users in the last 24 hours, we should use that.
+
+   - The code snippet cuts off at: `const { count: u24 ` so we cannot see the rest.
+
+   - However, the function `fetchStats` is used to set `dashboardStats`, and then the UI uses `dashboardStats` to display dynamic data.
+
+   - The UI also fetches users in the `fetchUsers` function (which is not shown in the snippet). We must check that function as well.
+
+   - The provided code snippet for the UI is incomplete, so we can only check what we see.
+
+   - Also, note that the UI uses the `audit_logs` table in the `fetchStats` function? Not in the provided snippet.
+
+   - The UI uses mock data for some parts, but we are only concerned with the data fetching from the database.
+
+   - Another issue: the UI component uses `useAuth` and `startImpersonation` but that is not part of the database schema.
+
+   - The UI component uses `session_participants` and `assessments` which are in the schema.
+
+   - The UI component uses `certificates` which is in the schema.
+
+   - The UI component uses `documents` which is in the schema.
+
+   - The UI component uses `sessions` which is in the schema.
+
+   - The UI component uses `users` which is in the schema.
+
+   - However, note that in the `fetchStats` function, the code uses `supabase.from('users')` and then filters by role. 
+        The roles in the schema are: 'participant', 'instructor', 'org_admin', 'ernam_admin', 'maintainer', 'developer'.
+
+        The code uses:
+            .eq('role', 'participant')   -> correct
+            .eq('role', 'instructor')    -> correct
+            .eq('role', 'ernam_admin')   -> correct
+
+        So that is consistent.
+
+   - The `fetchStats` function also uses `session_participants` and filters by `attendance_status` = 'attended'. 
+        The schema for `session_participants` has `attendance_status` with values: ['enrolled', 'attended', 'absent']. So that is correct.
+
+   - The `fetchStats` function uses `assessments` table, which exists.
+
+   - The `fetchStats` function uses `documents` table, which exists.
+
+   - The `fetchStats` function uses `certificates` table, which exists.
+
+   - The `fetchStats` function uses `sessions` table, which exists.
+
+   - But note: the `fetchStats` function is incomplete, so we don't see the 24-hour counts.
+
+   - Also, note that the `dashboardStats` object is used in the UI to display numbers. 
+        The `getDynamicStatsCategories` function uses `dashboardStats` and expects properties like `docs24h`, `users24h`, `sessions`, `exams`, `certificates`, `attendances`.
+
+        We don't see how `docs24h` and `users24h` are computed. They are probably from the 24-hour counts.
+
+   - The UI also has `getDynamicTraineeKpis`, `getDynamicTrainerKpis`, `getDynamicAdminKpis` which use `dashboardStats`.
+
+   - The `dashboardStats` is set in `fetchStats` and we don't see the full function, so there might be missing properties.
+
+   - Since the code is cut off, we cannot see the complete `fetchStats` function. But we can note that the existing part does not set `docs24h`, `users24h`, `certs24h` etc.
+
+   - This would cause the UI to show zeros for those dynamic stats.
+
+   - Also, note that the `fetchStats` function does not handle errors. If one of the queries fails, the whole function might fail.
+
+   - The UI uses `useEffect` to fetch data on mount, and sets `loading` state. That is okay.
+
+   - The UI also has a `fetchUsers` function (not shown) that fetches users and sets `allUsersRaw` and `allUsers`. We cannot check that.
+
+   - The UI uses `selectedUserForEdit` and `isEditModalOpen` for editing a user. We don't see the edit modal code.
+
+   - The UI uses `SessionFormModal`, `DocumentFormModal`, `StandardFormModal`, `UserDetailModal` which are not provided, so we cannot check them.
+
+   - The UI uses `drillDownView` and `drillDownData` for drill-down views, but we don't see how they are set.
+
+   - The UI uses `isSessionModalOpen`, `isDocumentModalOpen`, `isStandardModalOpen` for modals, but we don't see the modal code.
+
+   - The UI uses `selectedRecord` for editing a record in a modal.
+
+   - The UI uses `startImpersonation` from `useAuth` which is not part of the database, so we cannot check that.
+
+   - The UI uses `cn` for class names, which is a utility function.
+
+   - The UI uses `format` from `date-fns` for date formatting.
+
+   - The UI uses `Loader2` icon from `lucide-react` for loading state.
+
+   - The UI uses `PieChart`, `LineChart`, `BarChart` from `recharts` for charts.
+
+   - The UI uses mock data for some charts, but we are only concerned with the data fetching from the database.
+
+   - The UI uses `supabase` client from `@/lib/supabaseClient` which is not shown, but we assume it's configured correctly.
+
+   - The UI uses `useState` and `useEffect` from React.
+
+   - The UI uses `useAuth` from `@/components/providers/AuthProvider` which is not shown.
+
+   - The UI uses `TRAINEE_ROSTER_DATA`, `LEVEL2_ROSTER_DATA`, etc. from `@/lib/mockData` for the roster tables. 
+        This means that the roster data is not fetched from the database. This is a problem because the UI should use real data.
+
+   - The UI uses `USERS_DATA` from `@/lib/mockData` for the users table. This is also a problem.
+
+   - This is a critical integration failure because the UI is using mock data instead of real data from the database.
+
+   - The `fetchUsers` function (if it exists) sets `allUsersRaw` and `allUsers`, but then the UI uses `USERS_DATA` for the table? 
+        We don't see the table code, but in the provided snippet, the `USERS_DATA` is imported and likely used.
+
+   - The same for the roster data.
+
+   - Therefore, the UI is not displaying real data from the database for users and rosters.
+
+   - The `fetchStats` function does fetch some real data, but the UI also uses mock data for some parts.
+
+   - This is a mixture of real and mock data, which is not acceptable for production.
+
+   - Also, note that the `fetchStats` function is incomplete and does not set all the required properties for the dynamic stats.
+
+   - The `fetchStats` function does not set `docs24h`, `users24h`, `certs24h` etc. which are used in `getDynamicStatsCategories`.
+
+   - This will cause the UI to show zeros for those stats.
+
+   - Also, the `fetchStats` function does not set `trainees`, `trainers`, `admins` in the `dashboardStats`? 
+        We see that in the `fetchStats` function, we have `participantCount`, `trainerCount`, `adminCount`, but they are not assigned to `dashboardStats`.
+
+        We see that the `dashboardStats` is set to an object, but the code is cut off.
+
+   - We cannot see the rest of the `fetchStats` function, so we don't know how `dashboardStats` is built.
+
+   - This is a critical issue because the UI depends on `dashboardStats` for the dynamic KPIs.
+
+   - The dynamic KPI functions (like `getDynamicTraineeKpis`) use `dashboardStats` and expect properties like `trainees`, `totalUsers`, `sessions`, `certificates`, etc.
+
+   - We don't see that in the provided part of `fetchStats`.
+
+   - Therefore, the dynamic KPIs will not show real data.
+
+   - Also, note that the `fetchStats` function does not set `exams` and `attendances`? 
+        We see `examCount` and `attendanceCount` are fetched, but then not assigned to `dashboardStats` in the provided snippet.
+
+   - This is a critical integration failure.
+
+   - Also, note that the `fetchStats` function does not set `docs24h` and `users24h` and `certs24h` for the last 24 hours.
+
+   - The `getDynamicStatsCategories` function uses these properties.
+
+   - Without them, the stats will show zeros.
+
+   - Also, the `getDynamicTraineeKpis` function uses `dashboardStats.trainees` and `dashboardStats.totalUsers` and `dashboardStats.certificates` and `dashboardStats.sessions`.
+
+   - We don't see that in the provided part of `fetchStats`.
+
+   - Therefore, the KPIs will show zeros or incorrect data.
+
+   - This is a critical integration failure.
+
+   - Also, note that the `fetchStats` function does not set `trainers` and `admins` for the trainer and admin KPIs.
+
+   - The `getDynamicTrainerKpis` and `getDynamicAdminKpis` use `dashboardStats.trainers` and `dashboardStats.admins`.
+
+   - We don't see that in the provided part of `fetchStats`.
+
+   - Therefore, the trainer and admin KPIs will show zeros.
+
+   - This is a critical integration failure.
+
+   - Also, note that the `fetchStats` function does not set `documents` and `exams` and `attendances` for the stats categories.
+
+   - The `getDynamicStatsCategories` uses `dashboardStats.documents`, `dashboardStats.exams`, `dashboardStats.attendances`.
+
+   - We don't see that in the provided part of `fetchStats`.
+
+   - Therefore, the stats categories will show zeros.
+
+   - This is a critical integration failure.
+
+   - In summary, the UI is using mock data for some parts and the real data fetching is incomplete.
+
+   - This will cause the UI to show incorrect data.
+
+   - Also, the API routes have issues with the `audit_logs` table (using non-existent column `target_resource`).
+
+   - And the user management API has issues with the insert/update of public.users and the foreign key constraint when deleting.
+
+   - These are critical integration failures.
+
+   Let's list the integration failures:
+
+   Integration Failures Found:
+
+   1. In `manage-user` API:
+        a. The POST uses `update` on `public.users` after creating an auth user, but the row may not exist. It should use `insert`.
+        b. The DELETE tries to delete the auth user first, but the foreign key constraint in `public.users` references `auth.users`. 
+           We must delete the row in `public.users` first, then delete the auth user.
+        c. The `audit_logs` table does not have a `target_resource` column. The code tries to insert into this column, which will cause an error.
+        d. The audit log insertion in all methods (POST, PUT, DELETE) uses `target_resource` which does not exist. 
+           Also, the `action` and `entity_type` and `entity_id` are used, but note that the schema for `audit_logs` has `action` and `entity_type` and `entity_id`. 
+           We should remove `target_resource` and use the correct columns.
+
+   2. In `manage-session` API:
+        a. The same issue with `audit_logs` (using `target_resource`).
+
+   3. In `manage-standard` API:
+        a. The same issue with `audit_logs` (using `target_resource`).
+
+   4. In the UI component `PurpleAdminDashboard`:
+        a. The `fetchStats` function is incomplete and does not set the required properties for `dashboardStats` (like `docs24h`, `users24h`, `certs24h`, `trainees`, `trainers`, `admins`, `documents`, `exams`, `attendances`, `sessions`, `certificates`, `totalUsers`).
+        b. The UI uses mock data for the roster tables and users table (via `USERS_DATA` and other mock data imports) instead of real data from the database.
+        c. The dynamic KPI functions (like `getDynamicTraineeKpis`) use `dashboardStats` which is not properly set, so they will show zeros or incorrect data.
+        d. The `fetchStats` function does not handle errors, so if a query fails, the whole function fails and the UI will not show any real data.
+
+   5. Also, note that the `fetchStats` function uses `last24hDate` but does not use it in the provided snippet. We don't see the 24-hour counts being fetched.
+
+   6. The UI uses a mixture of real and mock data, which is inconsistent.
+
+   7. The UI uses `session_participants` and `assessments` and `documents` and `certificates` and `sessions` and `users` tables, which exist, but the `fetchStats` function does not set all the required counts.
+
+   8. The `fetchStats` function does not set `dashboardStats` with the fetched counts (we don't see the assignment in the provided snippet).
+
+   9. The UI uses `useAuth` and `startImpersonation` which are not part of the database schema, but that is not an integration failure with the database.
+
+   10. The UI uses `cn` utility, `format` from `date-fns`, `recharts`, `lucide-react` which are not part of the database, so no issue.
+
+   11. The UI uses `SessionFormModal`, `DocumentFormModal`, `StandardFormModal`, `UserDetailModal` which are not provided, so we cannot check them.
+
+   12. The UI uses `drillDownView` and `drillDownData` but we don't see how they are set from the database.
+
+   13. The UI uses `selectedRecord` for editing, but we don't see the edit modals.
+
+   14. The UI uses `isSessionModalOpen`, `isDocumentModalOpen`, `isStandardModalOpen` for modals, but we don't see the modal code.
+
+   15. The UI uses `useState` and `useEffect` and `useAuth` which are React hooks and context, so no issue.
+
+   16. The UI uses `supabase` client which is assumed to be configured correctly.
+
+   Given the above, the critical integration failures are:
+
+   - The `audit_logs` table structure mismatch in all API routes.
+   - The user management API has insert/update and delete order issues.
+   - The UI data fetching is incomplete and uses mock data for some parts.
+
+   We must fix:
+
+   - The API routes to use the correct columns in `audit_logs` and adjust the user management logic.
+   - The UI to fetch real data for all parts and not use mock data.
+
+   However, note that the UI code is incomplete and we cannot see the full `fetchStats` function and `fetchUsers` function.
+
+   Therefore, we can only report the issues we see.
+
+   Let's list the integration failures in a concise bulleted list.
+...done thinking.
+
+# Integration Failures Analysis
+
+## 1. **Database Schema vs API Endpoints**
+
+### manage-user API:
+- **Critical Failure**: Attempts to use `target_resource` column in `audit_logs` table, but schema shows only: `id, actor_id, action, entity_type, entity_id, created_at, ip_address`
+- **Risk**: Foreign key constraint violation - When deleting users, it tries to delete auth user first while `public.users` has foreign key constraint to `auth.users`. Should delete from `public.users` first.
+- **Missing Field**: `users` table has `organization_id` column but API doesn't handle it.
+
+### manage-session API:
+- **Missing Required Columns**: `sessions` table requires `max_participants` (defaults to 15) and `delivery_mode` with check constraint
+- **Status Mismatch**: Status values in code vs schema - schema allows: `['planned', 'scheduled', 'confirmed', 'active', 'in_progress', 'completed', 'cancelled', 'audited']`
+- **Audit Log Issue**: Same `target_resource` column doesn't exist
+
+### manage-standard API:
+- **Schema Mismatch**: No `target_resource` column in `audit_logs`
+- **Missing Field**: `training_standards` has `details jsonb DEFAULT '{}'` column not handled
+
+## 2. **UI Component - PurpleAdminDashboard**
+
+### Data Fetching Logic:
+- **Critical**: Uses deprecated `count: 'exact', head: true` syntax - Supabase v2 changed to `count: 'exact'`
+- **Incomplete Function**: `fetchStats` function cuts off mid-line: `const { count: u24` 
+- **Mixed Table References**: Uses both `session_participants` and `session_roster` tables inconsistently
+- **Missing Time Filters**: Defines `last24hDate` but doesn't use it in queries
+- **Role Name Mismatch**: Searches for `role: 'instructor'` but schema has `'instructor'` (correct), but also refers to 'trainers'
+- **Admin Role Confusion**: Searches `role: 'ernam_admin'` but dashboard shows 'administrators'
+
+### Mock Data Issues:
+- **Integration Gap**: Uses mock data (`USERS_DATA`, `TRAINEE_ROSTER_DATA`) instead of actual database queries
+- **Stats Properties Mismatch**: `getDynamicStatsCategories` expects `docs24h`, `users24h`, `certs24h` but fetchStats doesn't compute these
+- **Incomplete KPI Calculations**: Functions like `getDynamicTraineeKpis` use stats that aren't fetched (e.g., `stats.trainees`, `stats.certificates`)
+
+## 3. **Logical Errors & Data Mapping**
+
+### Role System Inconsistency:
+- Schema: `['participant', 'instructor', 'org_admin', 'ernam_admin', 'maintainer', 'developer']`
+- UI references: 'trainees', 'trainers', 'administrators', 'Level 1/2'
+- No direct mapping between display names and database roles
+
+### Status Value Mismatch:
+- `session_participants.attendance_status`: `['enrolled', 'attended', 'absent']`
+- `session_roster.status`: `['nominated', 'approved', 'attended', 'failed', 'certified']`
+- Inconsistent attendance tracking across tables
+
+### Missing Foreign Key Relationships:
+- `session_roster.user_id` has no foreign key constraint to `users(id)`
+- `session_roster.certificate_id` has no foreign key to `certificates(id)`
+- Circular dependency warning in users/organizations schema
+
+## 4. **Production Risk Errors**
+
+### 400/500 Error Causes:
+1. **Foreign Key Violations**: Deleting users/sessions without cascade deletes
+2. **Missing Required Fields**: Creating sessions without `max_participants` or `delivery_mode`
+3. **Check Constraint Violations**: Invalid status/role values
+4. **Unique Constraint Violations**: Duplicate `training_standards.code`
+5. **Invalid Date Formats**: Manual date conversions without validation
+
+### Performance Issues:
+- No pagination in dashboard data fetching
+- Multiple count queries could be optimized
+- Missing indexes not shown but likely needed
+
+---
+
+## **Integration Failures Found (Concise List):**
+
+1. **❌ Audit Log Schema Mismatch** - All APIs use non-existent `target_resource` column
+2. **❌ User Deletion Order** - Attempts to delete auth user before removing foreign key references
+3. **❌ Incomplete Session Creation** - Missing required `max_participants` and `delivery_mode` fields
+4. **❌ Supabase v2 Syntax Error** - Uses deprecated `count: 'exact', head: true` format
+5. **❌ Incomplete Data Fetching** - `fetchStats` function cuts off mid-execution
+6. **❌ Role Mapping Confusion** - UI uses 'trainees/trainers/admins' vs database 'participant/instructor/ernam_admin'
+7. **❌ Mock Data Dependency** - Critical dashboards use mock data instead of database
+8. **❌ Missing 24h Calculations** - Time-based metrics defined but not implemented
+9. **❌ Inconsistent Attendance Tracking** - Multiple tables with overlapping attendance data
+10. **❌ Missing Foreign Key Constraints** - `session_roster` lacks key relationships
+11. **❌ Status Value Conflicts** - Different status enums across related tables
+12. **❌ Incomplete User Management** - Missing `organization_id` handling in user APIs
+
+
+
+# ERRORS
+[?2026h[?25l[1G⠙ [K[?25h[?2026l[?2026h[?25l[1G⠹ [K[?25h[?2026l[?2026h[?25l[1G⠸ [K[?25h[?2026l[?2026h[?25l[1G⠸ [K[?25h[?2026l[?2026h[?25l[1G⠴ [K[?25h[?2026l[?2026h[?25l[1G⠦ [K[?25h[?2026l[?2026h[?25l[1G⠧ [K[?25h[?2026l[?2026h[?25l[1G⠧ [K[?25h[?2026l[?2026h[?25l[1G⠇ [K[?25h[?2026l[?2026h[?25l[1G⠋ [K[?25h[?2026l[?2026h[?25l[1G⠙ [K[?25h[?2026l[?2026h[?25l[1G⠹ [K[?25h[?2026l[?2026h[?25l[1G⠹ [K[?25h[?2026l[?2026h[?25l[1G⠸ [K[?25h[?2026l[?2026h[?25l[1G⠼ [K[?25h[?2026l[?2026h[?25l[1G⠴ [K[?25h[?2026l[?2026h[?25l[1G⠦ [K[?25h[?2026l[?2026h[?25l[1G⠧ [K[?25h[?2026l[?2026h[?25l[1G⠇ [K[?25h[?2026l[?2026h[?25l[1G⠏ [K[?25h[?2026l[?2026h[?25l[1G⠋ [K[?25h[?2026l[?2026h[?25l[1G⠙ [K[?25h[?2026l[?2026h[?25l[1G⠸ [K[?25h[?2026l[?2026h[?25l[1G⠸ [K[?25h[?2026l[?25l[?2026h[?25l[1G[K[?25h[?2026l[2K[1G[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h[?25l[?25h

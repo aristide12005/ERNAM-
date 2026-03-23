@@ -59,11 +59,20 @@ export default function StandardsView() {
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this standard? This might affect existing sessions.')) return;
 
-        const { error } = await supabase.from('training_standards').delete().eq('id', id);
-        if (!error) {
-            setStandards(prev => prev.filter(s => s.id !== id));
-        } else {
-            alert('Failed to delete standard.');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`/api/admin/manage-standard?id=${id}&adminId=${session?.user?.id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setStandards(prev => prev.filter(s => s.id !== id));
+            } else {
+                const err = await response.json();
+                throw new Error(err.error || 'Failed to delete standard');
+            }
+        } catch (err: any) {
+            alert(err.message);
         }
     };
 
@@ -121,7 +130,7 @@ export default function StandardsView() {
                                 <th className="px-6 py-4">Title</th>
                                 <th className="px-6 py-4">Validity</th>
                                 <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-6 py-4 text-right">ACTION</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -166,18 +175,18 @@ export default function StandardsView() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-3">
                                                 <button
                                                     onClick={() => handleEdit(std)}
-                                                    className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg transition-colors"
-                                                    title="Edit"
+                                                    className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-all active:scale-95 shadow-sm border border-blue-100/50"
+                                                    title="Edit Standard"
                                                 >
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(std.id)}
-                                                    className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 rounded-lg transition-colors"
-                                                    title="Delete"
+                                                    className="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-all active:scale-95 shadow-sm border border-red-100/50"
+                                                    title="Delete Standard"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>

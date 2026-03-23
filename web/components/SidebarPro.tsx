@@ -43,7 +43,7 @@ interface SidebarProProps {
 }
 
 export default function SidebarPro({ isCollapsed = false, toggleCollapse }: SidebarProProps) {
-    const { user, profile } = useAuth();
+    const { user, profile, impersonator } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -52,7 +52,7 @@ export default function SidebarPro({ isCollapsed = false, toggleCollapse }: Side
         const raw = profile?.role || 'trainee';
         if (raw === 'instructor') return 'trainer';
         if (raw === 'participant') return 'trainee';
-        if (raw === 'org_admin' || raw === 'ernam_admin') return 'admin';
+        if (raw === 'org_admin' || raw === 'ernam_admin' || raw === 'admin') return 'admin';
         return raw;
     })();
 
@@ -101,11 +101,14 @@ export default function SidebarPro({ isCollapsed = false, toggleCollapse }: Side
         router.push(`/dashboard?view=${view}`);
     };
 
+    const isImpersonating = !!impersonator;
+
     return (
         <aside
             className={cn(
-                "fixed left-0 top-0 h-full bg-[#F5F6F7] dark:bg-card border-r border-transparent flex flex-col z-[40] transition-all duration-300 ease-in-out font-sans",
-                isCollapsed ? "w-[80px]" : "w-[260px]"
+                "fixed left-0 bg-[#F5F6F7] dark:bg-card border-r border-transparent flex flex-col z-[40] transition-all duration-300 ease-in-out font-sans",
+                isCollapsed ? "w-[80px]" : "w-[260px]",
+                isImpersonating ? "top-[56px] h-[calc(100vh-56px)]" : "top-0 h-full"
             )}
         >
             {/* Collapse Toggle */}

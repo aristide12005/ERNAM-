@@ -19,6 +19,7 @@ import {
     Loader2,
     Eye,
     Trash2,
+    Edit2,
     Lock,
     Bell,
     Plus,
@@ -35,13 +36,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from "@/components/providers/AuthProvider";
 import { cn } from '@/lib/utils';
+import UserDetailModal from './UserDetailModal';
+
+import { UserRole, UserStatus } from '@/lib/types';
 
 interface Profile {
     id: string;
     full_name: string;
     email: string;
-    role: string;
-    status: string;
+    role: UserRole;
+    status: UserStatus;
     created_at: string;
 }
 
@@ -51,7 +55,13 @@ interface Course {
 }
 
 interface Enrollment {
-    course: Course;
+    session: {
+        id: string;
+        training_standard: {
+            id: string;
+            title: string;
+        };
+    };
     status: string;
 }
 
@@ -122,29 +132,34 @@ export default function UserManagement() {
     }, []);
 
     const handleAction = async (id: string, action: 'approve' | 'reject' | 'delete') => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const adminId = session?.user?.id;
+
         if (action === 'delete') {
             const confirmed = window.confirm("Are you sure you want to permanently delete this user?");
             if (!confirmed) return;
-            const { error } = await supabase.from('users').delete().eq('id', id);
-            if (!error) fetchProfiles();
-            else alert("Error deleting user: " + error.message);
-        } else {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const rpcName = action === 'approve' ? 'approve_user_transaction' : 'reject_user_transaction';
-
-            const { error } = await supabase.rpc(rpcName, {
-                target_user_id: id,
-                acting_admin_id: user.id
+            
+            const response = await fetch(`/api/admin/manage-user?id=${id}&adminId=${adminId}`, {
+                method: 'DELETE'
             });
 
-            if (error) {
-                console.error(`Error executing ${rpcName}:`, error);
-                const errorMsg = action === 'approve' ? "Failed to approve user. " : "Failed to reject user. ";
-                alert(`${errorMsg} ${error.message}`);
-            } else {
-                fetchProfiles();
+            if (response.ok) fetchProfiles();
+            else {
+                const err = await response.json();
+                alert("Error deleting user: " + err.error);
+            }
+        } else {
+            const status = action === 'approve' ? 'approved' : 'rejected';
+            const response = await fetch('/api/admin/manage-user', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status, adminId })
+            });
+
+            if (response.ok) fetchProfiles();
+            else {
+                const err = await response.json();
+                alert("Action failed: " + err.error);
             }
         }
     };
@@ -183,9 +198,9 @@ export default function UserManagement() {
                         className="bg-white border border-gray-100 rounded-[16px] py-3.5 px-6 text-xs font-black uppercase tracking-widest focus:outline-none text-black cursor-pointer shadow-sm hover:bg-gray-50 transition-colors"
                     >
                         <option value="all">All Roles</option>
-                        <option value="admin">Admin</option>
-                        <option value="trainer">Trainer</option>
-                        <option value="trainee">Trainee</option>
+                        <option value="ernam_admin">Admin</option>
+                        <option value="instructor">Trainer</option>
+                        <option value="participant">Trainee</option>
                     </select>
 
                     <button
@@ -206,7 +221,7 @@ export default function UserManagement() {
                                 <th className="px-8 py-5 font-black">Account Role</th>
                                 <th className="px-8 py-5 font-black">Status</th>
                                 <th className="px-8 py-5 font-black">Join Date</th>
-                                <th className="px-8 py-5 font-black text-right">Actions</th>
+                                <th className="px-8 py-5 font-black text-right">ACTION</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -248,8 +263,10 @@ export default function UserManagement() {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className="flex items-center gap-2 text-[#8E9296] font-bold text-xs">
-                                                    <div className={cn("w-1.5 h-1.5 rounded-full", p.role === 'admin' ? 'bg-black' : p.role === 'trainer' ? 'bg-blue-500' : 'bg-gray-400')} />
-                                                    <span className="capitalize">{p.role}</span>
+                                                    <div className={cn("w-1.5 h-1.5 rounded-full", p.role === 'ernam_admin' ? 'bg-black' : p.role === 'instructor' ? 'bg-blue-500' : 'bg-gray-400')} />
+                                                    <span className="capitalize">
+                                                        {p.role === 'ernam_admin' ? 'Admin' : p.role === 'instructor' ? 'Trainer' : p.role === 'participant' ? 'Trainee' : p.role}
+                                                    </span>
                                                 </span>
                                             </td>
                                             <td className="px-8 py-6">
@@ -266,20 +283,12 @@ export default function UserManagement() {
                                                 {new Date(p.created_at).toLocaleDateString()}
                                             </td>
                                             <td className="px-8 py-6 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <button
-                                                        onClick={() => { setSelectedUser(p); setIsDetailModalOpen(true); }}
-                                                        className="p-2.5 bg-slate-50 border border-slate-100 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-xl hover:shadow-blue-500/5 rounded-xl transition-all active:scale-95"
-                                                        title="Global Profile Info"
-                                                    >
-                                                        <User className="h-4 w-4" />
-                                                    </button>
-
-                                                    {adminProfile?.role === 'admin' && p.id !== adminProfile?.id && (
+                                                <div className="flex justify-end gap-3">
+                                                    {adminProfile?.role === 'ernam_admin' && p.id !== adminProfile?.id && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                startImpersonation(p);
+                                                                startImpersonation(p as any);
                                                             }}
                                                             className="p-2.5 bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-sm active:scale-95"
                                                             title="Act As This User"
@@ -290,9 +299,18 @@ export default function UserManagement() {
 
                                                     <button
                                                         onClick={() => { setSelectedUser(p); setIsDetailModalOpen(true); }}
-                                                        className="px-4 py-2.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all shadow-lg active:scale-95"
+                                                        className="p-2.5 bg-slate-50 border border-slate-100 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-xl hover:shadow-blue-500/5 rounded-xl transition-all active:scale-95"
+                                                        title="Edit User"
                                                     >
-                                                        Manage
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleAction(p.id, 'delete')}
+                                                        className="p-2.5 bg-red-50 border border-red-100 text-red-400 hover:text-white hover:bg-red-500 rounded-xl transition-all active:scale-95 shadow-sm"
+                                                        title="Delete User"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 </div>
                                             </td>
@@ -305,12 +323,11 @@ export default function UserManagement() {
                 </div>
             </div>
 
-            {/* User Detail Modal */}
             {selectedUser && (
                 <UserDetailModal
                     isOpen={isDetailModalOpen}
                     onClose={() => setIsDetailModalOpen(false)}
-                    user={selectedUser}
+                    user={selectedUser as any}
                     onUpdate={fetchProfiles}
                 />
             )}
@@ -324,367 +341,11 @@ export default function UserManagement() {
     );
 }
 
-function UserDetailModal({ isOpen, onClose, user, onUpdate }: { isOpen: boolean, onClose: () => void, user: Profile, onUpdate: () => void }) {
-    const [activeTab, setActiveTab] = useState<'profile' | 'enrollments' | 'security' | 'notify'>('profile');
-    const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-    const [activeStudentDetails, setActiveStudentDetails] = useState<any>(null); // State for student details
-    const [allCourses, setAllCourses] = useState<Course[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    // Notification state
-    const [notifTitle, setNotifTitle] = useState('');
-    const [notifMessage, setNotifMessage] = useState('');
-    const [notifType, setNotifType] = useState('info');
-
-    useEffect(() => {
-        if (isOpen) fetchData();
-    }, [isOpen, user.id]);
-
-    const fetchData = async () => {
-        setLoading(true);
-        const { data: enrolls } = await supabase
-            .from('enrollments')
-            .select(`status, course:courses(id, title_en)`)
-            .eq('user_id', user.id);
-
-        // Fetch Student Details if role is trainee
-        if (user.role === 'trainee') {
-            const { data: details } = await supabase
-                .from('student_details')
-                .select(`
-                    *,
-                    batch:batches ( name, academic_sessions ( year ) )
-                `)
-                .eq('user_id', user.id)
-                .single();
-            if (details) setActiveStudentDetails(details);
-        }
-
-        const { data: courses } = await supabase
-            .from('courses')
-            .select('id, title_en')
-            .eq('status', 'active');
-
-        if (enrolls) setEnrollments(enrolls as any);
-        if (courses) setAllCourses(courses);
-        setLoading(false);
-    };
-
-    const handlePasswordReset = async () => {
-        const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-            redirectTo: `${window.location.origin}/auth/reset-password`,
-        });
-        if (error) alert("Error: " + error.message);
-        else alert("Password reset email sent to " + user.email);
-    };
-
-    const handleRoleChange = async (newRole: string) => {
-        const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', user.id);
-        if (!error) {
-            alert("Role updated to " + newRole);
-            onUpdate();
-        }
-    };
-
-    // Helper type check if strict check needed, for now dynamic key
-    const isRole = (r: string) => ['admin', 'trainer', 'trainee'].includes(r);
-
-    const handleSendNotification = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const { error } = await supabase.from('notifications').insert({
-            recipient_id: user.id,
-            type: notifType,
-            read: false,
-            payload: {
-                title: notifTitle,
-                message: notifMessage,
-                action_link: null
-            }
-        });
-        if (!error) {
-            alert("Notification sent successfully!");
-            setNotifTitle('');
-            setNotifMessage('');
-        }
-    };
-
-    const handleEnroll = async (courseId: string) => {
-        const { error } = await supabase.from('enrollments').insert({
-            user_id: user.id,
-            course_id: courseId,
-            status: 'active'
-        });
-        if (!error) fetchData();
-    };
-
-    const handleUnenroll = async (courseId: string) => {
-        const { error } = await supabase.from('enrollments').delete().eq('user_id', user.id).eq('course_id', courseId);
-        if (!error) fetchData();
-    };
-
-    return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="bg-[#0A0A0A] border border-white/10 w-full max-w-4xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-                    >
-                        {/* Modal Header */}
-                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
-                            <div className="flex items-center gap-4">
-                                <div className="h-16 w-16 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-2xl font-black shadow-xl shadow-blue-600/20">
-                                    {user.full_name.charAt(0)}
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-black text-white">{user.full_name}</h2>
-                                    <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">{user.role} &bull; {user.status}</p>
-                                </div>
-                            </div>
-                            <button onClick={onClose} className="p-3 hover:bg-white/10 rounded-full transition-colors text-gray-400">
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-
-                        <div className="flex flex-1 overflow-hidden">
-                            {/* Tabs Sidebar */}
-                            <div className="w-64 border-r border-white/5 p-6 space-y-2 bg-black/40">
-                                {[
-                                    { id: 'profile', label: 'User Profile', icon: User },
-                                    { id: 'enrollments', label: 'Classes & Courses', icon: BookOpen },
-                                    { id: 'security', label: 'Security & Access', icon: Lock },
-                                    { id: 'notify', label: 'Communications', icon: Bell },
-                                ].map((tab) => {
-                                    const Icon = tab.icon;
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id as any)}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === tab.id
-                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                                : 'text-gray-500 hover:bg-white/5 hover:text-white'
-                                                }`}
-                                        >
-                                            <Icon className="h-4 w-4" />
-                                            {tab.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Tab Content */}
-                            <div className="flex-1 overflow-y-auto p-8 bg-black/20">
-                                <AnimatePresence mode="wait">
-                                    {activeTab === 'profile' && (
-                                        <motion.div key="profile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                                            <div className="grid grid-cols-2 gap-6">
-                                                <InfoCard label="Full Name" value={user.full_name} icon={User} />
-                                                <InfoCard label="Email Address" value={user.email} icon={Mail} />
-                                                <InfoCard label="Account Role" value={user.role} icon={Shield} uppercase />
-                                                <InfoCard label="Join Date" value={new Date(user.created_at).toLocaleDateString()} icon={Calendar} />
-
-                                                {/* Academic Details for Trainees */}
-                                                {user.role === 'trainee' && activeStudentDetails && (
-                                                    <>
-                                                        <InfoCard label="Roll Number" value={activeStudentDetails.roll_number || 'N/A'} icon={BookOpen} />
-                                                        <InfoCard label="Registration No" value={activeStudentDetails.registration_number || 'N/A'} icon={BookOpen} />
-                                                        <InfoCard
-                                                            label="Batch"
-                                                            value={activeStudentDetails.batch ? `${activeStudentDetails.batch.name} (${activeStudentDetails.batch.academic_sessions?.year})` : "Unassigned"}
-                                                            icon={Users}
-                                                        />
-                                                    </>
-                                                )}
-                                            </div>
-
-                                            <div className="p-6 bg-white/5 rounded-2xl border border-white/5">
-                                                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Quick Stats</h4>
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <div className="text-center">
-                                                        <div className="text-2xl font-black text-white">{enrollments.length}</div>
-                                                        <div className="text-[10px] text-gray-500 uppercase font-bold">Courses</div>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <div className="text-2xl font-black text-emerald-500">12</div>
-                                                        <div className="text-[10px] text-gray-500 uppercase font-bold">Log Hours</div>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <div className="text-2xl font-black text-blue-500">94%</div>
-                                                        <div className="text-[10px] text-gray-500 uppercase font-bold">Attendance</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-
-                                    {activeTab === 'enrollments' && (
-                                        <motion.div key="enrollments" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                                            <div className="space-y-4">
-                                                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest px-2">Active Enrollments</h4>
-                                                {enrollments.length === 0 ? (
-                                                    <p className="text-sm text-gray-500 italic px-2">No active enrollments found for this user.</p>
-                                                ) : (
-                                                    <div className="grid grid-cols-1 gap-3">
-                                                        {enrollments.map((en) => (
-                                                            <div key={en.course.id} className="bg-white/5 border border-white/5 p-4 rounded-xl flex items-center justify-between group">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
-                                                                        <BookOpen className="h-4 w-4" />
-                                                                    </div>
-                                                                    <span className="text-sm font-bold text-white">{en.course.title_en}</span>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => handleUnenroll(en.course.id)}
-                                                                    className="text-xs font-black text-red-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
-                                                                >
-                                                                    Unenroll
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest px-2">Enroll in New Course</h4>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {allCourses.filter(c => !enrollments.some(en => en.course.id === c.id)).map((course) => (
-                                                        <button
-                                                            key={course.id}
-                                                            onClick={() => handleEnroll(course.id)}
-                                                            className="px-4 py-2 bg-blue-600/10 border border-blue-600/20 text-blue-400 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2"
-                                                        >
-                                                            <Plus className="h-3 w-3" /> {course.title_en}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-
-                                    {activeTab === 'security' && (
-                                        <motion.div key="security" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                                            <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-2xl">
-                                                <h4 className="text-sm font-black text-red-500 mb-2">Password Management</h4>
-                                                <p className="text-xs text-gray-400 mb-6">Force a password reset for this user. They will receive an email with a secure link.</p>
-                                                <button
-                                                    onClick={handlePasswordReset}
-                                                    className="px-6 py-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-xl shadow-red-600/10"
-                                                >
-                                                    Send Reset Link
-                                                </button>
-                                            </div>
-
-                                            <div className="p-6 bg-white/5 border border-white/5 rounded-2xl">
-                                                <h4 className="text-sm font-black text-white mb-2">Role Permissions</h4>
-                                                <p className="text-xs text-gray-400 mb-6">Elevate or downgrade the user's access level in the system.</p>
-                                                <div className="flex gap-3">
-                                                    {['trainee', 'trainer', 'admin'].map((role) => (
-                                                        <button
-                                                            key={role}
-                                                            onClick={() => handleRoleChange(role)}
-                                                            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest border transition-all ${user.role === role
-                                                                ? 'bg-blue-600 border-blue-500 text-white'
-                                                                : 'bg-white/5 border-white/10 text-gray-500 hover:border-blue-500/50 hover:text-blue-400'
-                                                                }`}
-                                                        >
-                                                            {role}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-
-                                    {activeTab === 'notify' && (
-                                        <motion.div key="notify" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                                            <div>
-                                                <h4 className="text-lg font-black text-white italic">Broadcast Message</h4>
-                                                <p className="text-xs text-gray-500 font-medium">Send an instant in-app notification to this user.</p>
-                                            </div>
-
-                                            <form onSubmit={handleSendNotification} className="space-y-4">
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Notification Type</label>
-                                                    <div className="flex gap-2">
-                                                        {['info', 'alert', 'success', 'priority'].map((type) => (
-                                                            <button
-                                                                key={type}
-                                                                type="button"
-                                                                onClick={() => setNotifType(type)}
-                                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${notifType === type
-                                                                    ? 'bg-blue-600 border-blue-500 text-white'
-                                                                    : 'bg-white/5 border-white/10 text-gray-500'
-                                                                    }`}
-                                                            >
-                                                                {type}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Headline</label>
-                                                    <input
-                                                        type="text"
-                                                        value={notifTitle}
-                                                        onChange={(e) => setNotifTitle(e.target.value)}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-bold italic"
-                                                        placeholder="e.g. Schedule Change"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Message Content</label>
-                                                    <textarea
-                                                        value={notifMessage}
-                                                        onChange={(e) => setNotifMessage(e.target.value)}
-                                                        rows={4}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-medium leading-relaxed"
-                                                        placeholder="Enter the detailed message here..."
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <button
-                                                    type="submit"
-                                                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-2xl shadow-blue-600/20 transition-all active:scale-95 flex items-center justify-center gap-3"
-                                                >
-                                                    <Bell className="h-4 w-4" /> Send Notification
-                                                </button>
-                                            </form>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
-    );
-}
-
-function InfoCard({ label, value, icon: Icon, uppercase }: { label: string, value: string, icon: any, uppercase?: boolean }) {
-    return (
-        <div className="p-5 bg-white/5 rounded-2xl border border-white/5">
-            <div className="flex items-center gap-2 mb-2">
-                <Icon className="h-3 w-3 text-gray-500" />
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{label}</span>
-            </div>
-            <div className={`text-sm font-black text-white ${uppercase ? 'uppercase tracking-wide' : ''}`}>{value}</div>
-        </div>
-    );
-}
-
 function CreateUserModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onClose: () => void, onSuccess: () => void }) {
     const [email, setEmail] = useState('');
     const [fullName, setFullName] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('trainee');
+    const [role, setRole] = useState('participant');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -692,8 +353,8 @@ function CreateUserModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onCl
         setLoading(true);
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            const res = await fetch('/api/admin/create-user', {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/admin/manage-user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -701,7 +362,7 @@ function CreateUserModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onCl
                     password,
                     fullName,
                     role,
-                    adminId: user?.id
+                    adminId: session?.user?.id
                 })
             });
 
@@ -750,9 +411,9 @@ function CreateUserModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onCl
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Account Role</label>
                                 <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
-                                    <option value="trainee">Trainee</option>
-                                    <option value="trainer">Trainer</option>
-                                    <option value="admin">Admin</option>
+                                    <option value="participant">Trainee</option>
+                                    <option value="instructor">Trainer</option>
+                                    <option value="ernam_admin">Admin</option>
                                 </select>
                             </div>
 

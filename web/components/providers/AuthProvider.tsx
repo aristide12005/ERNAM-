@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.setItem('ernam_impersonated_user', JSON.stringify(target));
         setImpersonator(profile);
         setProfile(target);
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
     };
 
     const stopImpersonation = () => {
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.removeItem('ernam_impersonated_user');
         setProfile(impersonator);
         setImpersonator(null);
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
     };
 
     const fetchProfile = async (userId: string, retries = 1) => {
@@ -163,6 +163,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!user && !isAuthRoute && !isPublicRoute) {
             router.push('/auth/login');
         } else if (user && profile) {
+            // Role-based protection check for admin sub-paths
+            const isAdminPath = pathRef.startsWith('/dashboard/admin');
+            const isAdmin = profile.role === 'ernam_admin' || profile.role === 'org_admin' || profile.role === 'admin';
+            
+            if (isAdminPath && !isAdmin) {
+                console.warn(`[AuthProvider] Unauthorized access attempt to ${pathRef} by role ${profile.role}`);
+                router.push('/dashboard');
+                return;
+            }
+
             // If logged in, check user status
             if (profile.status === 'pending') {
                 if (pathname !== '/auth/pending') router.push('/auth/pending');

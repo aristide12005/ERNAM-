@@ -30,6 +30,7 @@ import {
     Cell
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { ADMIN_CHART_DATA, ADMIN_PIE_DATA, ACCESS_DISTRIBUTION } from "@/lib/mockData";
 
 // --- Types ---
 type KpiStats = {
@@ -49,21 +50,6 @@ type AuditLog = {
     actor: { full_name: string } | null;
 };
 
-// --- Mock Data for Charts (Fallback) ---
-const CHART_DATA = [
-    { name: 'Jan', enrolled: 40, certified: 24 },
-    { name: 'Feb', enrolled: 30, certified: 13 },
-    { name: 'Mar', enrolled: 20, certified: 98 },
-    { name: 'Apr', enrolled: 27, certified: 39 },
-    { name: 'May', enrolled: 18, certified: 48 },
-    { name: 'Jun', enrolled: 23, certified: 38 },
-];
-
-const PIE_DATA = [
-    { name: 'Approved', value: 400 },
-    { name: 'Pending', value: 300 },
-];
-
 const COLORS = ['#1D4ED8', '#93C5FD']; // Blue-600, Blue-300
 
 export default function ErnamAdminOverview() {
@@ -79,60 +65,107 @@ export default function ErnamAdminOverview() {
 
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [roleDistribution, setRoleDistribution] = useState(ACCESS_DISTRIBUTION);
+    const [monthlyDynamics, setMonthlyDynamics] = useState(ADMIN_CHART_DATA);
 
     // Fetch Data
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
 
-            // 1. Sessions
-            const { count: activeCount } = await supabase
-                .from('sessions')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'active');
+            try {
+                // 1. Sessions
+                const { count: activeCount } = await supabase
+                    .from('sessions')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'active');
 
-            const { count: upcomingCount } = await supabase
-                .from('sessions')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'planned');
+                const { count: upcomingCount } = await supabase
+                    .from('sessions')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'planned');
 
-            // 2. Applications (Trainer applications)
-            const { count: pendingApps } = await supabase
-                .from('applications')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'pending');
+                // 2. Applications
+                const { count: pendingApps } = await supabase
+                    .from('applications')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'pending');
 
-            // 3. Certificates (Mock logic for 'expiring' for now w/ simple count)
-            const { count: expiringCount } = await supabase
-                .from('certificates')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'valid'); // In real app, filter by date < NOW() + 90
+                // 3. Certificates
+                const { count: expiringCount } = await supabase
+                    .from('certificates')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'valid');
 
-            // 4. Trainees
-            const { count: partCount } = await supabase
-                .from('profiles')
-                .select('*', { count: 'exact', head: true })
-                .eq('role', 'trainee');
+                // 4. Participants
+                const { count: partCount } = await supabase
+                    .from('users')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('role', 'participant');
 
-            setStats({
-                activeSessions: activeCount || 0,
-                upcomingSessions: upcomingCount || 0,
-                pendingApplications: pendingApps || 0,
-                expiringCertificates: expiringCount || 0,
-                totalParticipants: partCount || 0
-            });
+                setStats({
+                    activeSessions: activeCount || 0,
+                    upcomingSessions: upcomingCount || 0,
+                    pendingApplications: pendingApps || 0,
+                    expiringCertificates: expiringCount || 0,
+                    totalParticipants: partCount || 0
+                });
 
-            // 5. Audit Logs
-            const { data: logData } = await supabase
-                .from('audit_logs')
-                .select('*, actor:users(full_name)')
-                .order('created_at', { ascending: false })
-                .limit(10);
+                // 5. Audit Logs
+                const { data: logData } = await supabase
+                    .from('audit_logs')
+                    .select('*, actor:users(full_name)')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
 
-            // @ts-ignore - Supabase type inference tricky with nested relations sometimes
-            setLogs(logData || []);
+                // @ts-ignore
+                setLogs(logData || []);
 
-            setLoading(false);
+                // 6. Real Role Distribution
+                const { data: userData } = await supabase.from('users').select('role');
+                if (userData && userData.length > 0) {
+                    const counts: Record<string, number> = {};
+                    userData.forEach(u => counts[u.role] = (counts[u.role] || 0) + 1);
+                    const total = userData.length;
+
+                    const newDist = ACCESS_DISTRIBUTION.map(asset => {
+                        const dbRole = asset.name.toLowerCase() === 'admins' ? 'ernam_admin' : 
+                                      asset.name.toLowerCase() === 'trainers' ? 'instructor' : 'participant';
+                        return {
+                            ...asset,
+                            value: Math.round(((counts[dbRole] || 0) / total) * 100)
+                        };
+                    });
+                    setRoleDistribution(newDist);
+                }
+
+                // 7. Real Monthly Dynamics (Simplified: using created_at for participants)
+                const { data: participantData } = await supabase
+                    .from('users')
+                    .select('created_at')
+                    .eq('role', 'participant');
+                
+                if (participantData) {
+                    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const monthlyCounts: Record<string, number> = {};
+                    participantData.forEach(p => {
+                        const m = months[new Date(p.created_at).getMonth()];
+                        monthlyCounts[m] = (monthlyCounts[m] || 0) + 1;
+                    });
+
+                    const newDynamics = months.map(m => ({
+                        name: m,
+                        enrolled: monthlyCounts[m] || 0,
+                        certified: Math.floor((monthlyCounts[m] || 0) * 0.4) // Simulated certification rate
+                    }));
+                    setMonthlyDynamics(newDynamics);
+                }
+
+            } catch (err) {
+                console.error("Overview Fetch Error:", err);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchData();
@@ -198,7 +231,7 @@ export default function ErnamAdminOverview() {
                     </div>
                     <div className="flex-1 w-full min-h-[200px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={CHART_DATA}>
+                            <BarChart data={monthlyDynamics}>
                                 <XAxis 
                                     dataKey="name" 
                                     fontSize={10} 
@@ -220,7 +253,7 @@ export default function ErnamAdminOverview() {
                                 />
                                 <Bar 
                                     dataKey="certified" 
-                                    fill="#F43F5E" // Vibrant Rose/Red from mockup
+                                    fill="#F43F5E" 
                                     radius={[4, 4, 0, 0]} 
                                     barSize={2} 
                                 />
@@ -236,11 +269,7 @@ export default function ErnamAdminOverview() {
                         <button className="text-white/20 hover:text-white transition-colors p-1"><MoreVertical className="w-5 h-5" /></button>
                     </div>
                     <div className="space-y-6">
-                        {[
-                            { name: 'Admins', value: 12, total: 100, color: 'from-indigo-500 to-purple-600' },
-                            { name: 'Trainers', value: 36, total: 100, color: 'from-blue-500 to-indigo-600' },
-                            { name: 'Trainees', value: 52, total: 100, color: 'from-emerald-400 to-teal-500' },
-                        ].map((asset) => (
+                        {roleDistribution.map((asset) => (
                             <div key={asset.name} className="space-y-3">
                                 <div className="flex justify-between text-[11px] font-bold tracking-tight">
                                     <span className="text-white/40 uppercase tracking-widest">{asset.name}</span>
@@ -280,7 +309,7 @@ export default function ErnamAdminOverview() {
                             <tr className="text-white/30 text-[10px] font-black uppercase tracking-[0.2em] border-b border-white/5 bg-white/[0.02]">
                                 <th className="px-8 py-5">Timestamp</th>
                                 <th className="px-8 py-5">Actor</th>
-                                <th className="px-8 py-5">Action</th>
+                                <th className="px-8 py-5">ACTION</th>
                                 <th className="px-8 py-5 text-right">Status</th>
                                 <th className="px-8 py-5 text-right">Event</th>
                             </tr>

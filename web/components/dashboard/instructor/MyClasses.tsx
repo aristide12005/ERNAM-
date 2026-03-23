@@ -39,39 +39,67 @@ export default function MyClasses({
 
     const fetchCourses = async () => {
         setLoading(true);
-        const { data: coursesData, error } = await supabase.rpc('get_manageable_courses');
+        try {
+            // 1. Get session IDs where user is the instructor
+            const { data: mySessions, error: sessionErr } = await supabase
+                .from('session_instructors')
+                .select('session_id')
+                .eq('instructor_id', instructorId);
 
-        if (error) {
-            console.error('Error fetching manageable courses:', error);
-            const { data: staffAssignments } = await supabase
-                .from('course_staff')
-                .select('course_id')
-                .eq('user_id', instructorId);
+            if (sessionErr) throw sessionErr;
 
-            if (staffAssignments && staffAssignments.length > 0) {
-                const courseIds = staffAssignments.map(s => s.course_id);
-                const { data: fallbackData } = await supabase
-                    .from('courses')
-                    .select('*')
-                    .in('id', courseIds);
-
-                if (fallbackData) {
-                    setCourses(fallbackData.map(c => ({
-                        ...c,
-                        enrollment_count: 0,
-                        course_status: c.course_status || c.status || 'draft'
-                    })));
-                }
+            if (!mySessions || mySessions.length === 0) {
+                setCourses([]);
+                setLoading(false);
+                return;
             }
-        } else if (coursesData) {
-            const enrichedCourses = coursesData.map((c: any) => ({
-                ...c,
-                enrollment_count: 0,
-                course_status: c.course_status || c.status || 'draft'
-            }));
-            setCourses(enrichedCourses);
+
+            const sessionIds = mySessions.map(s => s.session_id);
+
+            // 2. Fetch session details joined with standards
+            const { data: sessionsData, error: dataErr } = await supabase
+                .from('sessions')
+                .select(`
+                    id,
+                    status,
+                    training_standard:training_standards(
+                        id,
+                        title,
+                        code
+                    )
+                `)
+                .in('id', sessionIds);
+
+            if (dataErr) throw dataErr;
+
+            if (sessionsData) {
+                // 3. Get participant counts for each session
+                const { data: participantCounts } = await supabase
+                    .from('session_participants')
+                    .select('session_id')
+                    .in('session_id', sessionIds);
+
+                const countsMap = (participantCounts || []).reduce((acc: any, curr: any) => {
+                    acc[curr.session_id] = (acc[curr.session_id] || 0) + 1;
+                    return acc;
+                }, {});
+
+                const enrichedCourses = sessionsData.map((s: any) => ({
+                    id: s.id,
+                    title_en: s.training_standard?.title || 'Unknown Course',
+                    title_fr: s.training_standard?.code || '',
+                    course_status: s.status || 'planned',
+                    enrollment_count: countsMap[s.id] || 0,
+                    thumbnail_url: null
+                }));
+
+                setCourses(enrichedCourses);
+            }
+        } catch (error) {
+            console.error('Error fetching instructor sessions:', error);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     useEffect(() => {

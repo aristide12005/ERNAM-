@@ -1,154 +1,70 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
+import { useAuth } from '@/components/providers/AuthProvider';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, CartesianGrid, BarChart, Bar } from "recharts";
-import { Bell, Moon, Sun, ChevronLeft, ChevronRight, Settings, MoreVertical, Edit2, Trash2, Download, SlidersHorizontal, Triangle, Circle, Hexagon, Diamond, Focus } from "lucide-react";
+import { Bell, Moon, Sun, ChevronLeft, ChevronRight, Settings, MoreVertical, Edit2, Trash2, Download, SlidersHorizontal, Triangle, Circle, Hexagon, Diamond, Focus, Plus, Loader2, Users, ShieldCheck, AlertTriangle, CheckCircle2, Clock, BookOpen, UserCheck, Star, Zap, Activity, Database, Inbox, Award } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import SessionFormModal from "./SessionFormModal";
+import DocumentFormModal from "./DocumentFormModal";
+import StandardFormModal from "./StandardFormModal";
+import UserDetailModal from './UserDetailModal';
+import { 
+    SYSTEM_HEALTH_DATA, 
+    KEY_INDICATORS_DATA, 
+    SKILLS_EVALUATION_DATA, 
+    EVOLUTION_DATA, 
+    COURSE_AVG_DATA, 
+    TRAINEE_KPI_CARDS, 
+    LEVEL2_KPI_CARDS, 
+    TRAINER_KPI_CARDS, 
+    ADMIN_KPI_CARDS, 
+    TRAINEE_ROSTER_DATA, 
+    LEVEL2_ROSTER_DATA, 
+    TRAINER_ROSTER_DATA, 
+    ADMIN_ROSTER_DATA,
+    USERS_DATA
+} from "@/lib/mockData";
 
-// --- EXISTING DATA (Home View) ---
-const SYSTEM_HEALTH_DATA = [
-    { name: "Optimal Running", value: 85, color: "#10B981" },
-    { name: "Minor Warnings", value: 12, color: "#F59E0B" },
-    { name: "Active Errors", value: 3, color: "#EF4444" },
-];
-
-const KEY_INDICATORS_DATA = [
-    { name: "Jan", blue: 40, green: 24 },
-    { name: "Feb", blue: 30, green: 35 },
-    { name: "Mar", blue: 55, green: 48 },
-    { name: "Apr", blue: 25, green: 65 },
-    { name: "Mai", blue: 70, green: 45 },
-    { name: "Juin", blue: 85, green: 60 },
-];
-
-const SKILLS_EVALUATION_DATA = [
-    { name: "High", value: 80, color: "#0288D1" },
-    { name: "Medium", value: 60, color: "#00897B" },
-    { name: "Borderline", value: 40, color: "#F57C00" },
-    { name: "Needs Work", value: 20, color: "#E53935" },
-];
-
-const EVOLUTION_DATA = [
-    { name: "Jan", val: 10 },
-    { name: "Feb", val: 40 },
-    { name: "Mar", val: 25 },
-    { name: "Apr", val: 65 },
-    { name: "Mai", val: 80 },
-];
-
-const COURSE_AVG_DATA = [
-    { name: "Math", value: 75, color: "#1976D2" },
-    { name: "Physics", value: 60, color: "#388E3C" },
-    { name: "French", value: 55, color: "#29B6F6" },
-    { name: "English", value: 50, color: "#78909C" },
-];
 
 const getDynamicStatsCategories = (stats: any) => [
-    { name: "Documents", current: stats?.documents || 0, last24h: 0, thisWeek: stats?.documents || 0, thisMonth: stats?.documents || 0, total: stats?.documents?.toLocaleString() || "0" },
-    { name: "Signups", current: stats?.totalUsers || 0, last24h: 0, thisWeek: stats?.totalUsers || 0, thisMonth: stats?.totalUsers || 0, total: stats?.totalUsers?.toLocaleString() || "0" },
+    { name: "Documents", current: stats?.docs24h || 0, last24h: stats?.docs24h || 0, thisWeek: stats?.documents || 0, thisMonth: stats?.documents || 0, total: stats?.documents?.toLocaleString() || "0" },
+    { name: "Signups", current: stats?.users24h || 0, last24h: stats?.users24h || 0, thisWeek: stats?.totalUsers || 0, thisMonth: stats?.totalUsers || 0, total: stats?.totalUsers?.toLocaleString() || "0" },
     { name: "Courses", current: stats?.sessions || 0, last24h: 0, thisWeek: stats?.sessions || 0, thisMonth: stats?.sessions || 0, total: stats?.sessions?.toLocaleString() || "0" },
-    { name: "Exams", current: 0, last24h: 0, thisWeek: 0, thisMonth: 0, total: "0" },
-    { name: "Certificates", current: stats?.certificates || 0, last24h: 0, thisWeek: stats?.certificates || 0, thisMonth: stats?.certificates || 0, total: stats?.certificates?.toLocaleString() || "0" },
+    { name: "Exams", current: stats?.exams || 0, last24h: 0, thisWeek: stats?.exams || 0, thisMonth: stats?.exams || 0, total: stats?.exams?.toLocaleString() || "0" },
+    { name: "Certificates", current: stats?.certs24h || 0, last24h: stats?.certs24h || 0, thisWeek: stats?.certificates || 0, thisMonth: stats?.certificates || 0, total: stats?.certificates?.toLocaleString() || "0" },
     { name: "Attendances", current: stats?.attendances || 0, last24h: 0, thisWeek: stats?.attendances || 0, thisMonth: stats?.attendances || 0, total: stats?.attendances?.toLocaleString() || "0" }
 ];
 
-const STATS_CATEGORIES = [
-    { name: "Documents", current: 12, last24h: 34, thisWeek: 156, thisMonth: 642, total: "2,890" },
-    { name: "Signups", current: 5, last24h: 18, thisWeek: 89, thisMonth: 412, total: "1,250" },
-    { name: "Courses", current: 2, last24h: 8, thisWeek: 45, thisMonth: 120, total: "450" },
-    { name: "Exams", current: 0, last24h: 12, thisWeek: 67, thisMonth: 289, total: "890" },
-    { name: "Certificates", current: 8, last24h: 45, thisWeek: 210, thisMonth: 850, total: "3,420" },
-    { name: "Attendances", current: 145, last24h: 450, thisWeek: 2100, thisMonth: 8500, total: "45,000" }
-];
-
-const USERS_DATA = [
-    { id: 1, name: "Alice Dupont", role: "Trainee", email: "alice@example.com", phone: "+33 6 12 34 56 78", status: "excellent", avatar: "AD", color: "#1976D2" },
-    { id: 2, name: "Bob Martin", role: "Trainer", email: "bob@example.com", phone: "+33 6 98 76 54 32", status: "average", avatar: "BM", color: "#FF9800" },
-    { id: 3, name: "Charlie Durand", role: "Trainee", email: "charlie@example.com", phone: "+33 6 11 22 33 44", status: "failing", avatar: "CD", color: "#E53935" },
-    { id: 4, name: "Diana Prince", role: "Administrator", email: "diana@ernam.com", phone: "+33 6 55 44 33 22", status: "excellent", avatar: "DP", color: "#388E3C" },
-    { id: 5, name: "Eve Dubois", role: "Trainee", email: "eve@example.com", phone: "+33 6 99 88 77 66", status: "average", avatar: "ED", color: "#8E24AA" },
-    { id: 6, name: "Frank Blanc", role: "Trainer", email: "frank@example.com", phone: "+33 6 77 66 55 44", status: "failing", avatar: "FB", color: "#E53935" },
-];
-
-// --- NEW DATA (Training KPIs View) ---
 const getDynamicTraineeKpis = (stats: any) => [
-    { icon: "👥", name: "Active Trainees", balance: stats?.trainees?.toLocaleString() || "0", crypto: `Out of ${stats?.totalUsers || 0} registered`, rate: "Live Database Count", progress: stats?.totalUsers > 0 ? (stats.trainees / stats.totalUsers) * 100 : 0, color: "#1D4ED8" },
-    { icon: "🛡️", name: "Global Compliance", balance: "88.5%", crypto: "1,101 Fully Certified", rate: "Target: 95% by Q3", progress: 88, color: "#10B981" },
-    { icon: "⚠️", name: "Pending Renewals", balance: "142", crypto: "Expiring in 30 days", rate: "12 critical expirations today", progress: 15, color: "#EF4444" },
-    { icon: "✅", name: "Avg. Pass Rate", balance: "N/A", crypto: "First-attempt success", rate: "Awaiting exam data", progress: 0, color: "#059669" },
-    { icon: "⏳", name: "Hours Logged", balance: "8,450 hrs", crypto: "Total learning time this month", rate: "Avg. 6.7 hours per trainee", progress: 75, color: "#F59E0B" },
-    { icon: "📚", name: "Modules Completed", balance: stats?.certificates?.toLocaleString() || "0", crypto: `Across ${stats?.sessions || 0} active sessions`, rate: "Based on certificates", progress: 0, color: "#8B5CF6" },
+    { icon: <Users className="w-5 h-5" />, name: "Active Trainees", balance: stats?.trainees?.toLocaleString() || "0", crypto: `Out of ${stats?.totalUsers || 0} registered`, rate: "Live Database Count", progress: stats?.totalUsers > 0 ? (stats.trainees / stats.totalUsers) * 100 : 0, color: "#1D4ED8" },
+    { icon: <ShieldCheck className="w-5 h-5" />, name: "Global Compliance", balance: "88.5%", crypto: "1,101 Fully Certified", rate: "Target: 95% by Q3", progress: 88, color: "#10B981" },
+    { icon: <AlertTriangle className="w-5 h-5" />, name: "Pending Renewals", balance: "142", crypto: "Expiring in 30 days", rate: "12 critical expirations today", progress: 15, color: "#EF4444" },
+    { icon: <CheckCircle2 className="w-5 h-5" />, name: "Avg. Pass Rate", balance: "N/A", crypto: "First-attempt success", rate: "Awaiting exam data", progress: 0, color: "#059669" },
+    { icon: <Clock className="w-5 h-5" />, name: "Hours Logged", balance: "8,450 hrs", crypto: "Total learning time this month", rate: "Avg. 6.7 hours per trainee", progress: 75, color: "#F59E0B" },
+    { icon: <BookOpen className="w-5 h-5" />, name: "Modules Completed", balance: stats?.certificates?.toLocaleString() || "0", crypto: `Across ${stats?.sessions || 0} active sessions`, rate: "Based on certificates", progress: 0, color: "#8B5CF6" },
 ];
-
-const TRAINEE_KPI_CARDS = [
-    { icon: "👥", name: "Active Trainees", balance: "1,245", crypto: "Out of 1,500 registered", rate: "+12% active users this month", progress: 83, color: "#1D4ED8" },
-    { icon: "🛡️", name: "Global Compliance", balance: "88.5%", crypto: "1,101 Fully Certified", rate: "Target: 95% by Q3", progress: 88, color: "#10B981" },
-    { icon: "⚠️", name: "Pending Renewals", balance: "142", crypto: "Expiring in 30 days", rate: "12 critical expirations today", progress: 15, color: "#EF4444" },
-    { icon: "✅", name: "Avg. Pass Rate", balance: "94.2%", crypto: "First-attempt success", rate: "+2.1% improvement from last cohort", progress: 94, color: "#059669" },
-    { icon: "⏳", name: "Hours Logged", balance: "8,450 hrs", crypto: "Total learning time this month", rate: "Avg. 6.7 hours per trainee", progress: 75, color: "#F59E0B" },
-    { icon: "📚", name: "Modules Completed", balance: "3,210", crypto: "Across 45 active courses", rate: "\"Aviation Safety\" is top module", progress: 60, color: "#8B5CF6" },
+const getDynamicTrainerKpis = (stats: any) => [
+    { icon: <UserCheck className="w-5 h-5" />, name: "Active Trainers", balance: stats?.trainers?.toLocaleString() || "0", crypto: `Out of ${stats?.trainers || 0} rostered`, rate: "93% Core Availability", progress: 93, color: "#1D4ED8" },
+    { icon: <Star className="w-5 h-5" />, name: "Average Rating", balance: "4.8/5", crypto: "From 1.2k reviews", rate: "Top 10% Industry", progress: 96, color: "#10B981" },
+    { icon: <Zap className="w-5 h-5" />, name: "Sessions Conducted", balance: stats?.sessions?.toLocaleString() || "0", crypto: "Total active sessions", rate: "Live Database", progress: 75, color: "#8B5CF6" },
+    { icon: <Clock className="w-5 h-5" />, name: "Hours Taught", balance: "N/A", crypto: "Total classroom hours", rate: "Target: 1,500 hrs", progress: 94, color: "#F59E0B" },
+    { icon: <Award className="w-5 h-5" />, name: "Certifications", balance: stats?.certificates?.toLocaleString() || "0", crypto: "Active teaching certs", rate: "Verified in DB", progress: 97, color: "#059669" },
+    { icon: <Inbox className="w-5 h-5" />, name: "Open Slots", balance: "18", crypto: "Available this week", rate: "High demand expected", progress: 15, color: "#EF4444" },
 ];
-
-const TRAINEE_ROSTER_DATA = [
-    { id: 1, date: "20 Jul 2023", time: "18:42 PM", trainee: "John Doe", role: "Pilot Cadet", status: "ON TRACK", statusColor: "#10B981", moduleTitle: "Aviation Safety", moduleProgress: "Module 3 of 5", performanceNum: "85%", performanceText: "Grade: B", traineeId: "#TRN-381782", email: "john.doe@email.com" },
-    { id: 2, date: "18 Jul 2023", time: "12:35 PM", trainee: "Sarah Smith", role: "Air Traffic Controller", status: "AT RISK", statusColor: "#EF4444", moduleTitle: "Radar Operations", moduleProgress: "Module 1 of 4", performanceNum: "42%", performanceText: "Grade: F", traineeId: "#TRN-192834", email: "sarah.smith@email.com" },
-    { id: 3, date: "15 Jul 2023", time: "19:11 PM", trainee: "Michael Johnson", role: "Meteorologist", status: "IN PROGRESS", statusColor: "#F59E0B", moduleTitle: "Weather Patterns", moduleProgress: "Module 4 of 5", performanceNum: "72%", performanceText: "Grade: C", traineeId: "#TRN-948271", email: "michael.j@email.com" },
-    { id: 4, date: "11 Jul 2023", time: "12:00 PM", trainee: "Emma Davis", role: "Pilot Cadet", status: "ON TRACK", statusColor: "#10B981", moduleTitle: "Navigation Systems", moduleProgress: "Module 5 of 5", performanceNum: "96%", performanceText: "Grade: A", traineeId: "#TRN-562910", email: "emma.davis@email.com" },
-    { id: 5, date: "10 Jul 2023", time: "16:17 PM", trainee: "Robert Wilson", role: "Maintenance Engineer", status: "IN PROGRESS", statusColor: "#F59E0B", moduleTitle: "Engine Diagnostics", moduleProgress: "Module 2 of 6", performanceNum: "68%", performanceText: "Grade: D", traineeId: "#TRN-827364", email: "r.wilson@email.com" },
-    { id: 6, date: "9 Jul 2023", time: "15:24 PM", trainee: "Emily Brown", role: "Air Traffic Controller", status: "ON TRACK", statusColor: "#10B981", moduleTitle: "Emergency Protocols", moduleProgress: "Module 2 of 3", performanceNum: "91%", performanceText: "Grade: A-", traineeId: "#TRN-349812", email: "emily.b@email.com" },
-    { id: 7, date: "6 Jul 2023", time: "20:18 PM", trainee: "David Miller", role: "Meteorologist", status: "ON TRACK", statusColor: "#10B981", moduleTitle: "Climate Modeling", moduleProgress: "Module 1 of 2", performanceNum: "88%", performanceText: "Grade: B+", traineeId: "#TRN-718293", email: "david.miller@email.com" },
-    { id: 8, date: "2 Jul 2023", time: "14:21 PM", trainee: "Sophia Taylor", role: "Pilot Cadet", status: "AT RISK", statusColor: "#EF4444", moduleTitle: "Aerodynamics", moduleProgress: "Module 1 of 5", performanceNum: "55%", performanceText: "Grade: D-", traineeId: "#TRN-293847", email: "sophia.t@email.com" },
-];
-
-const LEVEL2_KPI_CARDS = [
-    { icon: "🎓", name: "Advanced Trainees", balance: "412", crypto: "Out of 500 eligible", rate: "+5% advanced enrollments", progress: 82, color: "#1D4ED8" },
-    { icon: "🏆", name: "Specialist Certs", balance: "94.5%", crypto: "389 Fully Certified", rate: "Target: 98% by EOY", progress: 94, color: "#10B981" },
-    { icon: "⏳", name: "Pending Evaluations", balance: "28", crypto: "Final assessments due", rate: "Needs Review", progress: 8, color: "#EF4444" },
-    { icon: "✨", name: "Avg. Distinction Rate", balance: "88.4%", crypto: "High honors achieved", rate: "+4.2% from Level 1", progress: 88, color: "#059669" },
-    { icon: "🧪", name: "Lab Hours", balance: "12,400 hrs", crypto: "Practical training time", rate: "Avg. 30 hours per trainee", progress: 90, color: "#F59E0B" },
-    { icon: "🗺️", name: "Simulations Passed", balance: "1,840", crypto: "Across 12 scenarios", rate: "\"Radar ATC\" is lowest pass", progress: 78, color: "#8B5CF6" },
-];
-
-const LEVEL2_ROSTER_DATA = [
-    { id: 101, date: "22 Jul 2023", time: "09:15 AM", trainee: "Alice Smith", role: "Senior ATC", status: "ON TRACK", statusColor: "#10B981", moduleTitle: "Advanced Radar", moduleProgress: "Simulation 4 of 5", performanceNum: "92%", performanceText: "Grade: A", traineeId: "#TRN-LV2-001", email: "alice.smith@email.com" },
-    { id: 102, date: "21 Jul 2023", time: "14:30 PM", trainee: "Bob Jones", role: "Captain Cadet", status: "IN PROGRESS", statusColor: "#F59E0B", moduleTitle: "Complex Weather Navigation", moduleProgress: "Simulation 2 of 4", performanceNum: "78%", performanceText: "Grade: C", traineeId: "#TRN-LV2-045", email: "bob.jones@email.com" },
-    { id: 103, date: "19 Jul 2023", time: "11:05 AM", trainee: "Carol Williams", role: "Senior ATC", status: "ON TRACK", statusColor: "#10B981", moduleTitle: "Emergency Comm Protocol", moduleProgress: "Simulation 3 of 3", performanceNum: "98%", performanceText: "Grade: A+", traineeId: "#TRN-LV2-089", email: "carol.w@email.com" },
-    { id: 104, date: "18 Jul 2023", time: "16:45 PM", trainee: "David Brown", role: "Chief Mechanic", status: "AT RISK", statusColor: "#EF4444", moduleTitle: "Turbine Overhaul", moduleProgress: "Practical 1 of 5", performanceNum: "58%", performanceText: "Grade: D-", traineeId: "#TRN-LV2-112", email: "david.b@email.com" },
-];
-
-const TRAINER_KPI_CARDS = [
-    { icon: "👨‍🏫", name: "Active Trainers", balance: "42", crypto: "Out of 45 rostered", rate: "93% Core Availability", progress: 93, color: "#1D4ED8" },
-    { icon: "⭐", name: "Average Rating", balance: "4.8/5", crypto: "From 1.2k reviews", rate: "Top 10% Industry", progress: 96, color: "#10B981" },
-    { icon: "🗓️", name: "Sessions Conducted", balance: "384", crypto: "This Month", rate: "+12% vs Last Month", progress: 75, color: "#8B5CF6" },
-    { icon: "⌚", name: "Hours Taught", balance: "1,420", crypto: "Total classroom hours", rate: "Target: 1,500 hrs", progress: 94, color: "#F59E0B" },
-    { icon: "📜", name: "Certifications", balance: "128", crypto: "Active teaching certs", rate: "4 pending renewal", progress: 97, color: "#059669" },
-    { icon: "📋", name: "Open Slots", balance: "18", crypto: "Available this week", rate: "High demand expected", progress: 15, color: "#EF4444" },
-];
-
-const TRAINER_ROSTER_DATA = [
-    { id: 201, date: "22 Jul 2023", time: "08:30 AM", trainer: "Dr. Alan Grant", role: "Aviation History", status: "AVAILABLE", statusColor: "#10B981", specialization: "Core Curriculum", activeSessions: "3 Classes", performanceNum: "4.9", performanceText: "Rating: Excellent", trainerId: "#INS-042", email: "a.grant@ernam.org" },
-    { id: 202, date: "21 Jul 2023", time: "11:15 AM", trainer: "Capt. Sarah Jenkins", role: "Radar Expert", status: "IN SESSION", statusColor: "#3B82F6", specialization: "Air Traffic Control", activeSessions: "1 Class", performanceNum: "4.7", performanceText: "Rating: Very Good", trainerId: "#INS-089", email: "s.jenkins@ernam.org" },
-    { id: 203, date: "20 Jul 2023", time: "16:45 PM", trainer: "Marcus Cole", role: "Meteorology Lead", status: "UNAVAILABLE", statusColor: "#EF4444", specialization: "Weather Systems", activeSessions: "0 Classes", performanceNum: "4.8", performanceText: "Rating: Excellent", trainerId: "#INS-112", email: "m.cole@ernam.org" },
-    { id: 204, date: "18 Jul 2023", time: "09:00 AM", trainer: "Elena Rostova", role: "Navigation Tech", status: "AVAILABLE", statusColor: "#10B981", specialization: "Instruments", activeSessions: "2 Classes", performanceNum: "4.5", performanceText: "Rating: Good", trainerId: "#INS-056", email: "e.rostova@ernam.org" },
-];
-
-const ADMIN_KPI_CARDS = [
-    { icon: "🛡️", name: "System Health", balance: "99.9%", crypto: "All services operational", rate: "Uptime: 30 days", progress: 99, color: "#10B981" },
-    { icon: "🔑", name: "Active Admins", balance: "5", crypto: "Currently logged in", rate: "Staff: 8 Total", progress: 62, color: "#3B82F6" },
-    { icon: "⚠️", name: "Security Alerts", balance: "0", crypto: "No critical threats", rate: "Last scan: 2m ago", progress: 0, color: "#F59E0B" },
-    { icon: "🕒", name: "Recent Logs", balance: "1.2k", crypto: "Generated today", rate: "+5% vs Avg", progress: 70, color: "#6366F1" },
-    { icon: "✅", name: "Pending Tasks", balance: "12", crypto: "System approvals", rate: "4 high priority", progress: 40, color: "#8B5CF6" },
-    { icon: "💾", name: "DB Storage", balance: "42%", crypto: "1.2GB/5GB used", rate: "Healthy growth", progress: 42, color: "#EC4899" },
-];
-
-const ADMIN_ROSTER_DATA = [
-    { id: 301, date: "22 Jul 2023", time: "10:00 AM", admin: "Edward Day", role: "Super Admin", status: "ACTIVE", statusColor: "#10B981", lastAction: "System Config Update", securityLevel: "Lv. 5", adminId: "#ADM-001", email: "e.day@ernam.org" },
-    { id: 302, date: "22 Jul 2023", time: "09:45 AM", admin: "Lisa Ray", role: "Mod / Support", status: "AWAY", statusColor: "#F59E0B", lastAction: "User Approval", securityLevel: "Lv. 3", adminId: "#ADM-012", email: "l.ray@ernam.org" },
-    { id: 303, date: "21 Jul 2023", time: "18:20 PM", admin: "Tom Harding", role: "System Admin", status: "OFFLINE", statusColor: "#6B7280", lastAction: "Database Maintenance", securityLevel: "Lv. 4", adminId: "#ADM-005", email: "t.harding@ernam.org" },
+const getDynamicAdminKpis = (stats: any) => [
+    { icon: <Activity className="w-5 h-5" />, name: "System Health", balance: "99.9%", crypto: "All services operational", rate: "Uptime: 30 days", progress: 99, color: "#10B981" },
+    { icon: <ShieldCheck className="w-5 h-5" />, name: "Active Admins", balance: stats?.admins?.toLocaleString() || "0", crypto: "Registered administrators", rate: "Live Database", progress: 62, color: "#3B82F6" },
+    { icon: <AlertTriangle className="w-5 h-5" />, name: "Security Alerts", balance: "0", crypto: "No critical threats", rate: "Last scan: 2m ago", progress: 0, color: "#F59E0B" },
+    { icon: <Database className="w-5 h-5" />, name: "Recent Logs", balance: "1.2k", crypto: "Generated today", rate: "+5% vs Avg", progress: 70, color: "#6366F1" },
+    { icon: <CheckCircle2 className="w-5 h-5" />, name: "Pending Tasks", balance: "N/A", crypto: "System approvals", rate: "4 high priority", progress: 40, color: "#8B5CF6" },
+    { icon: <Database className="w-5 h-5" />, name: "DB Storage", balance: "42%", crypto: "Healthy growth", rate: "Supabase Cloud", progress: 42, color: "#EC4899" },
 ];
 
 export default function PurpleAdminDashboard() {
+    const { startImpersonation } = useAuth();
     const [darkMode, setDarkMode] = useState(false);
     const [activeNav, setActiveNav] = useState("Home");
     const [showTraineeFilter, setShowTraineeFilter] = useState(false);
@@ -165,38 +81,78 @@ export default function PurpleAdminDashboard() {
     const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
     const [isMounted, setIsMounted] = useState(false);
     const [trainees, setTrainees] = useState<any[]>([]);
+    const [trainers, setTrainers] = useState<any[]>([]);
+    const [administrators, setAdministrators] = useState<any[]>([]);
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [allUsersRaw, setAllUsersRaw] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [dashboardStats, setDashboardStats] = useState<any>(null);
+    const [selectedUserForEdit, setSelectedUserForEdit] = useState<any>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    
+    // Drill-down View State
+    const [drillDownView, setDrillDownView] = useState<string | null>(null);
+    const [drillDownData, setDrillDownData] = useState<any[]>([]);
+    const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+    const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+    const [isStandardModalOpen, setIsStandardModalOpen] = useState(false);
+    const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
-        fetchTrainees();
-        fetchStats();
+        fetchAllData();
     }, []);
+
+    async function fetchAllData() {
+        setLoading(true);
+        await Promise.all([
+            fetchStats(),
+            fetchUsers()
+        ]);
+        setLoading(false);
+    }
 
     async function fetchStats() {
         try {
+            const now = new Date();
+            const last24hDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
             const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
             const { count: participantCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'participant');
+            const { count: trainerCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'instructor');
+            const { count: adminCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'ernam_admin');
             const { count: sessionCount } = await supabase.from('sessions').select('*', { count: 'exact', head: true });
             const { count: certCount } = await supabase.from('certificates').select('*', { count: 'exact', head: true });
             const { count: attendanceCount } = await supabase.from('session_participants').select('*', { count: 'exact', head: true }).eq('attendance_status', 'attended');
+            const { count: docCount } = await supabase.from('documents').select('*', { count: 'exact', head: true });
+            const { count: examCount } = await supabase.from('assessments').select('*', { count: 'exact', head: true });
+
+            // Activity filters for 24h
+            const { count: u24 } = await supabase.from('users').select('*', { count: 'exact', head: true }).gt('created_at', last24hDate);
+            const { count: d24 } = await supabase.from('documents').select('*', { count: 'exact', head: true }).gt('created_at', last24hDate);
+            const { count: c24 } = await supabase.from('certificates').select('*', { count: 'exact', head: true }).gt('created_at', last24hDate);
 
             setDashboardStats({
                 totalUsers: usersCount || 0,
                 trainees: participantCount || 0,
+                trainers: trainerCount || 0,
+                admins: adminCount || 0,
                 sessions: sessionCount || 0,
                 certificates: certCount || 0,
-                attendances: attendanceCount || 0
+                attendances: attendanceCount || 0,
+                documents: docCount || 0,
+                exams: examCount || 0,
+                users24h: u24 || 0,
+                docs24h: d24 || 0,
+                certs24h: c24 || 0
             });
         } catch (err) {
             console.error("Error fetching stats:", err);
         }
     }
 
-    async function fetchTrainees() {
+    async function fetchUsers() {
         try {
-            setLoading(true);
             const { data, error } = await supabase
                 .from('users')
                 .select(`
@@ -204,49 +160,146 @@ export default function PurpleAdminDashboard() {
                     full_name,
                     email,
                     role,
+                    created_at,
+                    phone,
+                    status,
+                    session_instructors (
+                        sessions (id)
+                    ),
                     session_participants (
                         attendance_status,
                         sessions (
                             start_date,
-                            training_standards (
-                                title
-                            )
+                            training_standards (title)
                         )
+                    ),
+                    audit_logs (
+                        action,
+                        created_at
                     )
-                `)
-                .eq('role', 'participant');
+                `);
 
             if (error) throw error;
+            if (!data) return;
 
-            if (data) {
-                const formattedTrainees = data.map((u: any, idx: number) => {
-                    const latestEnrollment = u.session_participants?.[0];
-                    const session = latestEnrollment?.sessions;
-                    const standard = session?.training_standards;
+            setAllUsersRaw(data || []);
+            setAllUsers(data.map(u => ({
+                id: u.id,
+                name: u.full_name || "Unknown",
+                role: u.role === 'ernam_admin' ? 'Administrator' : u.role === 'instructor' ? 'Trainer' : 'Trainee',
+                email: u.email,
+                phone: u.phone || "N/A",
+                status: u.status === 'approved' ? 'excellent' : 'average',
+                avatar: (u.full_name || "U").substring(0, 2).toUpperCase(),
+                color: u.role === 'ernam_admin' ? '#388E3C' : u.role === 'instructor' ? '#FF9800' : '#1976D2'
+            })));
 
-                    return {
-                        id: u.id,
-                        date: session?.start_date ? format(new Date(session.start_date), "dd MMM yyyy") : "N/A",
-                        time: session?.start_date ? format(new Date(session.start_date), "HH:mm a") : "",
-                        trainee: u.full_name || "Unknown",
-                        role: "Student", // Defaulting role as 'role' in DB is 'participant'
-                        status: latestEnrollment?.attendance_status?.toUpperCase().replace('_', ' ') || "PENDING",
-                        statusColor: latestEnrollment?.attendance_status === 'enrolled' ? "#3B82F6" : 
-                                     latestEnrollment?.attendance_status === 'attended' ? "#10B981" : "#EF4444",
-                        moduleTitle: standard?.title || "No Module assigned",
-                        moduleProgress: "N/A", // We'd need a separate 'progress' field or logic here
-                        performanceNum: "N/A",
-                        performanceText: "Grade: -",
-                        traineeId: `#TRN-${u.id.substring(0,6).toUpperCase()}`,
-                        email: u.email
-                    };
-                });
-                setTrainees(formattedTrainees);
+            // Map Trainees
+            const tData = data.filter(u => u.role === 'participant').map(u => {
+                const latest = u.session_participants?.[0];
+                const session: any = Array.isArray(latest?.sessions) ? latest.sessions[0] : latest?.sessions;
+                const standard: any = Array.isArray(session?.training_standards) ? session.training_standards[0] : session?.training_standards;
+                
+                return {
+                    id: u.id,
+                    date: session?.start_date ? format(new Date(session.start_date), "dd MMM yyyy") : "N/A",
+                    time: session?.start_date ? format(new Date(session.start_date), "HH:mm a") : "",
+                    trainee: u.full_name || "Unknown",
+                    role: "Student",
+                    status: latest?.attendance_status?.toUpperCase().replace('_', ' ') || "PENDING",
+                    statusColor: latest?.attendance_status === 'enrolled' ? "#3B82F6" : 
+                                 latest?.attendance_status === 'attended' ? "#10B981" : "#EF4444",
+                    moduleTitle: standard?.title || "No Module",
+                    moduleProgress: "N/A",
+                    performanceNum: "N/A",
+                    performanceText: "Grade: -",
+                    traineeId: `#TRN-${u.id.substring(0,6).toUpperCase()}`,
+                    email: u.email
+                };
+            });
+            setTrainees(tData);
+
+            // Fetch Drill-down data if active
+            if (activeNav === "Home" && drillDownView) {
+                fetchDrillDownData(drillDownView);
             }
+
+            // Map Trainers ... (rest of function)
+            const trData = data.filter(u => u.role === 'instructor').map(u => ({
+                id: u.id,
+                date: u.created_at ? format(new Date(u.created_at), "dd MMM yyyy") : "N/A",
+                time: "",
+                trainer: u.full_name || "Unknown",
+                role: "Instructor",
+                status: u.status === 'approved' ? "AVAILABLE" : "UNAVAILABLE",
+                statusColor: u.status === 'approved' ? "#10B981" : "#EF4444",
+                specialization: "Aviation Faculty",
+                activeSessions: `${u.session_instructors?.length || 0} Classes`,
+                performanceNum: "4.5",
+                performanceText: "Rating: Good",
+                trainerId: `#INS-${u.id.substring(0,6).toUpperCase()}`,
+                email: u.email
+            }));
+            setTrainers(trData);
+
+            // Map Admins
+            const aData = data.filter(u => u.role === 'ernam_admin' || u.role === 'admin').map(u => {
+                const lastLog = u.audit_logs?.[0];
+                return {
+                    id: u.id,
+                    date: u.created_at ? format(new Date(u.created_at), "dd MMM yyyy") : "N/A",
+                    time: "",
+                    admin: u.full_name || "Unknown",
+                    role: "System Admin",
+                    status: "ACTIVE",
+                    statusColor: "#10B981",
+                    lastAction: lastLog?.action || "System Login",
+                    securityLevel: "Lv. 4",
+                    adminId: `#ADM-${u.id.substring(0,6).toUpperCase()}`,
+                    email: u.email
+                };
+            });
+            setAdministrators(aData);
+
         } catch (err) {
-            console.error("Error fetching trainees:", err);
-        } finally {
-            setLoading(false);
+            console.error("Error fetching users:", err);
+        }
+    }
+
+    async function handleDeleteUser(id: string) {
+        if (!confirm("Are you sure you want to delete this user? This will remove their authentication and profile.")) return;
+        
+        try {
+            const adminId = (await supabase.auth.getUser()).data.user?.id;
+            const res = await fetch(`/api/admin/manage-user?id=${id}${adminId ? `&adminId=${adminId}` : ''}`, {
+                method: 'DELETE',
+            });
+            
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to delete user');
+            }
+            
+            alert("User deleted successfully");
+            fetchUsers(); // Refresh
+            fetchStats(); // Refresh stats
+        } catch (err: any) {
+            alert(err.message);
+        }
+    }
+
+    function handleEditUser(user: any) {
+        const rawUser = allUsersRaw.find(u => u.id === user.id);
+        if (rawUser) {
+            setSelectedUserForEdit(rawUser);
+            setIsEditModalOpen(true);
+        } else {
+            console.error("Raw user not found for ID:", user.id);
+            // Fallback: try to use the user object directly if it has enough info
+            if (user.email) {
+                setSelectedUserForEdit(user);
+                setIsEditModalOpen(true);
+            }
         }
     }
 
@@ -266,15 +319,15 @@ export default function PurpleAdminDashboard() {
                 <div className="grid grid-cols-2 gap-3 h-full pb-2">
                     <div className="bg-blue-600 text-white p-3 rounded-xl flex flex-col justify-center shadow-sm">
                         <span className="text-[11px] font-semibold opacity-90 mb-1">Tracked Students</span>
-                        <span className="text-2xl font-black">80</span>
+                        <span className="text-2xl font-black">{dashboardStats?.trainees || 0}</span>
                     </div>
                     <div className="bg-emerald-600 text-white p-3 rounded-xl flex flex-col justify-center shadow-sm">
-                        <span className="text-[11px] font-semibold opacity-90 mb-1">General Average</span>
-                        <span className="text-2xl font-black">12.8%</span>
+                        <span className="text-[11px] font-semibold opacity-90 mb-1">Global Certs</span>
+                        <span className="text-2xl font-black">{dashboardStats?.certificates || 0}</span>
                     </div>
                     <div className="bg-gray-50 border border-gray-200 text-gray-800 p-3 rounded-xl flex flex-col justify-center col-span-2 shadow-sm">
-                        <span className="text-[11px] font-bold text-gray-500 mb-1">Teaching Hours</span>
-                        <span className="text-2xl font-black">120 h</span>
+                        <span className="text-[11px] font-bold text-gray-500 mb-1">Active Sessions</span>
+                        <span className="text-2xl font-black">{dashboardStats?.sessions || 0}</span>
                     </div>
                 </div>
             )
@@ -340,8 +393,205 @@ export default function PurpleAdminDashboard() {
         }
     ];
 
-    const renderHomeView = () => (
-        <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-12">
+    async function fetchDrillDownData(view: string) {
+        setLoading(true);
+        try {
+            let data: any[] = [];
+            switch (view) {
+                case "Certificates":
+                    const { data: certs } = await supabase
+                        .from('certificates')
+                        .select('*, user:users(full_name), session:sessions(training_standard:training_standards(title))')
+                        .order('created_at', { ascending: false });
+                    data = certs || [];
+                    break;
+                case "Attendances":
+                    const { data: atts } = await supabase
+                        .from('session_participants')
+                        .select('*, user:participant_id(full_name), session:sessions(training_standard:training_standards(title))')
+                        .eq('attendance_status', 'attended')
+                        .order('id', { ascending: false });
+                    data = atts || [];
+                    break;
+                case "Courses":
+                    const { data: sessions } = await supabase
+                        .from('sessions')
+                        .select('*, training_standard:training_standards(code, title), session_instructors(instructor:users(full_name))')
+                        .order('start_date', { ascending: false });
+                    data = sessions || [];
+                    break;
+                case "Signups":
+                    const { data: users } = await supabase
+                        .from('users')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .limit(100);
+                    data = users || [];
+                    break;
+                case "Documents":
+                    const { data: docs } = await supabase
+                        .from('documents')
+                        .select('*, uploader:uploaded_by(full_name), session:sessions(training_standard:training_standards(title))')
+                        .order('created_at', { ascending: false });
+                    data = docs || [];
+                    break;
+                case "Exams":
+                    const { data: exams } = await supabase
+                        .from('assessments')
+                        .select('*, user:participant_id(full_name), session:sessions(training_standard:training_standards(title))')
+                        .order('created_at', { ascending: false });
+                    data = exams || [];
+                    break;
+            }
+            setDrillDownData(data);
+        } catch (err) {
+            console.error("Error fetching drill-down data:", err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        if (drillDownView) fetchDrillDownData(drillDownView);
+    }, [drillDownView]);
+
+    const handleAddRecord = (view: string) => {
+        setSelectedRecord(null);
+        if (view === "Courses") setIsSessionModalOpen(true);
+        else if (view === "Documents") setIsDocumentModalOpen(true);
+        else if (view === "Signups") setActiveNav("Trainees");
+        else if (view === "Certificates") setIsStandardModalOpen(true); // Temporary: issue through standard
+    };
+
+    const renderDrillDownView = (view: string) => (
+        <div className="min-h-screen bg-gray-50 flex flex-col p-8 animate-in slide-in-from-right duration-500">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8 bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => setDrillDownView(null)}
+                        className="p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all border border-gray-200 group"
+                    >
+                        <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+                    </button>
+                    <div>
+                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">{view}</h2>
+                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">
+                            {drillDownData.length} records found in {view.toLowerCase()}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-2xl text-xs font-black uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-all shadow-sm">
+                        <Download className="w-4 h-4" /> Export CSV
+                    </button>
+                    {["Courses", "Documents", "Certificates", "Signups"].includes(view) && (
+                        <button 
+                            onClick={() => handleAddRecord(view)}
+                            className="flex items-center gap-2 px-6 py-3 bg-[#12388D] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                        >
+                            <Plus className="w-4 h-4" /> Add New {view === "Signups" ? "User" : "Entry"}
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* List Table */}
+            <div className="flex-1 bg-white rounded-[32px] border border-gray-200 shadow-xl overflow-hidden flex flex-col">
+                <div className="overflow-x-auto">
+                    {loading ? (
+                        <div className="flex items-center justify-center p-20 flex-col gap-4">
+                            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Records...</span>
+                        </div>
+                    ) : drillDownData.length === 0 ? (
+                        <div className="flex items-center justify-center p-20 flex-col gap-4">
+                            <Focus className="w-12 h-12 text-gray-200" />
+                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">No Records Match This Criteria</span>
+                        </div>
+                    ) : (
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50/50 border-b border-gray-100">
+                                <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                                    <th className="px-8 py-5">
+                                        {view === "Certificates" ? "CERT # / HOLDER" : 
+                                         view === "Documents" ? "TITLE / UPLOADER" : 
+                                         view === "Courses" ? "COURSE CODE / TITLE" :
+                                         view === "Signups" ? "NAME / EMAIL" : "NAME / SUBJECT"}
+                                    </th>
+                                    <th className="px-8 py-5">
+                                        {view === "Courses" ? "INSTRUCTORS" : 
+                                         view === "Documents" ? "ASSOCIATED SESSION" : 
+                                         view === "Certificates" ? "TRAINING STANDARD" :
+                                         view === "Exams" ? "SESSION" : "CATEGORY / DETAILS"}
+                                    </th>
+                                    <th className="px-8 py-5 text-center">STATUS</th>
+                                    <th className="px-8 py-5 text-right">{view === "Exams" ? "SCORE" : "DATE"}</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {drillDownData.map((item, idx) => (
+                                    <tr 
+                                        key={idx} 
+                                        onClick={() => {
+                                            setSelectedRecord(item);
+                                            if (view === "Courses") setIsSessionModalOpen(true);
+                                            else if (view === "Documents") setIsDocumentModalOpen(true);
+                                        }}
+                                        className="group hover:bg-blue-50/30 transition-all cursor-pointer"
+                                    >
+                                        <td className="px-8 py-5">
+                                            <div className="font-black text-sm text-gray-900 leading-tight">
+                                                {view === "Courses" ? (item.training_standard?.code || item.id.substring(0,8)) :
+                                                 item.certificate_number || item.title || item.full_name || item.user?.full_name || "Unidentified Record"}
+                                            </div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                                                {view === "Courses" ? item.training_standard?.title :
+                                                 view === "Documents" ? `By ${item.uploader?.full_name || 'System'}` :
+                                                 item.user?.full_name || item.email || item.id.substring(0,8)}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <div className="text-[12px] font-bold text-gray-600">
+                                                {view === "Courses" ? (item.session_instructors?.map((si: any) => si.instructor?.full_name).join(", ") || "No Trainer") :
+                                                 view === "Documents" ? item.session?.training_standard?.title :
+                                                 view === "Certificates" ? item.standard?.title :
+                                                 view === "Attendances" ? item.session?.training_standard?.title :
+                                                 view === "Exams" ? item.session?.training_standard?.title :
+                                                 item.role || "Global"}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5 text-center">
+                                            <span className={cn(
+                                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                                item.status === 'valid' || item.attendance_status === 'attended' || item.status === 'active' || item.status === 'approved' || item.result === 'pass'
+                                                    ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                                    : "bg-red-50 text-red-600 border-red-100"
+                                            )}>
+                                                {item.status || item.attendance_status || item.result || "N/A"}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-5 text-right font-mono text-xs font-bold text-gray-500">
+                                            {view === "Exams" ? `${item.score}%` : 
+                                             item.issue_date ? format(new Date(item.issue_date), 'dd/MM/yyyy') :
+                                             item.start_date ? format(new Date(item.start_date), 'dd/MM/yy') :
+                                             item.created_at ? format(new Date(item.created_at), 'dd/MM/yy') : 'N/A'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderHomeView = () => {
+        if (drillDownView) return renderDrillDownView(drillDownView);
+        
+        return (
+            <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-12">
             {/* Top Navigation - LIGHT MODE */}
             <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
                 <div className="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200 rounded-full pr-5 pl-1.5 py-1.5 shadow-sm cursor-pointer group">
@@ -458,18 +708,25 @@ export default function PurpleAdminDashboard() {
 
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-6 pb-2">
                     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col justify-center">
-                        <div className="flex justify-between items-start mb-1">
-                            <span className="text-gray-500 font-bold text-[10px] uppercase tracking-wider">Options</span>
-                            <div className="flex items-center space-x-0.5">
-                                <button onClick={prevStat} className="p-0.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-                                <button onClick={nextStat} className="p-0.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
+                        <button 
+                            onClick={() => setDrillDownView(getDynamicStatsCategories(dashboardStats)[statsIndex].name)}
+                            className="text-left group/opt"
+                        >
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="text-gray-500 font-bold text-[10px] uppercase tracking-wider group-hover/opt:text-blue-600 transition-colors">Options</span>
+                                <div className="flex items-center space-x-0.5">
+                                    <button onClick={(e) => { e.stopPropagation(); prevStat(); }} className="p-0.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); nextStat(); }} className="p-0.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                        <div className="text-blue-700 font-black text-xl truncate">{getDynamicStatsCategories(dashboardStats)[statsIndex].name}</div>
+                            <div className="text-blue-700 font-black text-xl truncate group-hover/opt:underline decoration-2 underline-offset-4">
+                                {getDynamicStatsCategories(dashboardStats)[statsIndex].name}
+                            </div>
+                        </button>
                     </div>
 
                     <div className="bg-white rounded-2xl p-4 flex flex-col justify-center shadow-sm border border-gray-200">
@@ -513,11 +770,11 @@ export default function PurpleAdminDashboard() {
                                         <th className="px-3 py-3 font-bold">Number</th>
                                         <th className="px-3 py-3 font-bold text-center">Status</th>
                                         <th className="px-3 py-3 font-bold text-center">Preview</th>
-                                        <th className="px-3 py-3 font-bold text-center">Action</th>
+                                        <th className="px-3 py-3 font-bold text-center">ACTION</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {USERS_DATA.map((user) => (
+                                    {(activeNav === "Home" ? allUsers : []).map((user) => (
                                         <tr key={user.id} className="hover:bg-gray-50 transition-colors group">
                                             <td className="px-5 py-3">
                                                 <div className="flex items-center gap-3">
@@ -558,14 +815,20 @@ export default function PurpleAdminDashboard() {
                                                     {openDropdownId === user.id && (
                                                         <div className="absolute right-8 top-full -mt-2 w-44 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 py-1.5 z-50 animate-in fade-in zoom-in duration-150">
                                                             <button className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 font-semibold transition-colors">
-                                                                <span className="text-sm leading-none opacity-80">Ã°Å¸â€˜ÂÃ¯Â¸Â</span> View Profile
+                                                                <User className="w-3.5 h-3.5 text-gray-400" /> View Profile
                                                             </button>
                                                             <button className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 font-semibold transition-colors">
-                                                                <span className="text-sm leading-none opacity-80">Ã°Å¸â€â€</span> Send Message
+                                                                <Mail className="w-3.5 h-3.5 text-gray-400" /> Send Message
                                                             </button>
                                                             <div className="h-px bg-gray-100 my-1 mx-3" />
-                                                            <button className="w-full text-left px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-2.5 font-bold transition-colors">
-                                                                <span className="text-sm leading-none opacity-90">🎭</span> Act As
+                                                            <button 
+                                                                onClick={() => {
+                                                                    const rawUser = allUsersRaw.find(u => u.id === user.id);
+                                                                    if (rawUser) startImpersonation(rawUser);
+                                                                }}
+                                                                className="w-full text-left px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-2.5 font-bold transition-colors"
+                                                            >
+                                                                <UserCheck className="w-3.5 h-3.5 text-indigo-500" /> Act As
                                                             </button>
                                                         </div>
                                                     )}
@@ -573,8 +836,18 @@ export default function PurpleAdminDashboard() {
                                             </td>
                                             <td className="px-3 py-3">
                                                 <div className="flex items-center justify-center gap-1.5">
-                                                    <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
-                                                    <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                    <button 
+                                                        onClick={() => handleEditUser(user)}
+                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteUser(user.id)}
+                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -652,13 +925,12 @@ export default function PurpleAdminDashboard() {
                 </div>
             </div>
         </div>
-    );
+        );
+    };
 
     const renderTraineesView = () => {
         const currentKpis = traineeLevel === "Level 1" ? getDynamicTraineeKpis(dashboardStats) : LEVEL2_KPI_CARDS;
-        const currentRoster = traineeLevel === "Level 1" 
-            ? (trainees.length > 0 ? trainees : TRAINEE_ROSTER_DATA) 
-            : LEVEL2_ROSTER_DATA;
+        const currentRoster = traineeLevel === "Level 1" ? trainees : [];
         
         return (
         <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20">
@@ -736,7 +1008,7 @@ export default function PurpleAdminDashboard() {
 
                 {/* Learning & Training KPI Cards */}
                 <div className="grid grid-cols-6 gap-5">
-                    {currentKpis.map((card, idx) => (
+                    {currentKpis.map((card: any, idx: number) => (
                         <div key={idx} className="bg-white border border-gray-200 rounded-[20px] p-5 flex flex-col relative overflow-hidden group hover:shadow-md transition-all cursor-pointer">
                             {/* Background Glow Line & Blur */}
                             <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-[40px] opacity-10 group-hover:opacity-15 transition-opacity" style={{ background: card.color }} />
@@ -830,8 +1102,8 @@ export default function PurpleAdminDashboard() {
                                 <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit</button>
                                 <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Delete</button>
                             </div>
-                            <button onClick={() => setSelectedTrainees([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 text-xl leading-none">
-                                &times;
+                            <button onClick={() => setSelectedTrainees([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 flex items-center justify-center">
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
                     )}
@@ -862,6 +1134,7 @@ export default function PurpleAdminDashboard() {
                                 <th className="px-4 py-4">Current Module</th>
                                 <th className="px-4 py-4">Performance</th>
                                 <th className="px-6 py-4">Trainee ID / Contact</th>
+                                <th className="px-6 py-4 text-center">ACTION</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -896,7 +1169,7 @@ export default function PurpleAdminDashboard() {
                                     <td className="px-4 py-5">
                                         <div className="text-gray-800 font-bold text-xs mb-0.5">{tx.moduleTitle}</div>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-blue-600 font-bold text-[10px]">●</span>
+                                            <Circle className="w-1.5 h-1.5 fill-blue-600 text-blue-600" />
                                             <span className="text-gray-500 font-medium text-[11px]">{tx.moduleProgress}</span>
                                         </div>
                                     </td>
@@ -907,6 +1180,22 @@ export default function PurpleAdminDashboard() {
                                     <td className="px-6 py-5 max-w-[200px]">
                                         <div className="text-gray-900 font-bold text-xs truncate">{tx.traineeId}</div>
                                         <div className="text-gray-500 text-[11px] mt-0.5 truncate">{tx.email}</div>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button 
+                                                onClick={() => handleEditUser(tx)}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
+                                            >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteUser(tx.id)}
+                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -986,7 +1275,7 @@ export default function PurpleAdminDashboard() {
 
                 {/* Trainer KPI Cards */}
                 <div className="grid grid-cols-6 gap-5">
-                    {TRAINER_KPI_CARDS.map((card, idx) => (
+                    {getDynamicTrainerKpis(dashboardStats).map((card: any, idx: number) => (
                         <div key={idx} className="bg-white border border-gray-200 rounded-[20px] p-5 flex flex-col relative overflow-hidden group hover:shadow-md transition-all cursor-pointer">
                             <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-[40px] opacity-10 group-hover:opacity-15 transition-opacity" style={{ background: card.color }} />
                             
@@ -1063,10 +1352,10 @@ export default function PurpleAdminDashboard() {
                                     <input 
                                         type="checkbox" 
                                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
-                                        checked={TRAINER_ROSTER_DATA.length > 0 && selectedTrainers.length === TRAINER_ROSTER_DATA.length}
+                                        checked={trainers.length > 0 && selectedTrainers.length === trainers.length}
                                         onChange={(e) => {
                                             if (e.target.checked) {
-                                                setSelectedTrainers(TRAINER_ROSTER_DATA.map(t => t.id));
+                                                setSelectedTrainers(trainers.map(t => t.id));
                                             } else {
                                                 setSelectedTrainers([]);
                                             }
@@ -1079,10 +1368,11 @@ export default function PurpleAdminDashboard() {
                                 <th className="px-4 py-4">Specialization</th>
                                 <th className="px-4 py-4">Rating</th>
                                 <th className="px-6 py-4">Trainer Code / Email</th>
+                                <th className="px-6 py-4 text-center">ACTION</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {TRAINER_ROSTER_DATA.map((tx) => (
+                            {trainers.map((tx) => (
                                 <tr key={tx.id} className={`transition-colors group ${selectedTrainers.includes(tx.id) ? 'bg-blue-50/40' : 'hover:bg-gray-50'}`}>
                                     <td className="px-6 py-5 w-12 text-center">
                                         <input 
@@ -1113,7 +1403,7 @@ export default function PurpleAdminDashboard() {
                                     <td className="px-4 py-5">
                                         <div className="text-gray-800 font-bold text-xs mb-0.5">{tx.specialization}</div>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-blue-600 font-bold text-[10px]">●</span>
+                                            <span className="text-blue-600 font-bold text-[10px]">â—</span>
                                             <span className="text-gray-500 font-medium text-[11px]">{tx.activeSessions}</span>
                                         </div>
                                     </td>
@@ -1125,6 +1415,22 @@ export default function PurpleAdminDashboard() {
                                         <div className="text-gray-900 font-bold text-xs truncate">{tx.trainerId}</div>
                                         <div className="text-gray-500 text-[11px] mt-0.5 truncate">{tx.email}</div>
                                     </td>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button 
+                                                onClick={() => handleEditUser(tx)}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
+                                            >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteUser(tx.id)}
+                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -1134,189 +1440,48 @@ export default function PurpleAdminDashboard() {
         </div>
         );
     };
-
     const renderAdministratorsView = () => {
         return (
-        <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20">
-            {/* Top Navigation - LIGHT MODE */}
-            <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
-                <div className="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200 rounded-full pr-5 pl-1.5 py-1.5 shadow-sm cursor-pointer group">
-                    <div className="flex items-center -space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-10 group-hover:-translate-x-1 transition-transform">
-                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-20 shadow-sm group-hover:translate-x-1 transition-transform">
-                            <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA - ERNAM</span>
-                        <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                            Dashboard <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                        </span>
+            <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20 p-8">
+                <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
+                    <div>
+                        <h2 className="text-2xl font-black text-gray-900 leading-tight">System Administrators</h2>
+                        <p className="text-gray-500 text-sm font-medium">Manage security credentials and access control.</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-8">
-                    {navItems.map((item) => (
-                        <button
-                            key={item}
-                            onClick={() => setActiveNav(item)}
-                            className={`text-sm font-semibold transition-colors pb-1 ${activeNav === item ? "text-blue-700 border-b-2 border-blue-700" : "text-gray-500 hover:text-gray-900"}`}
-                        >
-                            {item}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <button className="text-gray-500 hover:text-gray-900"><Bell className="w-5 h-5" /></button>
-                    <button className="text-gray-500 hover:text-gray-900" onClick={() => setDarkMode(!darkMode)}>
-                        {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                    </button>
-                    <button className="text-gray-500 hover:text-gray-900"><Settings className="w-5 h-5" /></button>
-                    <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors">
-                        <span className="text-gray-800 text-sm font-semibold">Edward Day</span>
-                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">E</div>
-                    </div>
-                </div>
-            </nav>
-
-            {/* Main Admin Content */}
-            <div className="px-8 py-10 space-y-6 max-w-[1600px] mx-auto mt-4">
-                <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
-                    <h2 className="text-2xl font-black text-gray-900 leading-tight">System Administrators</h2>
-                    <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
-                        <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Security:</span>
-                        <div className="flex items-center gap-1.5 text-blue-600 font-bold text-xs">
-                             <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                             Tier 1 Encrypted
-                        </div>
-                    </div>
-                </div>
-
-                {/* Admin KPI Cards */}
-                <div className="grid grid-cols-6 gap-5">
-                    {ADMIN_KPI_CARDS.map((card, idx) => (
-                        <div key={idx} className="bg-white border border-gray-200 rounded-[20px] p-5 flex flex-col relative overflow-hidden group hover:shadow-md transition-all cursor-pointer">
-                            <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-[40px] opacity-10" style={{ background: card.color }} />
-                            <div className="flex justify-between items-center mb-4 relative z-10">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-sm" style={{ background: `${card.color}15` }}>
-                                        {card.icon}
-                                    </div>
-                                    <span className="text-gray-800 font-bold text-[14px]">{card.name}</span>
-                                </div>
-                            </div>
-                            <div className="relative z-10 mb-5">
-                                <div className="text-gray-900 font-black text-2xl tracking-tight mb-0.5">{card.balance}</div>
-                                <div className="text-gray-500 font-medium text-[11px]">{card.crypto}</div>
-                            </div>
-                            <div className="relative z-10 w-full mt-auto">
-                                <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3 overflow-hidden">
-                                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${card.progress}%`, backgroundColor: card.color }} />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-gray-500 font-medium tracking-tight truncate">{card.rate}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Admin Roster Header */}
-                <div className="pt-10 pb-4 flex flex-col gap-4 border-b border-gray-200">
-                    <div className="flex justify-between items-end">
-                        <div className="transition-all">
-                            <h2 className="text-2xl font-black text-gray-900 leading-tight mb-1">Administrator Roster</h2>
-                            <p className="text-gray-500 text-sm font-medium">Manage security credentials, view access logs, and assign moderator roles.</p>
-                        </div>
-                        <div className="flex gap-3 pb-1 relative">
-                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"><Download className="w-4 h-4"/></button>
-                            <button 
-                                onClick={() => setShowAdminFilter(!showAdminFilter)}
-                                className={`p-2 rounded-lg transition-colors border shadow-sm ${showAdminFilter ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-400 hover:text-blue-600 hover:bg-blue-50 border-gray-100'}`}
-                            >
-                                <SlidersHorizontal className="w-4 h-4"/>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Batch Actions Bar for Admins */}
-                    {selectedAdmins.length > 0 && (
-                        <div className="flex items-center gap-6 bg-blue-50 text-blue-800 px-5 py-3 rounded-xl border border-blue-200 shadow-sm w-full animate-in fade-in slide-in-from-top-2">
-                            <span className="font-bold whitespace-nowrap">{selectedAdmins.length} selected</span>
-                            <div className="w-px h-5 bg-blue-200"></div>
-                            <div className="flex items-center gap-3 w-full">
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 text-gray-700 border border-gray-100 flex-1">Reset Password</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 text-gray-700 border border-gray-100 flex-1">Manage Keys</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 text-gray-700 border border-gray-100 flex-1">Edit Role</button>
-                                <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 border border-gray-100 transition-colors shadow-sm flex-1">Revoke Access</button>
-                            </div>
-                            <button onClick={() => setSelectedAdmins([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 text-xl leading-none">
-                                &times;
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Admin Table */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left">
                         <thead>
                             <tr className="bg-gray-50 text-gray-500 text-[10px] uppercase tracking-widest font-bold border-b border-gray-100">
-                                <th className="px-6 py-4 w-12 text-center">
-                                    <input 
-                                        type="checkbox" 
-                                        className="rounded border-gray-300 text-blue-600"
-                                        checked={ADMIN_ROSTER_DATA.length > 0 && selectedAdmins.length === ADMIN_ROSTER_DATA.length}
-                                        onChange={(e) => {
-                                            if (e.target.checked) setSelectedAdmins(ADMIN_ROSTER_DATA.map(t => t.id));
-                                            else setSelectedAdmins([]);
-                                        }}
-                                    />
-                                </th>
-                                <th className="px-2 py-4 text-center">Last Active</th>
-                                <th className="px-4 py-4">Administrator</th>
-                                <th className="px-4 py-4">Status</th>
+                                <th className="px-6 py-4">Administrator</th>
                                 <th className="px-4 py-4">Recent Action</th>
                                 <th className="px-4 py-4 text-center">Security</th>
                                 <th className="px-6 py-4">Account ID / Email</th>
+                                <th className="px-6 py-4 text-center">ACTION</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {ADMIN_ROSTER_DATA.map((tx) => (
-                                <tr key={tx.id} className={`transition-colors group ${selectedAdmins.includes(tx.id) ? 'bg-blue-50/40' : 'hover:bg-gray-50'}`}>
-                                    <td className="px-6 py-5 w-12 text-center">
-                                        <input 
-                                            type="checkbox" 
-                                            className="rounded border-gray-300 text-blue-600"
-                                            checked={selectedAdmins.includes(tx.id)}
-                                            onChange={() => {
-                                                setSelectedAdmins(prev => 
-                                                    prev.includes(tx.id) ? prev.filter(id => id !== tx.id) : [...prev, tx.id]
-                                                );
-                                            }}
-                                        />
-                                    </td>
-                                    <td className="px-2 py-5 text-center">
-                                        <div className="text-gray-900 font-bold text-xs">{tx.date}</div>
-                                        <div className="text-gray-400 text-[10px] mt-0.5">{tx.time}</div>
-                                    </td>
-                                    <td className="px-4 py-5 font-bold text-[13px]">{tx.admin}</td>
-                                    <td className="px-4 py-5">
-                                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 w-fit">
-                                            <div className="w-2 h-2 rounded-full" style={{ background: tx.statusColor }} />
-                                            <span className="text-[11px] font-bold" style={{ color: tx.statusColor }}>{tx.status}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-5 text-gray-500 text-xs font-semibold">{tx.lastAction}</td>
+                            {administrators.map((tx) => (
+                                <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-5 font-bold text-[13px]">{tx.admin || tx.full_name}</td>
+                                    <td className="px-4 py-5 text-gray-500 text-xs font-semibold">{tx.lastAction || "System Login"}</td>
                                     <td className="px-4 py-5 text-center">
-                                        <span className="px-2.5 py-1 bg-gray-900 text-white rounded-md font-black text-[10px] tracking-widest">{tx.securityLevel}</span>
+                                        <span className="px-2.5 py-1 bg-gray-900 text-white rounded-md font-black text-[10px] tracking-widest">{tx.securityLevel || "TIER 1"}</span>
                                     </td>
-                                    <td className="px-6 py-5 max-w-[200px]">
-                                        <div className="text-gray-900 font-bold text-xs truncate">{tx.adminId}</div>
+                                    <td className="px-6 py-5">
+                                        <div className="text-gray-900 font-bold text-xs truncate">{tx.adminId || tx.id.substring(0,8)}</div>
                                         <div className="text-gray-500 text-[11px] mt-0.5 truncate">{tx.email}</div>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button 
+                                                onClick={() => handleEditUser(tx)}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100"
+                                            >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -1324,16 +1489,58 @@ export default function PurpleAdminDashboard() {
                     </table>
                 </div>
             </div>
-        </div>
         );
     };
 
     return (
         <React.Fragment>
-            {activeNav === "Home" && renderHomeView()}
+            {activeNav === "Home" && (drillDownView ? renderDrillDownView(drillDownView) : renderHomeView())}
             {activeNav === "Trainees" && renderTraineesView()}
             {activeNav === "Trainers" && renderTrainersView()}
             {activeNav === "Administrators" && renderAdministratorsView()}
+
+            {selectedUserForEdit && (
+                <UserDetailModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    user={selectedUserForEdit}
+                    onUpdate={fetchUsers}
+                />
+            )}
+
+            <SessionFormModal 
+                isOpen={isSessionModalOpen}
+                onClose={() => setIsSessionModalOpen(false)}
+                onSuccess={() => {
+                    if (drillDownView) fetchDrillDownData(drillDownView);
+                    fetchStats();
+                }}
+                sessionToEdit={selectedRecord}
+            />
+
+            <DocumentFormModal 
+                isOpen={isDocumentModalOpen}
+                onClose={() => {
+                    setIsDocumentModalOpen(false);
+                    setSelectedRecord(null);
+                }}
+                onSuccess={() => {
+                    fetchDrillDownData("Documents");
+                    loadDashboardStats();
+                }}
+                documentToEdit={selectedRecord}
+                onAddNewSession={() => setIsSessionModalOpen(true)}
+            />
+
+            <StandardFormModal 
+                isOpen={isStandardModalOpen}
+                onClose={() => setIsStandardModalOpen(false)}
+                onSuccess={() => {
+                    if (drillDownView) fetchDrillDownData(drillDownView);
+                    fetchStats();
+                }}
+                standardToEdit={selectedRecord}
+            />
         </React.Fragment>
     );
 }

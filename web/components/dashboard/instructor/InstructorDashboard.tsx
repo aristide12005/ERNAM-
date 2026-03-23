@@ -38,15 +38,15 @@ export default function InstructorDashboard() {
     });
 
     useEffect(() => {
-        if (user) fetchTodaySession();
-    }, [user]);
+        if (profile) fetchTodaySession();
+    }, [profile]);
 
     const fetchTodaySession = async () => {
         try {
             const { data: mySessions } = await supabase
                 .from('session_instructors')
                 .select('session_id')
-                .eq('instructor_id', user?.id);
+                .eq('instructor_id', profile?.id || user?.id);
 
             if (!mySessions || mySessions.length === 0) {
                 setLoadingSession(false);
@@ -104,8 +104,7 @@ export default function InstructorDashboard() {
     const sessionId = searchParams.get('sessionId');
 
     return (
-        <div className="min-h-screen">
-            <div className="flex-1 relative">
+        <div className="relative">
                 <div className="max-w-[1400px] mx-auto pb-20">
                     <AnimatePresence mode="wait">
                         {activeView === 'dashboard' && (
@@ -114,18 +113,17 @@ export default function InstructorDashboard() {
                             </motion.div>
                         )}
                         {activeView === 'my-schedule' && <InstructorScheduleView />}
-                        {activeView === 'sessions' && <MyClasses instructorId={user?.id || ''} onManageClass={(id) => router.push(`/dashboard?view=assessments&sessionId=${id}`)} />}
+                        {activeView === 'sessions' && <MyClasses instructorId={profile?.id || user?.id || ''} onManageClass={(id) => router.push(`/dashboard?view=assessments&sessionId=${id}`)} />}
                         {activeView === 'participants' && <InstructorParticipantsView />}
                         {activeView === 'attendance' && <InstructorAttendanceView />}
                         {activeView === 'notes' && <InstructorNotesView />}
-                        {activeView === 'results_scores' && <Gradebook instructorId={user?.id || ''} />}
+                        {activeView === 'results_scores' && <Gradebook instructorId={profile?.id || user?.id || ''} />}
                         {activeView === 'assessments' && <ManageSessionView sessionId={sessionId || todaySession?.id || ''} onBack={() => router.push('/dashboard')} />}
                         {activeView === 'documents' && <InstructorDocumentsView />}
                         {activeView === 'planned-activities' && <InstructorActivitiesView />}
                         {(activeView === 'profile' || activeView === 'settings') && <InstructorProfileView />}
                     </AnimatePresence>
                 </div>
-            </div>
             <NotificationsDialog
                 isOpen={showNotifications}
                 onClose={() => setShowNotifications(false)}

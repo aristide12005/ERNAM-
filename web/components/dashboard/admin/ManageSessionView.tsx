@@ -81,13 +81,26 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
     const handleStatusUpdate = async (newStatus: string) => {
         if (!confirm(`Are you sure you want to change status to ${newStatus.toUpperCase()}? This is an official action.`)) return;
 
-        const { error } = await supabase
-            .from('sessions')
-            .update({ status: newStatus })
-            .eq('id', sessionId);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch('/api/admin/manage-session', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: sessionId,
+                    status: newStatus,
+                    adminId: session?.user?.id
+                })
+            });
 
-        if (!error) fetchSessionData();
-        else alert("Status update failed: " + error.message);
+            if (response.ok) fetchSessionData();
+            else {
+                const err = await response.json();
+                throw new Error(err.error || "Status update failed");
+            }
+        } catch (err: any) {
+            alert(err.message);
+        }
     };
 
     const handleIssueCertificates = async () => {
@@ -99,32 +112,65 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
     // --- Fetchers for Dialogs ---
     const fetchAvailableInstructors = async () => {
         const assignedIds = instructors.map(i => i.id);
-        const { data } = await supabase.from('users').select('id, full_name, email').eq('role', 'trainer');
+        const { data } = await supabase.from('users').select('id, full_name, email').eq('role', 'instructor');
         if (data) setAvailableInstructors(data.filter(u => !assignedIds.includes(u.id)));
         setShowAddInstructor(true);
     };
 
     const fetchAvailableParticipants = async () => {
         const enrolledIds = participants.map(p => p.id);
-        const { data } = await supabase.from('users').select('id, full_name, email').eq('role', 'trainee');
+        const { data } = await supabase.from('users').select('id, full_name, email').eq('role', 'participant');
         if (data) setAvailableParticipants(data.filter(u => !enrolledIds.includes(u.id)));
         setShowEnrollParticipant(true);
     };
 
     // --- Assignment Handlers ---
     const handleAddInstructor = async (instructorId: string) => {
-        const { error } = await supabase.from('session_instructors').insert([{ session_id: sessionId, instructor_id: instructorId }]);
-        if (!error) { fetchSessionData(); setShowAddInstructor(false); }
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch('/api/admin/manage-session-membership', {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'instructor',
+                action: 'add',
+                session_id: sessionId,
+                user_id: instructorId,
+                adminId: session?.user?.id
+            })
+        });
+        if (response.ok) { fetchSessionData(); setShowAddInstructor(false); }
+        else { const err = await response.json(); alert(err.error); }
     };
 
     const handleEnrollParticipant = async (participantId: string) => {
-        const { error } = await supabase.from('session_participants').insert([{ session_id: sessionId, participant_id: participantId, status: 'enrolled' }]);
-        if (!error) { fetchSessionData(); setShowEnrollParticipant(false); }
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch('/api/admin/manage-session-membership', {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'participant',
+                action: 'add',
+                session_id: sessionId,
+                user_id: participantId,
+                adminId: session?.user?.id
+            })
+        });
+        if (response.ok) { fetchSessionData(); setShowEnrollParticipant(false); }
+        else { const err = await response.json(); alert(err.error); }
     };
 
     const handleRemoveInstructor = async (instructorId: string) => {
-        const { error } = await supabase.from('session_instructors').delete().eq('session_id', sessionId).eq('instructor_id', instructorId);
-        if (!error) fetchSessionData();
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch('/api/admin/manage-session-membership', {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'instructor',
+                action: 'remove',
+                session_id: sessionId,
+                user_id: instructorId,
+                adminId: session?.user?.id
+            })
+        });
+        if (response.ok) fetchSessionData();
+        else { const err = await response.json(); alert(err.error); }
     };
 
     if (loading) return <div className="p-12 text-center animate-pulse text-muted-foreground font-medium">Loading Command Center...</div>;

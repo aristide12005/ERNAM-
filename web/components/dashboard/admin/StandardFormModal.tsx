@@ -76,41 +76,25 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
 
             // Prepare Payload
             const payload = {
+                id: standardToEdit?.id,
                 code: formData.code,
                 title: formData.title,
                 description: formData.description,
                 validity_months: parseInt(String(formData.validity_months), 10),
-                active: formData.active
+                active: formData.active,
+                adminId: (await supabase.auth.getSession()).data.session?.user?.id
             };
 
-            if (standardToEdit) {
-                // UPDATE (Keep using Client for Update if it works, or switch to API too?)
-                // Assuming Update might work if we fixed policies, but let's stick to existing for now
-                // If update fails too, we should move it to API.
+            const response = await fetch('/api/admin/manage-standard', {
+                method: standardToEdit ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-                const { error: updateError } = await supabase
-                    .from('training_standards')
-                    .update(payload)
-                    .eq('id', standardToEdit.id);
+            const resData = await response.json();
 
-                if (updateError) throw updateError;
-            } else {
-                // CREATE - USE API ROUTE TO BYPASS RLS
-                const { data: { session } } = await supabase.auth.getSession();
-                const response = await fetch('/api/admin/create-standard', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...payload,
-                        adminId: session?.user?.id
-                    })
-                });
-
-                const resData = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(resData.error || 'Failed to create standard');
-                }
+            if (!response.ok) {
+                throw new Error(resData.error || 'Failed to save standard');
             }
 
             // Success

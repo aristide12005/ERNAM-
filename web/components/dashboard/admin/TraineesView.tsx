@@ -4,17 +4,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Search, Users, GraduationCap, Clock, Award } from 'lucide-react';
+import { Participant, getEnrichedParticipants } from '@/lib/mockData';
 
-type Participant = {
-    id: string;
-    full_name: string;
-    email: string;
-    role: string;
-    created_at: string;
-    // Mock fields for demo
-    status?: 'enrolled' | 'completed' | 'inactive';
-    progress?: number;
-};
 
 export default function TraineesView() {
     const [participants, setParticipants] = useState<Participant[]>([]);
@@ -28,19 +19,14 @@ export default function TraineesView() {
     const fetchParticipants = async () => {
         setLoading(true);
         const { data, error } = await supabase
-            .from('profiles')
+            .from('users')
             .select('*')
-            .eq('role', 'trainee')
+            .eq('role', 'participant')
             .order('full_name', { ascending: true });
 
         if (!error && data) {
-            // Add mock status for visual variety until enrollment integration
-            const enriched = data.map(p => ({
-                ...p,
-                status: Math.random() > 0.6 ? 'completed' : Math.random() > 0.3 ? 'enrolled' : 'inactive',
-                progress: Math.floor(Math.random() * 100)
-            })) as Participant[];
-            setParticipants(enriched);
+            // Using existing enrichment for UI consistency, but with real user data
+            setParticipants(getEnrichedParticipants(data));
         }
         setLoading(false);
     };

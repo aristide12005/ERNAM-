@@ -42,7 +42,7 @@ export default function ParticipantDashboard() {
         const { data: participation } = await supabase
             .from('session_participants')
             .select('session_id, attendance_status')
-            .eq('participant_id', user?.id)
+            .eq('participant_id', profile?.id || user?.id)
             .limit(1)
             .single();
 
@@ -74,14 +74,14 @@ export default function ParticipantDashboard() {
                     .from('assessments')
                     .select('result')
                     .eq('session_id', sid)
-                    .eq('participant_id', user?.id)
+                    .eq('participant_id', profile?.id || user?.id)
                     .single();
 
                 const { data: certificate } = await supabase
                     .from('certificates')
                     .select('id')
                     .eq('session_id', sid)
-                    .eq('participant_id', user?.id)
+                    .eq('participant_id', profile?.id || user?.id)
                     .single();
 
                 const start = new Date(session.start_date).getTime();
@@ -107,8 +107,8 @@ export default function ParticipantDashboard() {
     };
 
     useEffect(() => {
-        if (user) fetchCurrentTraining();
-    }, [user]);
+        if (profile) fetchCurrentTraining();
+    }, [profile]);
 
     const handleNavigate = (view: string, sId?: string) => {
         let url = `/dashboard?view=${view}`;
@@ -117,85 +117,8 @@ export default function ParticipantDashboard() {
     };
 
     return (
-        <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-12">
-            {/* Top Navigation - PREMIUM LIGHT MODE */}
-            <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200 sticky top-0 z-50">
-                <div 
-                    onClick={() => handleNavigate('dashboard')}
-                    className="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200 rounded-full pr-5 pl-1.5 py-1.5 shadow-sm cursor-pointer group"
-                >
-                    <div className="flex items-center -space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-10 group-hover:-translate-x-1 transition-transform">
-                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-20 shadow-sm group-hover:translate-x-1 transition-transform">
-                            <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA - ERNAM</span>
-                        <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                            Participant <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                        </span>
-                    </div>
-                </div>
-
-                <div className="hidden md:flex items-center gap-8">
-                    {[
-                        { id: 'dashboard', label: 'Home' },
-                        { id: 'courses', label: 'My Learning' },
-                        { id: 'schedule', label: 'Schedule' },
-                        { id: 'documents', label: 'Resources' },
-                        { id: 'certificates', label: 'Achievements' }
-                    ].map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => handleNavigate(item.id)}
-                            className={`text-sm font-semibold transition-colors pb-1 border-b-2 ${
-                                activeView === item.id || (activeView === 'dashboard' && item.id === 'dashboard')
-                                    ? "text-blue-700 border-blue-700" 
-                                    : "text-gray-400 border-transparent hover:text-gray-900"
-                            }`}
-                        >
-                            {item.label}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={() => setShowNotifications(true)}
-                        className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all relative"
-                    >
-                        <Bell className="w-5 h-5" />
-                        {stats.messagesCount > 0 && (
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                        )}
-                    </button>
-                    
-                    <button 
-                        onClick={() => handleNavigate('settings')}
-                        className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"
-                    >
-                        <Settings className="w-5 h-5" />
-                    </button>
-
-                    <div 
-                        onClick={() => setIsControlCenterOpen(true)}
-                        className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 cursor-pointer hover:bg-gray-100 transition-all group"
-                    >
-                        <div className="flex flex-col text-right hidden sm:block">
-                            <span className="text-gray-900 font-bold text-xs leading-tight group-hover:text-blue-700 transition-colors capitalize">{profile?.full_name?.toLowerCase()}</span>
-                            <span className="text-gray-400 font-bold text-[9px] uppercase tracking-widest leading-tight">Trainee Pro</span>
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-black shadow-sm group-hover:scale-105 transition-transform">
-                            {profile?.full_name?.charAt(0).toUpperCase() || 'P'}
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <div className="p-4 md:p-8 max-w-7xl mx-auto pb-20">
+        <div className="font-sans text-gray-900 pb-12">
+            <div className="max-w-7xl mx-auto pb-20">
                 <AnimatePresence mode="wait">
                     {activeView === 'dashboard' && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
@@ -335,7 +258,7 @@ export default function ParticipantDashboard() {
                             <button onClick={() => handleNavigate('dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm mb-4">
                                 <ArrowRight className="h-4 w-4 rotate-180" /> Back
                             </button>
-                            <MyLearningView />
+                            <MyLearningView onLaunch={(id) => handleNavigate('session', id)} />
                         </div>
                     )}
 

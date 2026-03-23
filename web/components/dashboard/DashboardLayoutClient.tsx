@@ -5,13 +5,14 @@ import SidebarPro from "@/components/SidebarPro";
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Search, Bell } from "lucide-react";
 import ImpersonationBanner from './admin/ImpersonationBanner';
+import { cn } from "@/lib/utils";
 
 export default function DashboardLayoutClient({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const { profile } = useAuth();
+    const { profile, impersonator } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -35,24 +36,32 @@ export default function DashboardLayoutClient({
 
     // Normalize role to match how the rest of the app resolves admins
     const roleId = (() => {
-        const raw = profile?.role || 'trainee';
-        if (raw === 'org_admin' || raw === 'ernam_admin') return 'admin';
-        return raw;
+        const raw = profile?.role || 'participant';
+        if (raw === 'org_admin' || raw === 'ernam_admin' || raw === 'admin') return 'admin';
+        if (raw === 'instructor' || raw === 'trainer') return 'instructor';
+        return 'participant';
     })();
 
     // ─── ADMIN: Full-screen, zero chrome ───────────────────────────────────────
-    if (!profile || roleId === 'admin') {
+    // This premium chromeless view is strictly reserved for verified admin roles.
+    if (roleId === 'admin') {
+        const isImpersonating = !!impersonator;
         return (
-            <div className="min-h-screen">
-                {roleId === 'admin' && <ImpersonationBanner />}
+            <div className={cn("min-h-screen", isImpersonating && "pt-[56px]")}>
+                <ImpersonationBanner />
                 {children}
             </div>
         );
     }
 
     // ─── Non-admin roles: standard sidebar + top-bar layout ───────────────────
+    const isImpersonating = !!impersonator;
+
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
+        <div className={cn(
+            "min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300",
+            isImpersonating && "pt-[56px]"
+        )}>
             <ImpersonationBanner />
             <SidebarPro
                 isCollapsed={isCollapsed}

@@ -17,10 +17,10 @@ export default function DashboardPage() {
         </div>
     );
 
-    // Role-Based Routing — 3 tiers only (with legacy mapping)
-    if (profile?.role === 'trainee' || profile?.role === 'participant') return <ParticipantDashboard />;
-    if (profile?.role === 'trainer' || profile?.role === 'instructor') return <InstructorDashboard />;
-    if (profile?.role === 'admin' || profile?.role === 'ernam_admin' || profile?.role === 'org_admin') return <ErnamAdminDashboard />;
+    // Role-Based Routing — aligned with database role names
+    if (profile?.role === 'participant' || profile?.role === 'trainee') return <ParticipantDashboard />;
+    if (profile?.role === 'instructor' || profile?.role === 'trainer') return <InstructorDashboard />;
+    if (profile?.role === 'ernam_admin' || profile?.role === 'org_admin' || profile?.role === 'admin') return <ErnamAdminDashboard />;
 
     return (
         <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-900 text-white p-4 text-center">

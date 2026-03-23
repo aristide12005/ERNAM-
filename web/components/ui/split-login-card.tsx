@@ -103,7 +103,7 @@ export default function SplitLoginCard({
 
           <p className="mt-8 text-sm text-gray-500 dark:text-gray-400 text-center">
             Don’t have an ERNAM digital account? <br/>
-            <Link href="/apply" className="text-blue-600 hover:underline font-medium mt-1 inline-block">Apply for authorization</Link>
+            <Link href="#" className="text-blue-600 hover:underline font-medium mt-1 inline-block">Apply for authorization</Link>
           </p>
         </form>
       </div>
