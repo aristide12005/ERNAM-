@@ -17,7 +17,7 @@ const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 export default function InstructorParticipantsView() {
     const [participants, setParticipants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
+    const { profile } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -31,15 +31,15 @@ export default function InstructorParticipantsView() {
     const [sending, setSending] = useState(false);
 
     useEffect(() => {
-        if (user) fetchParticipants();
-    }, [user]);
+        if (profile) fetchParticipants();
+    }, [profile]);
 
     const fetchParticipants = async () => {
         try {
             const { data: mySessions } = await supabase
                 .from('session_instructors')
                 .select('session_id')
-                .eq('instructor_id', user?.id);
+                .eq('instructor_id', profile?.id);
 
             if (!mySessions || mySessions.length === 0) {
                 setLoading(false);
@@ -52,7 +52,7 @@ export default function InstructorParticipantsView() {
                 .select(`
                     id,
                     attendance_status,
-                    user:profiels!participant_id(id, full_name, email, avatar_url)
+                    user:profiles!participant_id(id, full_name, email, avatar_url)
                 `)
                 .in('session_id', sessionIds);
 

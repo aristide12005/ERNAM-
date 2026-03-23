@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
 import SidebarPro from "@/components/SidebarPro";
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Search, Bell } from "lucide-react";
@@ -13,6 +14,7 @@ export default function DashboardLayoutClient({
     children: React.ReactNode;
 }) {
     const { profile, impersonator } = useAuth();
+    const router = useRouter();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -93,9 +95,25 @@ export default function DashboardLayoutClient({
                             <Bell className="w-5 h-5" />
                             <span className="absolute top-0 right-1 w-2 h-2 bg-red-400 rounded-full border border-[#f8f9fa] dark:border-black" />
                         </button>
-                        <div className="flex items-center gap-2.5 bg-white dark:bg-[#1c1c1c] pl-1.5 pr-4 py-1.5 rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-transparent dark:border-white/5 cursor-pointer hover:shadow-md transition-shadow">
-                            <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-8 h-8 object-contain rounded-full" />
-                            <span className="text-sm font-black tracking-tight text-gray-800 dark:text-gray-100">ERNAM</span>
+                        <div 
+                            onClick={() => router.push('/dashboard?view=profile')}
+                            className="flex items-center gap-2.5 bg-white dark:bg-[#1c1c1c] pl-1.5 pr-4 py-1.5 rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-transparent dark:border-white/5 cursor-pointer hover:shadow-md transition-shadow"
+                        >
+                            {profile?.avatar_url ? (
+                                <img src={profile.avatar_url} alt="" className="w-8 h-8 object-contain rounded-full" />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-black uppercase tracking-tighter">
+                                    {profile?.full_name?.charAt(0) || 'U'}
+                                </div>
+                            )}
+                            <div className="flex flex-col">
+                                <span className="text-sm font-black tracking-tight text-gray-800 dark:text-gray-100">
+                                    {profile?.full_name || 'My Profile'}
+                                </span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                                    {profile?.role || 'User'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

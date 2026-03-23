@@ -21,14 +21,14 @@ type Session = {
 };
 
 export default function MySessionsView() {
-    const { user } = useAuth();
+    const { profile } = useAuth();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (user?.id) fetchMySessions();
-    }, [user?.id]);
+        if (profile?.id) fetchMySessions();
+    }, [profile?.id]);
 
     const fetchMySessions = async () => {
         setLoading(true);
@@ -45,12 +45,11 @@ export default function MySessionsView() {
                     training_standard:training_standards(code, title)
                 )
             `)
-            .eq('instructor_id', user?.id)
-            .order('session(start_date)', { ascending: true }); // sort might need manual handling if deep
+            .eq('instructor_id', profile?.id);
 
         if (data) {
             // Flatten the structure
-            const validSessions = data.map((d: any) => d.session).filter(s => s !== null);
+            const validSessions = data.map((d: any) => d.session).filter((s: any) => s !== null);
             setSessions(validSessions);
         }
         setLoading(false);

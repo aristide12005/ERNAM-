@@ -28,7 +28,7 @@ type ParticipantRecord = {
 };
 
 export default function ManageSessionView({ sessionId, onBack }: ManageSessionViewProps) {
-    const { user } = useAuth();
+    const { profile } = useAuth();
     const [participants, setParticipants] = useState<ParticipantRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -169,7 +169,7 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
         const { error } = await supabase.from('planned_activities').insert([{
             ...newActivity,
             session_id: sessionId,
-            created_by: user?.id
+            created_by: profile?.id
         }]);
         if (!error) {
             setNewActivity({ title: '', day_order: 1, description: '' });
@@ -208,7 +208,7 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
                 title: file.name, // Default to filename
                 file_url: publicUrl.publicUrl,
                 document_type: 'material', // Default
-                uploaded_by: user?.id
+                uploaded_by: profile?.id
             });
 
             if (insertError) throw insertError;
@@ -231,7 +231,7 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
             file_url: newDoc.url,
             document_type: newDoc.type,
             session_id: sessionId,
-            uploaded_by: user?.id
+            uploaded_by: profile?.id
         }]);
         if (!error) {
             setNewDoc({ title: '', url: '', type: 'material' });

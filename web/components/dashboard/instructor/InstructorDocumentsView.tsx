@@ -9,22 +9,18 @@ import { FolderKanban, Upload, Search } from 'lucide-react';
 export default function InstructorDocumentsView() {
     const [documents, setDocuments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
+    const { profile } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        if (user) fetchDocuments();
-    }, [user]);
+        if (profile) fetchDocuments();
+    }, [profile]);
 
     const fetchDocuments = async () => {
         try {
             // Fetch ALL documents uploaded by this instructor
-            // Note: In real world, documents are linked to Sessions, but we want a central view.
-            // We can query all documents where uploaded_by = auth.uid() OR linked to my sessions.
-            // For simplicity, let's fetch documents linked to my sessions to be safe + my uploads.
-
             // 1. Get my session IDs
-            const { data: mySessions } = await supabase.from('session_instructors').select('session_id').eq('instructor_id', user?.id);
+            const { data: mySessions } = await supabase.from('session_instructors').select('session_id').eq('instructor_id', profile?.id);
             const sessionIds = mySessions?.map(s => s.session_id) || [];
 
             if (sessionIds.length === 0) {
@@ -54,7 +50,7 @@ export default function InstructorDocumentsView() {
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl font-bold mb-6">Document Repository</h1>
+            <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Document Repository</h1>
             <div className="bg-white dark:bg-[#141414] rounded-xl border border-gray-200 dark:border-white/5 shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-gray-200 dark:border-white/5 flex justify-between items-center">
                     <div className="relative w-64">
@@ -64,7 +60,7 @@ export default function InstructorDocumentsView() {
                             placeholder="Search files..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm dark:text-white"
                         />
                     </div>
                 </div>
@@ -81,8 +77,8 @@ export default function InstructorDocumentsView() {
                                     <div className="h-10 w-10 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
                                         <FolderKanban className="h-5 w-5" />
                                     </div>
-                                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-400 hover:text-blue-500">
-                                        <Upload className="h-4 w-4" /> {/* Icon is confusing, should be download, but reuse Upload for now as link out */}
+                                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
+                                        <Upload className="h-4 w-4" />
                                     </a>
                                 </div>
                                 <h3 className="font-bold text-gray-900 dark:text-white truncate" title={doc.title}>{doc.title}</h3>

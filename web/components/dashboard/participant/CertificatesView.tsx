@@ -23,7 +23,7 @@ type Certificate = {
 };
 
 export default function CertificatesView() {
-    const { user } = useAuth();
+    const { profile } = useAuth();
     const [certificates, setCertificates] = useState<Certificate[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -40,7 +40,7 @@ export default function CertificatesView() {
                 training_standard:training_standards(code, title),
                 session:sessions(end_date)
             `)
-            .eq('participant_id', user?.id)
+            .eq('participant_id', profile?.id)
             .order('issue_date', { ascending: false });
 
         if (data) {
@@ -50,8 +50,8 @@ export default function CertificatesView() {
     };
 
     useEffect(() => {
-        if (user?.id) fetchCertificates();
-    }, [user?.id]);
+        if (profile?.id) fetchCertificates();
+    }, [profile?.id]);
 
     return (
         <div className="p-6">

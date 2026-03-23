@@ -8,11 +8,11 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 export default function InstructorScheduleView() {
     const [sessions, setSessions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
+    const { profile } = useAuth();
 
     useEffect(() => {
-        if (user) fetchSchedule();
-    }, [user]);
+        if (profile) fetchSchedule();
+    }, [profile]);
 
     const fetchSchedule = async () => {
         try {
@@ -20,7 +20,7 @@ export default function InstructorScheduleView() {
             const { data: mySessions } = await supabase
                 .from('session_instructors')
                 .select('session_id')
-                .eq('instructor_id', user?.id);
+                .eq('instructor_id', profile?.id);
 
             if (!mySessions || mySessions.length === 0) {
                 setLoading(false);

@@ -988,6 +988,15 @@ export default function PurpleAdminDashboard() {
 
             {/* Main Wallet Content */}
             <div className="px-8 py-10 space-y-6 max-w-[1600px] mx-auto mt-4">
+                {/* Back Link */}
+                <button 
+                    onClick={() => setActiveNav("Home")}
+                    className="flex items-center gap-2 text-gray-400 hover:text-blue-600 font-bold text-xs uppercase tracking-widest transition-colors group mb-2"
+                >
+                    <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    Back to Overview
+                </button>
+
                 {/* Header: Tabs & Networks */}
                 <div className="flex justify-between items-center mb-8">
                     <div className="flex gap-8">
@@ -1264,6 +1273,15 @@ export default function PurpleAdminDashboard() {
 
             {/* Main Trainer Content */}
             <div className="px-8 py-10 space-y-6 max-w-[1600px] mx-auto mt-4">
+                {/* Back Link */}
+                <button 
+                    onClick={() => setActiveNav("Home")}
+                    className="flex items-center gap-2 text-gray-400 hover:text-blue-600 font-bold text-xs uppercase tracking-widest transition-colors group mb-2"
+                >
+                    <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    Back to Overview
+                </button>
+
                 {/* Header structure: Trainee view has "Level 1" / "Level 2". For Trainers, NO TABS. */}
                 <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
                     <div className="flex gap-8">
@@ -1451,6 +1469,15 @@ export default function PurpleAdminDashboard() {
     const renderAdministratorsView = () => {
         return (
             <div className="min-h-screen font-sans bg-gray-50 text-gray-900 pb-20 p-8">
+                {/* Back Link */}
+                <button 
+                    onClick={() => setActiveNav("Home")}
+                    className="flex items-center gap-2 text-gray-400 hover:text-blue-600 font-bold text-xs uppercase tracking-widest transition-colors group mb-6"
+                >
+                    <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    Back to Overview
+                </button>
+
                 <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
                     <div>
                         <h2 className="text-2xl font-black text-gray-900 leading-tight">System Administrators</h2>

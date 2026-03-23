@@ -9,16 +9,16 @@ import { FileText, Plus } from 'lucide-react';
 export default function InstructorActivitiesView() {
     const [activities, setActivities] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
+    const { profile } = useAuth();
 
     useEffect(() => {
-        if (user) fetchActivities();
-    }, [user]);
+        if (profile) fetchActivities();
+    }, [profile]);
 
     const fetchActivities = async () => {
         try {
             // 1. Get my session IDs
-            const { data: mySessions } = await supabase.from('session_instructors').select('session_id').eq('instructor_id', user?.id);
+            const { data: mySessions } = await supabase.from('session_instructors').select('session_id').eq('instructor_id', profile?.id);
             const sessionIds = mySessions?.map(s => s.session_id) || [];
 
             if (sessionIds.length === 0) {
@@ -34,7 +34,7 @@ export default function InstructorActivitiesView() {
                     session:sessions(start_date, training_standard:training_standards(title))
                 `)
                 .in('session_id', sessionIds)
-                .order('day_order', { ascending: true }); // Ideally ideally sort by calculated date, but day_order is proxy
+                .order('day_order', { ascending: true });
 
             if (acts) setActivities(acts);
 
@@ -47,7 +47,7 @@ export default function InstructorActivitiesView() {
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl font-bold mb-6">Activity Planner</h1>
+            <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Activity Planner</h1>
             <div className="bg-white dark:bg-[#141414] rounded-xl border border-gray-200 dark:border-white/5 shadow-sm p-8">
                 {loading ? (
                     <div className="text-center py-10 text-gray-500">Loading activities...</div>

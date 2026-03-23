@@ -25,12 +25,12 @@ interface MyLearningViewProps {
 }
 
 export default function MyLearningView({ onLaunch }: MyLearningViewProps) {
-    const { user } = useAuth();
+    const { profile } = useAuth();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchMyLearning = async () => {
-        if (!user?.id) return;
+        if (!profile?.id) return;
         setLoading(true);
         try {
             const { data, error } = await supabase
@@ -47,7 +47,7 @@ export default function MyLearningView({ onLaunch }: MyLearningViewProps) {
                         training_standard:training_standards(code, title)
                     )
                 `)
-                .eq('participant_id', user.id);
+                .eq('participant_id', profile.id);
 
             if (data) {
                 const mapped = data
@@ -67,7 +67,7 @@ export default function MyLearningView({ onLaunch }: MyLearningViewProps) {
 
     useEffect(() => {
         fetchMyLearning();
-    }, [user?.id]);
+    }, [profile?.id]);
 
     return (
         <div className="p-6">
