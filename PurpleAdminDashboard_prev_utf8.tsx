@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -16,11 +16,16 @@ import {
     KEY_INDICATORS_DATA, 
     SKILLS_EVALUATION_DATA, 
     EVOLUTION_DATA, 
-    COURSE_AVG_DATA,
-    TRAINEE_KPI_CARDS,
-    LEVEL2_KPI_CARDS,
-    TRAINER_KPI_CARDS,
-    ADMIN_KPI_CARDS
+    COURSE_AVG_DATA, 
+    TRAINEE_KPI_CARDS, 
+    LEVEL2_KPI_CARDS, 
+    TRAINER_KPI_CARDS, 
+    ADMIN_KPI_CARDS, 
+    TRAINEE_ROSTER_DATA, 
+    LEVEL2_ROSTER_DATA, 
+    TRAINER_ROSTER_DATA, 
+    ADMIN_ROSTER_DATA,
+    USERS_DATA
 } from "@/lib/mockData";
 
 
@@ -35,17 +40,17 @@ const getDynamicStatsCategories = (stats: any) => [
 
 const getDynamicTraineeKpis = (stats: any) => [
     { icon: <Users className="w-5 h-5" />, name: "Active Trainees", balance: stats?.trainees?.toLocaleString() || "0", crypto: `Out of ${stats?.totalUsers || 0} registered`, rate: "Live Database Count", progress: stats?.totalUsers > 0 ? (stats.trainees / stats.totalUsers) * 100 : 0, color: "#1D4ED8" },
-    { icon: <ShieldCheck className="w-5 h-5" />, name: "Global Compliance", balance: "88.5%", crypto: `${stats?.certificates || 0} Fully Certified`, rate: "Target: 95% by Q3", progress: 88, color: "#10B981" },
+    { icon: <ShieldCheck className="w-5 h-5" />, name: "Global Compliance", balance: "88.5%", crypto: "1,101 Fully Certified", rate: "Target: 95% by Q3", progress: 88, color: "#10B981" },
     { icon: <AlertTriangle className="w-5 h-5" />, name: "Pending Renewals", balance: "142", crypto: "Expiring in 30 days", rate: "12 critical expirations today", progress: 15, color: "#EF4444" },
-    { icon: <CheckCircle2 className="w-5 h-5" />, name: "Avg. Pass Rate", balance: `${stats?.passRate || 0}%`, crypto: "First-attempt success", rate: "Live Database", progress: stats?.passRate || 0, color: "#059669" },
-    { icon: <Clock className="w-5 h-5" />, name: "Hours Logged", balance: `${stats?.hoursLogged || 0} hrs`, crypto: "Total training time", rate: "Avg. per session", progress: 75, color: "#F59E0B" },
+    { icon: <CheckCircle2 className="w-5 h-5" />, name: "Avg. Pass Rate", balance: "N/A", crypto: "First-attempt success", rate: "Awaiting exam data", progress: 0, color: "#059669" },
+    { icon: <Clock className="w-5 h-5" />, name: "Hours Logged", balance: "8,450 hrs", crypto: "Total learning time this month", rate: "Avg. 6.7 hours per trainee", progress: 75, color: "#F59E0B" },
     { icon: <BookOpen className="w-5 h-5" />, name: "Modules Completed", balance: stats?.certificates?.toLocaleString() || "0", crypto: `Across ${stats?.sessions || 0} active sessions`, rate: "Based on certificates", progress: 0, color: "#8B5CF6" },
 ];
 const getDynamicTrainerKpis = (stats: any) => [
     { icon: <UserCheck className="w-5 h-5" />, name: "Active Trainers", balance: stats?.trainers?.toLocaleString() || "0", crypto: `Out of ${stats?.trainers || 0} rostered`, rate: "93% Core Availability", progress: 93, color: "#1D4ED8" },
     { icon: <Star className="w-5 h-5" />, name: "Average Rating", balance: "4.8/5", crypto: "From 1.2k reviews", rate: "Top 10% Industry", progress: 96, color: "#10B981" },
     { icon: <Zap className="w-5 h-5" />, name: "Sessions Conducted", balance: stats?.sessions?.toLocaleString() || "0", crypto: "Total active sessions", rate: "Live Database", progress: 75, color: "#8B5CF6" },
-    { icon: <Clock className="w-5 h-5" />, name: "Hours Taught", balance: `${stats?.hoursLogged || 0} hrs`, crypto: "Total classroom hours", rate: "Target: 1,500 hrs", progress: 94, color: "#F59E0B" },
+    { icon: <Clock className="w-5 h-5" />, name: "Hours Taught", balance: "N/A", crypto: "Total classroom hours", rate: "Target: 1,500 hrs", progress: 94, color: "#F59E0B" },
     { icon: <Award className="w-5 h-5" />, name: "Certifications", balance: stats?.certificates?.toLocaleString() || "0", crypto: "Active teaching certs", rate: "Verified in DB", progress: 97, color: "#059669" },
     { icon: <Inbox className="w-5 h-5" />, name: "Open Slots", balance: "18", crypto: "Available this week", rate: "High demand expected", progress: 15, color: "#EF4444" },
 ];
@@ -53,8 +58,8 @@ const getDynamicAdminKpis = (stats: any) => [
     { icon: <Activity className="w-5 h-5" />, name: "System Health", balance: "99.9%", crypto: "All services operational", rate: "Uptime: 30 days", progress: 99, color: "#10B981" },
     { icon: <ShieldCheck className="w-5 h-5" />, name: "Active Admins", balance: stats?.admins?.toLocaleString() || "0", crypto: "Registered administrators", rate: "Live Database", progress: 62, color: "#3B82F6" },
     { icon: <AlertTriangle className="w-5 h-5" />, name: "Security Alerts", balance: "0", crypto: "No critical threats", rate: "Last scan: 2m ago", progress: 0, color: "#F59E0B" },
-    { icon: <Database className="w-5 h-5" />, name: "Recent Logs", balance: "Live", crypto: "Generated today", rate: "+5% vs Avg", progress: 70, color: "#6366F1" },
-    { icon: <CheckCircle2 className="w-5 h-5" />, name: "Pending Tasks", balance: stats?.pendingTasks?.toLocaleString() || "0", crypto: "System approvals", rate: "Action required", progress: 40, color: "#8B5CF6" },
+    { icon: <Database className="w-5 h-5" />, name: "Recent Logs", balance: "1.2k", crypto: "Generated today", rate: "+5% vs Avg", progress: 70, color: "#6366F1" },
+    { icon: <CheckCircle2 className="w-5 h-5" />, name: "Pending Tasks", balance: "N/A", crypto: "System approvals", rate: "4 high priority", progress: 40, color: "#8B5CF6" },
     { icon: <Database className="w-5 h-5" />, name: "DB Storage", balance: "42%", crypto: "Healthy growth", rate: "Supabase Cloud", progress: 42, color: "#EC4899" },
 ];
 
@@ -121,16 +126,6 @@ export default function PurpleAdminDashboard() {
             const { count: attendanceCount } = await supabase.from('session_participants').select('*', { count: 'exact', head: true }).eq('attendance_status', 'attended');
             const { count: docCount } = await supabase.from('documents').select('*', { count: 'exact', head: true });
             const { count: examCount } = await supabase.from('assessments').select('*', { count: 'exact', head: true });
-            const { count: passCount } = await supabase.from('assessments').select('*', { count: 'exact', head: true }).eq('result', 'pass');
-            const { count: pendingUserCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-
-            // Hours Logged calculation (estimate from sessions)
-            const { data: sessionDurations } = await supabase.from('sessions').select('start_date, end_date');
-            const totalHours = sessionDurations?.reduce((acc, s) => {
-                const start = new Date(s.start_date);
-                const end = new Date(s.end_date);
-                return acc + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-            }, 0) || 0;
 
             // Activity filters for 24h
             const { count: u24 } = await supabase.from('users').select('*', { count: 'exact', head: true }).gt('created_at', last24hDate);
@@ -149,10 +144,7 @@ export default function PurpleAdminDashboard() {
                 exams: examCount || 0,
                 users24h: u24 || 0,
                 docs24h: d24 || 0,
-                certs24h: c24 || 0,
-                passRate: examCount ? Math.round((passCount! / examCount) * 100) : 0,
-                hoursLogged: Math.round(totalHours),
-                pendingTasks: pendingUserCount || 0
+                certs24h: c24 || 0
             });
         } catch (err) {
             console.error("Error fetching stats:", err);
