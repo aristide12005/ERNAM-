@@ -44,9 +44,9 @@ export default function DashboardLayoutClient({
         return 'participant';
     })();
 
-    // ─── ADMIN: Full-screen, zero chrome ───────────────────────────────────────
-    // This premium chromeless view is strictly reserved for verified admin roles.
-    if (roleId === 'admin') {
+    // ─── ADMIN & PARTICIPANT: Full-screen, zero chrome ─────────────────────────
+    // This premium chromeless view is reserved for admins and redesigned trainee views.
+    if (roleId === 'admin' || roleId === 'participant') {
         const isImpersonating = !!impersonator;
         return (
             <div className={cn("min-h-screen", isImpersonating && "pt-[56px]")}>

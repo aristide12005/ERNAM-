@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 import { UserProfile } from '@/lib/types';
@@ -38,15 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
-    // Load impersonation state from session storage on mount
-    useEffect(() => {
-        const saved = sessionStorage.getItem('ernam_impersonator');
-        const savedTarget = sessionStorage.getItem('ernam_impersonated_user');
-        if (saved && savedTarget) {
-            setImpersonator(JSON.parse(saved));
-            setProfile(JSON.parse(savedTarget));
-        }
-    }, []);
+    // Impersonation state is now handled internally within initAuth and fetchProfile
+    // to prevent race conditions during authentication lifecycle.
 
     const startImpersonation = (target: UserProfile) => {
         if (!profile) return;
@@ -66,35 +59,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.location.href = '/dashboard';
     };
 
-    const fetchProfile = async (userId: string, retries = 1) => {
+    const fetchProfile = async (realUserId: string, retries = 1) => {
         try {
+            // INTERCEPT: Check if we are impersonating before fetching the profile
+            const savedImpersonatorStr = sessionStorage.getItem('ernam_impersonator');
+            const savedTargetStr = sessionStorage.getItem('ernam_impersonated_user');
+
+            let targetId = realUserId;
+
+            if (savedImpersonatorStr && savedTargetStr) {
+                const parsedTarget = JSON.parse(savedTargetStr);
+                targetId = parsedTarget.id;
+                setImpersonator(JSON.parse(savedImpersonatorStr));
+            } else {
+                setImpersonator(null);
+            }
+
+            // Fetch profile with admin role and permissions
             const { data, error } = await supabase
                 .from('users')
-                .select('*')
-                .eq('id', userId)
+                .select(`
+                    *,
+                    admin_role:admin_roles (
+                        id,
+                        name,
+                        is_system,
+                        role_permissions (
+                            permission:permissions (
+                                module,
+                                action
+                            )
+                        )
+                    )
+                `)
+                .eq('id', targetId)
                 .single();
 
             if (error) {
                 console.error('Error fetching profile:', error);
                 if (retries > 0) {
-                    console.log(`Retrying profile fetch in 2s... (${retries} left)`);
                     await new Promise(r => setTimeout(r, 2000));
-                    return fetchProfile(userId, retries - 1);
+                    return fetchProfile(realUserId, retries - 1);
                 }
             } else {
-                setProfile(data as UserProfile);
+                // Flatten granular permissions into ['module:action', ...]
+                const rawProfile = data as any;
+                let granularPerms: string[] = [];
+
+                if (rawProfile.admin_role?.role_permissions) {
+                    granularPerms = rawProfile.admin_role.role_permissions
+                        .map((rp: any) => rp.permission ? `${rp.permission.module}:${rp.permission.action}` : null)
+                        .filter(Boolean);
+                }
+
+                const profileWithPerms: UserProfile = {
+                    ...rawProfile,
+                    granular_permissions: granularPerms
+                };
+
+                setProfile(profileWithPerms);
+                return profileWithPerms;
             }
         } catch (err) {
             console.error('Unexpected error fetching profile:', err);
             if (retries > 0) {
                 await new Promise(r => setTimeout(r, 2000));
-                return fetchProfile(userId, retries - 1);
+                return fetchProfile(realUserId, retries - 1);
             }
         }
     };
 
     const refreshProfile = async () => {
-        if (user) await fetchProfile(user.id);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) await fetchProfile(session.user.id);
     };
 
     useEffect(() => {
@@ -102,7 +139,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const initAuth = async () => {
             try {
-                // Add timeout to prevent hanging if Supabase is unreachable
                 const sessionPromise = supabase.auth.getSession();
                 const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('Auth timeout')), 15000)
@@ -112,11 +148,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 if (!mounted) return;
 
-                setUser(session?.user ?? null);
+                let currentUser = session?.user ?? null;
 
-                if (session?.user) {
-                    // Don't block loading for profile - fetch but continue
-                    fetchProfile(session.user.id).finally(() => {
+                if (currentUser) {
+                    // Spoof the `user` object if impersonating, so components using `user.id` get the target's ID
+                    const savedTargetStr = sessionStorage.getItem('ernam_impersonated_user');
+                    if (savedTargetStr) {
+                        const parsedTarget = JSON.parse(savedTargetStr);
+                        currentUser = { ...currentUser, id: parsedTarget.id, email: parsedTarget.email };
+                    }
+                    
+                    setUser(currentUser);
+                    
+                    // fetchProfile handles the impersonation routing internally
+                    await fetchProfile(session!.user.id).finally(() => {
                         if (mounted) setLoading(false);
                     });
                 } else {
@@ -129,11 +174,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
                 if (!mounted) return;
-                setUser(session?.user ?? null);
-                if (session?.user) {
-                    await fetchProfile(session.user.id);
+                
+                let currentUser = session?.user ?? null;
+                
+                if (currentUser) {
+                    const savedTargetStr = sessionStorage.getItem('ernam_impersonated_user');
+                    if (savedTargetStr) {
+                        const parsedTarget = JSON.parse(savedTargetStr);
+                        currentUser = { ...currentUser, id: parsedTarget.id, email: parsedTarget.email };
+                    }
+                    setUser(currentUser);
+                    await fetchProfile(session!.user.id);
                 } else {
                     setProfile(null);
+                    setImpersonator(null);
                 }
             });
 

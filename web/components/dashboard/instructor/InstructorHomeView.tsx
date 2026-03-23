@@ -73,16 +73,6 @@ export default function InstructorHomeView({ session, stats }: { session: any, s
 
     return (
         <div className="space-y-6 max-w-[1400px] mx-auto w-full">
-            {/* Course Banner - minimal */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{courseTitle}</h1>
-                    <p className="text-sm text-gray-500 mt-1">{session?.training_standard?.code || 'Dashboard overview with real-time insights'}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="px-4 py-1.5 bg-[#dcfce7] dark:bg-emerald-900/30 text-[#166534] dark:text-emerald-400 rounded-full text-xs font-bold tracking-wider">Active</span>
-                </div>
-            </div>
 
             {/* Top Metrics Row */}
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-6">

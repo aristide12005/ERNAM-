@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from '@/components/providers/AuthProvider';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, CartesianGrid, BarChart, Bar } from "recharts";
-import { Bell, Moon, Sun, ChevronLeft, ChevronRight, Settings, MoreVertical, Edit2, Trash2, Download, SlidersHorizontal, Triangle, Circle, Hexagon, Diamond, Focus, Plus, Loader2, Users, ShieldCheck, AlertTriangle, CheckCircle2, Clock, BookOpen, UserCheck, Star, Zap, Activity, Database, Inbox, Award } from "lucide-react";
+import { Bell, Moon, Sun, ChevronLeft, ChevronRight, Settings, MoreVertical, Edit2, Trash2, Download, SlidersHorizontal, Triangle, Circle, Hexagon, Diamond, Focus, Plus, Loader2, Users, ShieldCheck, AlertTriangle, CheckCircle2, Clock, BookOpen, UserCheck, Star, Zap, Activity, Database, Inbox, Award, User, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,9 @@ import SessionFormModal from "./SessionFormModal";
 import DocumentFormModal from "./DocumentFormModal";
 import StandardFormModal from "./StandardFormModal";
 import UserDetailModal from './UserDetailModal';
+import RoleManagement from "./RoleManagement";
+import { Can } from "@/components/common/Can";
+import { usePermissions } from "@/hooks/usePermissions";
 import { 
     SYSTEM_HEALTH_DATA, 
     KEY_INDICATORS_DATA, 
@@ -59,7 +62,7 @@ const getDynamicAdminKpis = (stats: any) => [
 ];
 
 export default function PurpleAdminDashboard() {
-    const { startImpersonation } = useAuth();
+    const { profile, startImpersonation } = useAuth();
     const [darkMode, setDarkMode] = useState(false);
     const [activeNav, setActiveNav] = useState("Home");
     const [showTraineeFilter, setShowTraineeFilter] = useState(false);
@@ -311,7 +314,11 @@ export default function PurpleAdminDashboard() {
         }
     }
 
+    const { hasPermission } = usePermissions();
     const navItems = ["Home", "Trainees", "Trainers", "Administrators"];
+    if (isMounted && hasPermission('System:manage_roles')) {
+        navItems.push("Roles");
+    }
 
     // Home Methods
     const currentStats = getDynamicStatsCategories(dashboardStats);
@@ -494,12 +501,14 @@ export default function PurpleAdminDashboard() {
                         <Download className="w-4 h-4" /> Export CSV
                     </button>
                     {["Courses", "Documents", "Certificates", "Signups"].includes(view) && (
-                        <button 
-                            onClick={() => handleAddRecord(view)}
-                            className="flex items-center gap-2 px-6 py-3 bg-[#12388D] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-                        >
-                            <Plus className="w-4 h-4" /> Add New {view === "Signups" ? "User" : "Entry"}
-                        </button>
+                        <Can I={view === "Courses" ? "sessions:create" : view === "Documents" ? "docs:create" : view === "Certificates" ? "certs:create" : "users:create"}>
+                            <button 
+                                onClick={() => handleAddRecord(view)}
+                                className="flex items-center gap-2 px-6 py-3 bg-[#12388D] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                            >
+                                <Plus className="w-4 h-4" /> Add New {view === "Signups" ? "User" : "Entry"}
+                            </button>
+                        </Can>
                     )}
                 </div>
             </div>
@@ -614,7 +623,7 @@ export default function PurpleAdminDashboard() {
                     <div className="flex flex-col">
                         <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA - ERNAM</span>
                         <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                            Dashboard <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                            Digital Twin <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
                         </span>
                     </div>
                 </div>
@@ -638,8 +647,10 @@ export default function PurpleAdminDashboard() {
                     </button>
                     <button className="text-gray-500 hover:text-gray-900"><Settings className="w-5 h-5" /></button>
                     <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors">
-                        <span className="text-gray-800 text-sm font-semibold">Edward Day</span>
-                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">E</div>
+                        <span className="text-gray-800 text-sm font-semibold">{profile?.full_name || "Admin"}</span>
+                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                            {profile?.full_name?.charAt(0) || "A"}
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -829,15 +840,17 @@ export default function PurpleAdminDashboard() {
                                                                 <Mail className="w-3.5 h-3.5 text-gray-400" /> Send Message
                                                             </button>
                                                             <div className="h-px bg-gray-100 my-1 mx-3" />
-                                                            <button 
-                                                                onClick={() => {
-                                                                    const rawUser = allUsersRaw.find(u => u.id === user.id);
-                                                                    if (rawUser) startImpersonation(rawUser);
-                                                                }}
-                                                                className="w-full text-left px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-2.5 font-bold transition-colors"
-                                                            >
-                                                                <UserCheck className="w-3.5 h-3.5 text-indigo-500" /> Act As
-                                                            </button>
+                                                            <Can I="users:impersonate">
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        const rawUser = allUsersRaw.find(u => u.id === user.id);
+                                                                        if (rawUser) startImpersonation(rawUser);
+                                                                    }}
+                                                                    className="w-full text-left px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-2.5 font-bold transition-colors"
+                                                                >
+                                                                    <UserCheck className="w-3.5 h-3.5 text-indigo-500" /> Act As
+                                                                </button>
+                                                            </Can>
                                                         </div>
                                                     )}
                                                 </div>
@@ -956,7 +969,7 @@ export default function PurpleAdminDashboard() {
                     <div className="flex flex-col">
                         <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA - ERNAM</span>
                         <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                            Dashboard <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                            Digital Twin <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
                         </span>
                     </div>
                 </div>
@@ -980,8 +993,10 @@ export default function PurpleAdminDashboard() {
                     </button>
                     <button className="text-gray-500 hover:text-gray-900"><Settings className="w-5 h-5" /></button>
                     <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors">
-                        <span className="text-gray-800 text-sm font-semibold">Edward Day</span>
-                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">E</div>
+                        <span className="text-gray-800 text-sm font-semibold">{profile?.full_name || "Admin"}</span>
+                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                            {profile?.full_name?.charAt(0) || "A"}
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -1115,9 +1130,15 @@ export default function PurpleAdminDashboard() {
                             <div className="w-px h-5 bg-blue-200"></div>
                             <div className="flex items-center gap-3 w-full">
                                 <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Details</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">View As</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit</button>
-                                <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Delete</button>
+                                <Can I="users:impersonate">
+                                    <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">View As</button>
+                                </Can>
+                                <Can I="users:edit">
+                                    <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit</button>
+                                </Can>
+                                <Can I="users:delete">
+                                    <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Delete</button>
+                                </Can>
                             </div>
                             <button onClick={() => setSelectedTrainees([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 flex items-center justify-center">
                                 <X className="w-5 h-5" />
@@ -1200,18 +1221,22 @@ export default function PurpleAdminDashboard() {
                                     </td>
                                     <td className="px-6 py-5">
                                         <div className="flex items-center justify-center gap-2">
-                                            <button 
-                                                onClick={() => handleEditUser(tx)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
-                                            >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeleteUser(tx.id)}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                                            <Can I="users:edit">
+                                                <button 
+                                                    onClick={() => handleEditUser(tx)}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </Can>
+                                            <Can I="users:delete">
+                                                <button 
+                                                    onClick={() => handleDeleteUser(tx.id)}
+                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </Can>
                                         </div>
                                     </td>
                                 </tr>
@@ -1241,7 +1266,7 @@ export default function PurpleAdminDashboard() {
                     <div className="flex flex-col">
                         <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA - ERNAM</span>
                         <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                            Dashboard <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                            Digital Twin <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
                         </span>
                     </div>
                 </div>
@@ -1265,8 +1290,10 @@ export default function PurpleAdminDashboard() {
                     </button>
                     <button className="text-gray-500 hover:text-gray-900"><Settings className="w-5 h-5" /></button>
                     <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors">
-                        <span className="text-gray-800 text-sm font-semibold">Edward Day</span>
-                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">E</div>
+                        <span className="text-gray-800 text-sm font-semibold">{profile?.full_name || "Admin"}</span>
+                        <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                            {profile?.full_name?.charAt(0) || "A"}
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -1358,9 +1385,16 @@ export default function PurpleAdminDashboard() {
                             <div className="w-px h-5 bg-blue-200"></div>
                             <div className="flex items-center gap-3 w-full">
                                 <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Profile</button>
+                                <Can I="users:impersonate">
+                                    <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">View As</button>
+                                </Can>
                                 <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Reassign</button>
-                                <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit</button>
-                                <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Remove Faculty</button>
+                                <Can I="users:edit">
+                                    <button className="px-3 py-1.5 bg-white rounded-lg text-sm font-semibold hover:bg-gray-50 hover:text-blue-700 transition-colors shadow-sm text-gray-700 border border-gray-100 flex-1">Edit</button>
+                                </Can>
+                                <Can I="users:delete">
+                                    <button className="px-3 py-1.5 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-200 hover:text-red-700 border border-gray-100 transition-colors shadow-sm flex-1">Remove Faculty</button>
+                                </Can>
                             </div>
                             <button onClick={() => setSelectedTrainers([])} className="ml-auto text-blue-400 hover:text-blue-600 p-1 flex-shrink-0 text-xl leading-none">
                                 &times;
@@ -1443,18 +1477,22 @@ export default function PurpleAdminDashboard() {
                                     </td>
                                     <td className="px-6 py-5">
                                         <div className="flex items-center justify-center gap-2">
-                                            <button 
-                                                onClick={() => handleEditUser(tx)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
-                                            >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeleteUser(tx.id)}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                                            <Can I="users:edit">
+                                                <button 
+                                                    onClick={() => handleEditUser(tx)}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </Can>
+                                            <Can I="users:delete">
+                                                <button 
+                                                    onClick={() => handleDeleteUser(tx.id)}
+                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100 shadow-sm"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </Can>
                                         </div>
                                     </td>
                                 </tr>
@@ -1510,12 +1548,14 @@ export default function PurpleAdminDashboard() {
                                     </td>
                                     <td className="px-6 py-5">
                                         <div className="flex items-center justify-center gap-2">
-                                            <button 
-                                                onClick={() => handleEditUser(tx)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100"
-                                            >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                            </button>
+                                            <Can I="users:edit">
+                                                <button 
+                                                    onClick={() => handleEditUser(tx)}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-100"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </Can>
                                         </div>
                                     </td>
                                 </tr>
@@ -1533,6 +1573,7 @@ export default function PurpleAdminDashboard() {
             {activeNav === "Trainees" && renderTraineesView()}
             {activeNav === "Trainers" && renderTrainersView()}
             {activeNav === "Administrators" && renderAdministratorsView()}
+            {activeNav === "Roles" && <RoleManagement />}
 
             {selectedUserForEdit && (
                 <UserDetailModal
@@ -1561,7 +1602,7 @@ export default function PurpleAdminDashboard() {
                 }}
                 onSuccess={() => {
                     fetchDrillDownData("Documents");
-                    loadDashboardStats();
+                    fetchStats();
                 }}
                 documentToEdit={selectedRecord}
                 onAddNewSession={() => setIsSessionModalOpen(true)}

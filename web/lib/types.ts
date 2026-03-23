@@ -14,6 +14,12 @@ export interface UserProfile {
     permissions?: Record<string, any>;
     impersonated_by?: string;
     last_impersonated_at?: string;
+    admin_role_id?: string;
+    admin_role?: {
+        name: string;
+        is_system: boolean;
+    };
+    granular_permissions?: string[];
 }
 
 export type SessionStatus = 'planned' | 'scheduled' | 'confirmed' | 'active' | 'in_progress' | 'completed' | 'cancelled' | 'audited';

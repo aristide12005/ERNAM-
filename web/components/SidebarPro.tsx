@@ -64,6 +64,7 @@ export default function SidebarPro({ isCollapsed = false, toggleCollapse }: Side
             {
                 items: [
                     { label: "Home", icon: LayoutDashboard, view: "dashboard" },
+                    { label: "Courses", icon: GraduationCap, view: "courses" },
                     { label: "Trainees", icon: Users, view: "trainees" },
                     { label: "Notes", icon: MessageSquare, view: "notes" },
                     { label: "Attendance", icon: ClipboardCheck, view: "attendance" },
@@ -126,12 +127,13 @@ export default function SidebarPro({ isCollapsed = false, toggleCollapse }: Side
                 "py-10 flex items-center transition-all duration-300",
                 isCollapsed ? "justify-center px-0" : "px-8"
             )}>
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0">
-                        <div className="w-4 h-4 rounded-full bg-white opacity-90" />
-                    </div>
+                <div className={cn(
+                    "flex items-center gap-2.5 bg-white pl-1.5 py-1.5 rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 shrink-0 transition-all",
+                    isCollapsed ? "pr-1.5" : "pr-4"
+                )}>
+                    <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-8 h-8 object-contain rounded-full" />
                     {!isCollapsed && (
-                        <span className="font-black text-xl tracking-tighter text-black uppercase">Ernam</span>
+                        <span className="text-sm font-black tracking-tight text-gray-800 uppercase">Ernam</span>
                     )}
                 </div>
             </div>

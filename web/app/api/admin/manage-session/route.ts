@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { hasPermission } from '@/lib/rbac-server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -12,6 +13,11 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { training_standard_id, location, start_date, end_date, status, adminId, max_participants, delivery_mode } = body;
+
+        // RBAC Enforcement
+        if (!await hasPermission(adminId, 'sessions', 'create')) {
+            return NextResponse.json({ error: 'Forbidden: Insufficient permissions to create sessions' }, { status: 403 });
+        }
 
         if (!training_standard_id || !start_date || !end_date) 
             return NextResponse.json({ error: 'Missing required session fields' }, { status: 400 });
@@ -51,6 +57,11 @@ export async function PUT(req: NextRequest) {
         const body = await req.json();
         const { id, training_standard_id, location, start_date, end_date, status, adminId, max_participants, delivery_mode } = body;
 
+        // RBAC Enforcement
+        if (!await hasPermission(adminId, 'sessions', 'edit')) {
+            return NextResponse.json({ error: 'Forbidden: Insufficient permissions to edit sessions' }, { status: 403 });
+        }
+
         if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
         const updateData: any = { location, status };
@@ -88,6 +99,11 @@ export async function DELETE(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
         const adminId = searchParams.get('adminId');
+
+        // RBAC Enforcement
+        if (!await hasPermission(adminId, 'sessions', 'delete')) {
+            return NextResponse.json({ error: 'Forbidden: Insufficient permissions to delete sessions' }, { status: 403 });
+        }
 
         if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 

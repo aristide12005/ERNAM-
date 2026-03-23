@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { hasPermission } from '@/lib/rbac-server';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
@@ -13,17 +15,20 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { email, password, fullName, role, adminId } = body;
 
+        // RBAC Enforcement
+        if (!await hasPermission(adminId, 'users', 'create')) {
+            return NextResponse.json({ error: 'Forbidden: Insufficient permissions to create users' }, { status: 403 });
+        }
+
         if (!email || !password || !fullName || !role) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Validate role against schema constraints
         const validRoles = ['participant', 'instructor', 'org_admin', 'ernam_admin', 'maintainer', 'developer'];
         if (!validRoles.includes(role)) {
             return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
         }
 
-        // 1. Create Auth User
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
             password,
@@ -33,7 +38,6 @@ export async function POST(req: NextRequest) {
 
         if (authError) throw authError;
 
-        // 2. Upsert into public.users (Profile)
         const { error: profileError } = await supabaseAdmin
             .from('users')
             .upsert({
@@ -44,20 +48,15 @@ export async function POST(req: NextRequest) {
                 status: 'approved'
             });
 
-        if (profileError) {
-            console.error("Profile upsert error:", profileError);
-            throw profileError;
-        }
+        if (profileError) throw profileError;
 
-        if (adminId) {
-            await supabaseAdmin.from('audit_logs').insert({
-                action: 'USER_CREATED',
-                entity_type: 'user',
-                entity_id: authUser.user.id,
-                actor_id: adminId,
-                ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
-            });
-        }
+        await supabaseAdmin.from('audit_logs').insert({
+            action: 'USER_CREATED',
+            entity_type: 'user',
+            entity_id: authUser.user.id,
+            actor_id: adminId,
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+        });
 
         return NextResponse.json({ message: 'User created successfully', user: authUser.user });
     } catch (e: any) {
@@ -70,9 +69,13 @@ export async function PUT(req: NextRequest) {
         const body = await req.json();
         const { id, role, status, full_name, adminId } = body;
 
+        // RBAC Enforcement
+        if (!await hasPermission(adminId, 'users', 'edit')) {
+            return NextResponse.json({ error: 'Forbidden: Insufficient permissions to edit users' }, { status: 403 });
+        }
+
         if (!id) return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
 
-        // Validate role and status against schema constraints if provided
         if (role) {
             const validRoles = ['participant', 'instructor', 'org_admin', 'ernam_admin', 'maintainer', 'developer'];
             if (!validRoles.includes(role)) {
@@ -95,16 +98,14 @@ export async function PUT(req: NextRequest) {
 
         if (error) throw error;
 
-        if (adminId) {
-            await supabaseAdmin.from('audit_logs').insert({
-                action: 'USER_UPDATED',
-                entity_type: 'user',
-                entity_id: id,
-                actor_id: adminId,
-                ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
-                details: { role, status }
-            });
-        }
+        await supabaseAdmin.from('audit_logs').insert({
+            action: 'USER_UPDATED',
+            entity_type: 'user',
+            entity_id: id,
+            actor_id: adminId,
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            details: { role, status }
+        });
 
         return NextResponse.json({ message: 'User updated successfully', user: data });
     } catch (e: any) {
@@ -118,9 +119,13 @@ export async function DELETE(req: NextRequest) {
         const id = searchParams.get('id');
         const adminId = searchParams.get('adminId');
 
+        // RBAC Enforcement
+        if (!await hasPermission(adminId as string, 'users', 'delete')) {
+            return NextResponse.json({ error: 'Forbidden: Insufficient permissions to delete users' }, { status: 403 });
+        }
+
         if (!id) return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
 
-        // 1. Delete from public.users first to avoid foreign key violations
         const { error: profileError } = await supabaseAdmin
             .from('users')
             .delete()
@@ -128,22 +133,19 @@ export async function DELETE(req: NextRequest) {
 
         if (profileError) throw profileError;
 
-        // 2. Delete from Auth
         const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
         if (authError) throw authError;
 
-        if (adminId) {
-            await supabaseAdmin.from('audit_logs').insert({
-                action: 'USER_DELETED',
-                entity_type: 'user',
-                entity_id: id,
-                actor_id: adminId,
-                ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
-            });
-        }
+        await supabaseAdmin.from('audit_logs').insert({
+            action: 'USER_DELETED',
+            entity_type: 'user',
+            entity_id: id,
+            actor_id: adminId,
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+        });
 
         return NextResponse.json({ message: 'User deleted successfully' });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
-}
+}

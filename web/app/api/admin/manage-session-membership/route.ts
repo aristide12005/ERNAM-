@@ -1,6 +1,6 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { hasPermission } from '@/lib/rbac-server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -13,6 +13,11 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { type, session_id, user_id, action, adminId } = body; // type: 'instructor' | 'participant', action: 'add' | 'remove'
+
+        // RBAC Enforcement
+        if (!await hasPermission(adminId, 'sessions', 'edit')) {
+            return NextResponse.json({ error: 'Forbidden: Insufficient permissions to manage session membership' }, { status: 403 });
+        }
 
         if (!type || !session_id || !user_id || !action) 
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

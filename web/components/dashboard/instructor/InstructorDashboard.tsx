@@ -19,6 +19,7 @@ import InstructorProfileView from './InstructorProfileView';
 import ControlCenter from '@/components/dashboard/ControlCenter';
 import MyClasses from '@/components/dashboard/instructor/MyClasses';
 import InstructorHomeView from './InstructorHomeView';
+import InstructorCoursesView from './InstructorCoursesView';
 
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -112,6 +113,7 @@ export default function InstructorDashboard() {
                                 <InstructorHomeView session={todaySession} stats={stats} />
                             </motion.div>
                         )}
+                        {activeView === 'courses' && <InstructorCoursesView instructorId={profile?.id || user?.id || ''} />}
                         {activeView === 'my-schedule' && <InstructorScheduleView />}
                         {activeView === 'sessions' && <MyClasses instructorId={profile?.id || user?.id || ''} onManageClass={(id) => router.push(`/dashboard?view=assessments&sessionId=${id}`)} />}
                         {activeView === 'participants' && <InstructorParticipantsView />}
