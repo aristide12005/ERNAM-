@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { uploadCourseContent } from '@/lib/storage';
+import { toast } from 'sonner';
 import { 
     X, 
     Check, 
@@ -42,6 +44,8 @@ interface CourseNotesEditorProps {
     note: any;
     courseName: string;
     onClose: (updated: boolean) => void;
+    initialPreview?: boolean;
+    isReadOnly?: boolean;
 }
 
 const BLOCK_TYPES = [
@@ -61,14 +65,14 @@ const EDUCATIONAL_TOOLS = [
     { id: 'open_ended', label: 'Open-ended', icon: MessageSquare, color: 'bg-purple-50 text-purple-600' },
 ];
 
-export default function CourseNotesEditor({ note, courseName, onClose }: CourseNotesEditorProps) {
+export default function CourseNotesEditor({ note, courseName, onClose, initialPreview = false, isReadOnly = false }: CourseNotesEditorProps) {
     const [title, setTitle] = useState(note.title);
     const [status, setStatus] = useState(note.status);
     const [blocks, setBlocks] = useState<Block[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
-    const [isPreview, setIsPreview] = useState(false);
+    const [isPreview, setIsPreview] = useState(isReadOnly || initialPreview);
 
     useEffect(() => {
         if (note.id) {
@@ -143,10 +147,11 @@ export default function CourseNotesEditor({ note, courseName, onClose }: CourseN
             }
 
             setSaving(false);
+            toast.success("Note saved successfully");
             onClose(true); // This triggers fetchData in parent
         } catch (e) {
             console.error(e);
-            alert("Failed to save note");
+            toast.error("Failed to save note");
             setSaving(false);
         }
     };
@@ -182,9 +187,11 @@ export default function CourseNotesEditor({ note, courseName, onClose }: CourseN
                 })));
             }
             setSaving(false);
+            toast.success("Note published successfully!");
             onClose(true);
         } catch (e) {
             console.error(e);
+            toast.error("Failed to publish note");
             setSaving(false);
         }
     };
@@ -195,17 +202,19 @@ export default function CourseNotesEditor({ note, courseName, onClose }: CourseN
             <div className="flex items-center justify-between px-10 py-6 bg-white dark:bg-[#0f0f1a] sticky top-0 z-[110]">
                 {/* Left: Edit Mode Toggle */}
                 <div className="flex items-center gap-4">
-                    <button 
-                        onClick={() => setIsPreview(false)}
-                        className={cn(
-                            "px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all",
-                            !isPreview 
-                                ? "bg-black text-white shadow-xl shadow-black/10" 
-                                : "text-gray-400 hover:text-black"
-                        )}
-                    >
-                        Edit Mode
-                    </button>
+                    {!isReadOnly && (
+                        <button 
+                            onClick={() => setIsPreview(false)}
+                            className={cn(
+                                "px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all",
+                                !isPreview 
+                                    ? "bg-black text-white shadow-xl shadow-black/10" 
+                                    : "text-gray-400 hover:text-black"
+                            )}
+                        >
+                            Edit Mode
+                        </button>
+                    )}
                     {saving && <Loader2 className="w-4 h-4 animate-spin text-gray-300" />}
                 </div>
 
@@ -217,17 +226,19 @@ export default function CourseNotesEditor({ note, courseName, onClose }: CourseN
 
                 {/* Right: Preview & Actions */}
                 <div className="flex items-center gap-4">
-                    <button 
-                        onClick={() => setIsPreview(true)}
-                        className={cn(
-                            "px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all",
-                            isPreview 
-                                ? "bg-purple-600 text-white shadow-xl shadow-purple-500/20" 
-                                : "text-gray-400 hover:text-purple-600"
-                        )}
-                    >
-                        Preview
-                    </button>
+                    {!isReadOnly && (
+                        <button 
+                            onClick={() => setIsPreview(true)}
+                            className={cn(
+                                "px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all",
+                                isPreview 
+                                    ? "bg-purple-600 text-white shadow-xl shadow-purple-500/20" 
+                                    : "text-gray-400 hover:text-purple-600"
+                            )}
+                        >
+                            Preview
+                        </button>
+                    )}
                     
                     <div className="w-px h-4 bg-gray-100 mx-2" />
 
@@ -277,7 +288,7 @@ export default function CourseNotesEditor({ note, courseName, onClose }: CourseN
                                 <Reorder.Item 
                                     key={block.id} 
                                     value={block}
-                                    disabled={isPreview}
+                                    dragListener={!isPreview}
                                     className={cn(
                                         "group relative bg-white dark:bg-[#1a1a2e] rounded-[2rem] p-8 border transition-all",
                                         isPreview ? "border-transparent px-0" : (activeBlockId === block.id ? "border-purple-500 shadow-xl shadow-purple-500/5 ring-4 ring-purple-500/5" : "border-gray-100 dark:border-white/5 hover:border-purple-200")
@@ -321,28 +332,47 @@ export default function CourseNotesEditor({ note, courseName, onClose }: CourseN
                                                     const input = document.createElement('input');
                                                     input.type = 'file';
                                                     input.accept = 'image/*';
-                                                    input.onchange = (e) => {
+                                                    input.onchange = async (e) => {
                                                         const file = (e.target as HTMLInputElement).files?.[0];
                                                         if (file) {
-                                                            // For now, simulate upload and show naming
-                                                            updateBlockContent(block.id, { ...block.content, fileName: file.name, locallySelected: true });
+                                                            updateBlockContent(block.id, { ...block.content, isUploading: true });
+                                                            const { url, error } = await uploadCourseContent(file);
+                                                            if (error) {
+                                                                toast.error('Upload failed: ' + error.message);
+                                                                updateBlockContent(block.id, { ...block.content, isUploading: false });
+                                                            } else {
+                                                                updateBlockContent(block.id, { ...block.content, fileName: file.name, locallySelected: true, url, isUploading: false });
+                                                            }
                                                         }
                                                     };
                                                     input.click();
                                                 }}
-                                                className="aspect-video bg-gray-50 dark:bg-black/20 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-white/10 group/drop cursor-pointer hover:bg-purple-50/30 transition-all overflow-hidden"
+                                                className="aspect-video relative bg-gray-50 dark:bg-black/20 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-white/10 group/drop cursor-pointer hover:bg-purple-50/30 transition-all overflow-hidden"
                                             >
-                                                {block.content.locallySelected ? (
-                                                    <div className="flex flex-col items-center">
+                                                {block.content.isUploading ? (
+                                                    <div className="flex flex-col items-center z-10">
+                                                        <Loader2 className="w-8 h-8 text-purple-500 animate-spin mb-2" />
+                                                        <p className="text-xs font-black text-purple-600 uppercase tracking-widest">Uploading...</p>
+                                                    </div>
+                                                ) : block.content.url ? (
+                                                    <>
+                                                        <img src={block.content.url} alt="Uploaded" className="w-full h-full object-contain absolute inset-0 z-0" />
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/drop:opacity-100 transition-opacity flex flex-col items-center justify-center z-10">
+                                                            <ImageIcon className="w-8 h-8 text-white mb-2" />
+                                                            <p className="text-xs font-black text-white uppercase tracking-widest">Click to Replace</p>
+                                                        </div>
+                                                    </>
+                                                ) : block.content.locallySelected ? (
+                                                    <div className="flex flex-col items-center z-10">
                                                         <Check className="w-8 h-8 text-emerald-500 mb-2" />
                                                         <p className="text-xs font-black text-emerald-600 uppercase tracking-widest">{block.content.fileName}</p>
-                                                        <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold">Ready to Upload with Changes</p>
+                                                        <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold">Ready</p>
                                                     </div>
                                                 ) : (
-                                                    <>
+                                                    <div className="flex flex-col items-center z-10">
                                                         <ImageIcon className="w-12 h-12 text-gray-200 group-hover/drop:text-purple-300 transition-colors" />
                                                         <p className="text-xs font-black text-gray-400 mt-4 uppercase tracking-widest">Click to Upload Image</p>
-                                                    </>
+                                                    </div>
                                                 )}
                                             </div>
                                             <input type="text" placeholder="Add image caption..." className="w-full bg-transparent border-none text-sm font-bold text-gray-400 outline-none" />
@@ -355,24 +385,49 @@ export default function CourseNotesEditor({ note, courseName, onClose }: CourseN
                                             onClick={() => {
                                                 const input = document.createElement('input');
                                                 input.type = 'file';
-                                                input.onchange = (e) => {
+                                                input.onchange = async (e) => {
                                                     const file = (e.target as HTMLInputElement).files?.[0];
-                                                    if (file) updateBlockContent(block.id, { ...block.content, fileName: file.name, locallySelected: true });
+                                                    if (file) {
+                                                        updateBlockContent(block.id, { ...block.content, isUploading: true });
+                                                        const { url, error } = await uploadCourseContent(file);
+                                                        if (error) {
+                                                            toast.error('Upload failed: ' + error.message);
+                                                            updateBlockContent(block.id, { ...block.content, isUploading: false });
+                                                        } else {
+                                                            updateBlockContent(block.id, { ...block.content, fileName: file.name, locallySelected: true, url, isUploading: false });
+                                                        }
+                                                    }
                                                 };
                                                 input.click();
                                             }}
-                                            className="py-12 flex flex-col items-center justify-center bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 cursor-pointer hover:bg-purple-50/20 transition-all"
+                                            className="py-12 flex flex-col items-center justify-center bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 cursor-pointer hover:bg-purple-50/20 transition-all relative group/media"
                                         >
-                                            {block.content.locallySelected ? (
+                                            {block.content.isUploading ? (
+                                                <div className="flex flex-col items-center">
+                                                    <Loader2 className="w-8 h-8 text-purple-500 animate-spin mb-2" />
+                                                    <p className="text-xs font-black text-purple-600 uppercase tracking-widest">Uploading...</p>
+                                                </div>
+                                            ) : block.content.url ? (
+                                                <div className="flex flex-col items-center group-hover/media:opacity-50 transition-opacity">
+                                                    {block.type === 'video' ? <Video className="w-8 h-8 text-emerald-500 mb-2" /> : block.type === 'pdf' ? <FileText className="w-8 h-8 text-emerald-500 mb-2" /> : <Volume2 className="w-8 h-8 text-emerald-500 mb-2" />}
+                                                    <p className="text-xs font-black text-emerald-600 uppercase tracking-widest">{block.content.fileName}</p>
+                                                    <a href={block.content.url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-500 hover:text-blue-600 mt-2 uppercase font-bold" onClick={(e) => { e.stopPropagation(); }}>View File</a>
+                                                </div>
+                                            ) : block.content.locallySelected ? (
                                                 <div className="flex flex-col items-center">
                                                     <FileText className="w-8 h-8 text-emerald-500 mb-2" />
                                                     <p className="text-xs font-black text-emerald-600 uppercase tracking-widest">{block.content.fileName}</p>
                                                 </div>
                                             ) : (
-                                                <>
+                                                <div className="flex flex-col items-center">
                                                     {block.type === 'video' ? <Video className="w-8 h-8 text-gray-200 mb-2" /> : block.type === 'pdf' ? <FileText className="w-8 h-8 text-gray-200 mb-2" /> : <Volume2 className="w-8 h-8 text-gray-200 mb-2" />}
                                                     <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Click to Upload {block.type.toUpperCase()}</p>
-                                                </>
+                                                </div>
+                                            )}
+                                            {block.content.url && (
+                                                <div className="absolute inset-0 opacity-0 group-hover/media:opacity-100 transition-opacity flex flex-col items-center justify-center pointer-events-none">
+                                                    <p className="text-xs font-black text-purple-600 uppercase tracking-widest bg-purple-50 rounded-lg px-4 py-2 pointer-events-auto">Click to Replace</p>
+                                                </div>
                                             )}
                                         </div>
                                     )}
@@ -392,7 +447,7 @@ export default function CourseNotesEditor({ note, courseName, onClose }: CourseN
 
                 {/* Sidebar Panel */}
                 <AnimatePresence>
-                    {!isPreview && (
+                    {!isPreview && !isReadOnly && (
                         <motion.div 
                             initial={{ x: 300 }}
                             animate={{ x: 0 }}

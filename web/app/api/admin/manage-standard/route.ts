@@ -9,10 +9,22 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
     auth: { autoRefreshToken: false, persistSession: false }
 });
 
+async function getAdminUser(req: NextRequest) {
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) return null;
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+    return user;
+}
+
 export async function POST(req: NextRequest) {
     try {
+        const adminUser = await getAdminUser(req);
+        if (!adminUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const adminId = adminUser.id;
+
         const body = await req.json();
-        const { code, title, description, validity_months, active, adminId } = body;
+        const { code, title, description, validity_months, active } = body;
 
         // RBAC Enforcement
         if (!await hasPermission(adminId, 'sessions', 'create')) {
@@ -48,8 +60,12 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
     try {
+        const adminUser = await getAdminUser(req);
+        if (!adminUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const adminId = adminUser.id;
+
         const body = await req.json();
-        const { id, code, title, description, validity_months, active, adminId } = body;
+        const { id, code, title, description, validity_months, active } = body;
 
         // RBAC Enforcement
         if (!await hasPermission(adminId, 'sessions', 'edit')) {
@@ -83,9 +99,12 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
     try {
+        const adminUser = await getAdminUser(req);
+        if (!adminUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const adminId = adminUser.id;
+
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
-        const adminId = searchParams.get('adminId');
 
         // RBAC Enforcement
         if (!await hasPermission(adminId, 'sessions', 'delete')) {

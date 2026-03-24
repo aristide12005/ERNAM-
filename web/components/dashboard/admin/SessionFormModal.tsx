@@ -99,9 +99,12 @@ export default function SessionFormModal({ isOpen, onClose, onSuccess, sessionTo
                 instructor_ids: formData.instructor_ids
             };
 
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const response = await fetch('/api/admin/manage-session', {
                 method: sessionToEdit ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
 

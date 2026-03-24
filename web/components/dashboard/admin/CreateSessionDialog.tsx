@@ -75,14 +75,12 @@ export default function CreateSessionDialog({ isOpen, onClose, onSuccess }: Crea
 
             // 2. Insert Session via API (Bypass RLS)
             const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
             const response = await fetch('/api/admin/manage-session', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...sessionPayload,
-                    adminId: session?.user?.id
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(sessionPayload)
             });
 
             const resData = await response.json();

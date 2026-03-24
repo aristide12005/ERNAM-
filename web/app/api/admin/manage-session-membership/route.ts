@@ -9,10 +9,22 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
     auth: { autoRefreshToken: false, persistSession: false }
 });
 
+async function getAdminUser(req: NextRequest) {
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) return null;
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+    return user;
+}
+
 export async function POST(req: NextRequest) {
     try {
+        const adminUser = await getAdminUser(req);
+        if (!adminUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const adminId = adminUser.id;
+
         const body = await req.json();
-        const { type, session_id, user_id, action, adminId } = body; // type: 'instructor' | 'participant', action: 'add' | 'remove'
+        const { type, session_id, user_id, action } = body; // type: 'instructor' | 'participant', action: 'add' | 'remove'
 
         // RBAC Enforcement
         if (!await hasPermission(adminId, 'sessions', 'edit')) {

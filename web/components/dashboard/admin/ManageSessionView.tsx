@@ -83,13 +83,13 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
             const response = await fetch('/api/admin/manage-session', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     id: sessionId,
-                    status: newStatus,
-                    adminId: session?.user?.id
+                    status: newStatus
                 })
             });
 
@@ -127,14 +127,15 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
     // --- Assignment Handlers ---
     const handleAddInstructor = async (instructorId: string) => {
         const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
         const response = await fetch('/api/admin/manage-session-membership', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({
                 type: 'instructor',
                 action: 'add',
                 session_id: sessionId,
-                user_id: instructorId,
-                adminId: session?.user?.id
+                user_id: instructorId
             })
         });
         if (response.ok) { fetchSessionData(); setShowAddInstructor(false); }
@@ -143,14 +144,15 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
 
     const handleEnrollParticipant = async (participantId: string) => {
         const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
         const response = await fetch('/api/admin/manage-session-membership', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({
                 type: 'participant',
                 action: 'add',
                 session_id: sessionId,
-                user_id: participantId,
-                adminId: session?.user?.id
+                user_id: participantId
             })
         });
         if (response.ok) { fetchSessionData(); setShowEnrollParticipant(false); }
@@ -159,14 +161,15 @@ export default function ManageSessionView({ sessionId, onBack }: ManageSessionVi
 
     const handleRemoveInstructor = async (instructorId: string) => {
         const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
         const response = await fetch('/api/admin/manage-session-membership', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({
                 type: 'instructor',
                 action: 'remove',
                 session_id: sessionId,
-                user_id: instructorId,
-                adminId: session?.user?.id
+                user_id: instructorId
             })
         });
         if (response.ok) fetchSessionData();

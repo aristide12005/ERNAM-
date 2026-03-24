@@ -140,7 +140,7 @@ export default function CourseDetailPage() {
         if (!course || !userId) return;
         setEnrolling(true);
 
-        await new Promise(r => setTimeout(r, 800));
+        setEnrolling(true);
 
         const newStatus = course.enrollment_mode === 'manual' ? 'pending' : 'active';
 

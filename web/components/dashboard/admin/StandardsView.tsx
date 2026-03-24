@@ -61,8 +61,10 @@ export default function StandardsView() {
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
             const response = await fetch(`/api/admin/manage-standard?id=${id}&adminId=${session?.user?.id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (response.ok) {

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { toast } from 'sonner';
 import { 
     ChevronLeft, 
     BookOpen, 
@@ -73,6 +74,27 @@ export default function InstructorCourseDetailView({ course, instructorId, onBac
             console.error(e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleUpdateAttendance = async (participantId: string, newStatus: string) => {
+        try {
+            // Optimistic update
+            setTrainees(prev => prev.map(t => 
+                t.id === participantId ? { ...t, attendance_status: newStatus } : t
+            ));
+            
+            const { error } = await supabase
+                .from('session_participants')
+                .update({ attendance_status: newStatus })
+                .eq('id', participantId);
+                
+            if (error) throw error;
+            toast.success(`Attendance marked as ${newStatus}`);
+        } catch (e) {
+            console.error(e);
+            toast.error('Failed to update attendance');
+            fetchData(); // Rollback
         }
     };
 
@@ -291,6 +313,7 @@ export default function InstructorCourseDetailView({ course, instructorId, onBac
                                                     {['enrolled', 'attended', 'absent'].map(status => (
                                                         <button 
                                                             key={status}
+                                                            onClick={() => handleUpdateAttendance(t.id, status)}
                                                             className={cn(
                                                                 "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
                                                                 t.attendance_status === status 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from 'react';
-import { Search, Award, AlertTriangle, CheckCircle, Clock, FileText, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { Search, Award, AlertTriangle, CheckCircle, Clock, FileText, Download, Loader2 } from 'lucide-react';
 
 // Mock data type until backend is ready
 type Certificate = {
@@ -10,7 +11,7 @@ type Certificate = {
     course_name: string;
     issue_date: string;
     expiry_date: string;
-    status: 'valid' | 'expiring' | 'expired';
+    status: 'valid' | 'expiring' | 'expired' | 'revoked';
     reference_id: string;
 };
 
@@ -18,18 +19,47 @@ export default function CertificatesView() {
     const [searchTerm, setSearchTerm] = useState("");
     const [filter, setFilter] = useState<'all' | 'valid' | 'expiring' | 'expired'>('all');
 
-    // Mock data generation
-    const mockCertificates: Certificate[] = [
-        { id: '1', recipient_name: 'Jean Dupont', course_name: 'Safety Management', issue_date: '2023-01-15', expiry_date: '2026-01-15', status: 'valid', reference_id: 'CERT-001' },
-        { id: '2', recipient_name: 'Marie Curie', course_name: 'Advanced Aerodynamics', issue_date: '2021-05-20', expiry_date: '2024-05-20', status: 'expiring', reference_id: 'CERT-002' },
-        { id: '3', recipient_name: 'Albert Einstein', course_name: 'Physics 101', issue_date: '2019-11-10', expiry_date: '2022-11-10', status: 'expired', reference_id: 'CERT-003' },
-    ];
+    const [certificates, setCertificates] = useState<Certificate[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const filtered = mockCertificates.filter(c =>
+    useEffect(() => {
+        const fetchCertificates = async () => {
+            const { data, error } = await supabase.from('certificates').select(`
+                id,
+                certificate_number,
+                issue_date,
+                expiry_date,
+                status,
+                participant:users!participant_id(full_name),
+                standard:training_standards(title)
+            `);
+
+            if (data && !error) {
+                const mapped = data.map((c: any) => ({
+                    id: c.id,
+                    recipient_name: c.participant?.full_name || 'Unknown',
+                    course_name: c.standard?.title || 'Unknown',
+                    issue_date: c.issue_date || '-',
+                    expiry_date: c.expiry_date || '-',
+                    status: c.status,
+                    reference_id: c.certificate_number
+                }));
+                setCertificates(mapped);
+            }
+            setLoading(false);
+        };
+        fetchCertificates();
+    }, []);
+
+    const filtered = certificates.filter(c =>
         (filter === 'all' || c.status === filter) &&
         (c.recipient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             c.course_name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+
+    const activeCount = certificates.filter(c => c.status === 'valid').length;
+    const expiringCount = certificates.filter(c => c.status === 'expiring').length;
+    const expiredCount = certificates.filter(c => c.status === 'expired' || c.status === 'revoked').length;
 
     return (
         <div className="p-6 max-w-7xl mx-auto">
@@ -66,7 +96,7 @@ export default function CertificatesView() {
                         <CheckCircle className="h-6 w-6" />
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-white">1,245</div>
+                        <div className="text-2xl font-bold text-white">{activeCount}</div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Active</div>
                     </div>
                 </div>
@@ -75,7 +105,7 @@ export default function CertificatesView() {
                         <Clock className="h-6 w-6" />
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-white">38</div>
+                        <div className="text-2xl font-bold text-white">{expiringCount}</div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Expiring Soon</div>
                     </div>
                 </div>
@@ -84,7 +114,7 @@ export default function CertificatesView() {
                         <AlertTriangle className="h-6 w-6" />
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-white">12</div>
+                        <div className="text-2xl font-bold text-white">{expiredCount}</div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Expired</div>
                     </div>
                 </div>
@@ -115,7 +145,21 @@ export default function CertificatesView() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                        {filtered.map((c) => (
+                        {loading ? (
+                            <tr>
+                                <td colSpan={5} className="py-20 text-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-gray-500 mx-auto mb-4" />
+                                    <div className="text-gray-400 text-sm">Loading security registry...</div>
+                                </td>
+                            </tr>
+                        ) : filtered.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="py-20 text-center">
+                                    <FileText className="h-10 w-10 text-gray-700 mx-auto mb-3" />
+                                    <div className="text-gray-400 text-sm">No registered certificates found</div>
+                                </td>
+                            </tr>
+                        ) : filtered.map((c) => (
                             <tr key={c.id} className="hover:bg-white/5 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="font-bold text-white text-sm">{c.recipient_name}</div>
@@ -128,7 +172,7 @@ export default function CertificatesView() {
                                         <div className={`h-2 w-2 rounded-full ${c.status === 'valid' ? 'bg-emerald-500' :
                                                 c.status === 'expiring' ? 'bg-yellow-500' : 'bg-red-500'
                                             }`} />
-                                        <span className={`text-xs font-medium ${c.status === 'valid' ? 'text-emerald-500' :
+                                        <span className={`text-xs font-medium uppercase tracking-wider ${c.status === 'valid' ? 'text-emerald-500' :
                                                 c.status === 'expiring' ? 'text-yellow-500' : 'text-red-500'
                                             }`}>
                                             {c.expiry_date}

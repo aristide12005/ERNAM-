@@ -24,7 +24,7 @@ export default function InstructorNotesView() {
     const [allNotes, setAllNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedNote, setSelectedNote] = useState<any | null>(null);
+    const [selectedNote, setSelectedNote] = useState<{ note: any, mode: 'preview' | 'edit' } | null>(null);
 
     useEffect(() => {
         if (profile?.id) fetchAllData();
@@ -75,8 +75,9 @@ export default function InstructorNotesView() {
         return (
             <div className="fixed inset-0 z-[100] bg-white dark:bg-[#0f0f1a]">
                 <CourseNotesEditor 
-                    note={selectedNote} 
-                    courseName={getCourseName(selectedNote.course_id)}
+                    note={selectedNote.note} 
+                    courseName={getCourseName(selectedNote.note.course_id)}
+                    initialPreview={selectedNote.mode === 'preview'}
                     onClose={(updated) => {
                         setSelectedNote(null);
                         if (updated) fetchAllData();
@@ -128,7 +129,10 @@ export default function InstructorNotesView() {
                                 </div>
                             </div>
 
-                            <div className="w-28 h-28 mb-8 transition-transform group-hover:scale-110 duration-500">
+                            <div 
+                                onClick={() => setSelectedNote({ note, mode: 'preview' })}
+                                className="w-28 h-28 mb-8 transition-transform group-hover:scale-110 duration-500 cursor-pointer"
+                            >
                                 <img src="/icons/note_icon_3d.png" alt="Note Icon" className="w-full h-full object-contain" />
                             </div>
 
@@ -138,7 +142,7 @@ export default function InstructorNotesView() {
                             </div>
 
                             <button 
-                                onClick={() => setSelectedNote(note)}
+                                onClick={() => setSelectedNote({ note, mode: 'edit' })}
                                 className="w-full py-4 rounded-2xl bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white text-xs font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all group-hover:shadow-lg group-hover:shadow-black/5"
                             >
                                 Open Editor

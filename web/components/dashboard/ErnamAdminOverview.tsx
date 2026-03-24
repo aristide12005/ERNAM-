@@ -30,8 +30,13 @@ import {
     Cell
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { ADMIN_CHART_DATA, ADMIN_PIE_DATA, ACCESS_DISTRIBUTION } from "@/lib/mockData";
 
+const DEFAULT_DISTRIBUTION = [
+    { name: 'Admins', value: 0, color: 'from-blue-600 to-blue-400' },
+    { name: 'Trainers', value: 0, color: 'from-emerald-600 to-emerald-400' },
+    { name: 'Students', value: 0, color: 'from-purple-600 to-purple-400' },
+    { name: 'Guests', value: 0, color: 'from-amber-600 to-amber-400' },
+];
 // --- Types ---
 type KpiStats = {
     activeSessions: number;
@@ -65,8 +70,8 @@ export default function ErnamAdminOverview() {
 
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
-    const [roleDistribution, setRoleDistribution] = useState(ACCESS_DISTRIBUTION);
-    const [monthlyDynamics, setMonthlyDynamics] = useState(ADMIN_CHART_DATA);
+    const [roleDistribution, setRoleDistribution] = useState(DEFAULT_DISTRIBUTION);
+    const [monthlyDynamics, setMonthlyDynamics] = useState<any[]>([]);
 
     // Fetch Data
     useEffect(() => {
@@ -128,7 +133,7 @@ export default function ErnamAdminOverview() {
                     userData.forEach(u => counts[u.role] = (counts[u.role] || 0) + 1);
                     const total = userData.length;
 
-                    const newDist = ACCESS_DISTRIBUTION.map(asset => {
+                    const newDist = DEFAULT_DISTRIBUTION.map(asset => {
                         const dbRole = asset.name.toLowerCase() === 'admins' ? 'ernam_admin' : 
                                       asset.name.toLowerCase() === 'trainers' ? 'instructor' : 'participant';
                         return {

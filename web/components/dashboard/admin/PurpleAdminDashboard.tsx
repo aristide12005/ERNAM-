@@ -281,9 +281,12 @@ export default function PurpleAdminDashboard() {
         if (!confirm("Are you sure you want to delete this user? This will remove their authentication and profile.")) return;
         
         try {
-            const adminId = (await supabase.auth.getUser()).data.user?.id;
+            const authRes = await supabase.auth.getSession();
+            const token = authRes.data.session?.access_token;
+            const adminId = authRes.data.session?.user?.id;
             const res = await fetch(`/api/admin/manage-user?id=${id}${adminId ? `&adminId=${adminId}` : ''}`, {
                 method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             
             if (!res.ok) {

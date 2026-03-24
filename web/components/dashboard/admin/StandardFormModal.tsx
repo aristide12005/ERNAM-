@@ -75,19 +75,19 @@ export default function StandardFormModal({ isOpen, onClose, onSuccess, standard
             }
 
             // Prepare Payload
+            const sessionObj = (await supabase.auth.getSession()).data.session;
             const payload = {
                 id: standardToEdit?.id,
                 code: formData.code,
                 title: formData.title,
                 description: formData.description,
                 validity_months: parseInt(String(formData.validity_months), 10),
-                active: formData.active,
-                adminId: (await supabase.auth.getSession()).data.session?.user?.id
+                active: formData.active
             };
 
             const response = await fetch('/api/admin/manage-standard', {
                 method: standardToEdit ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionObj?.access_token}` },
                 body: JSON.stringify(payload)
             });
 

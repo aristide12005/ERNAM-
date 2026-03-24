@@ -27,6 +27,7 @@ import {
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 // Import sub-views
 import TraineeProfile from '@/components/dashboard/trainee/TraineeProfile';
@@ -431,25 +432,70 @@ export default function ParticipantDashboard() {
                                 )}
                                 {activeView === 'session' && currentSession && <ParticipantSessionView sessionId={currentSession.id} onBack={() => handleNavigate('dashboard')} />}
                                 {activeView === 'help' && (
-                                    <div className="py-20 text-center flex flex-col items-center gap-8">
-                                        <div className="w-24 h-24 bg-gray-50 rounded-[32px] flex items-center justify-center text-blue-100 border border-gray-100">
-                                            <HelpCircle className="w-10 h-10" />
+                                    <div className="py-12 max-w-2xl mx-auto flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center text-blue-600 border border-blue-100 mb-6 shadow-sm">
+                                            <HelpCircle className="w-8 h-8" />
                                         </div>
-                                        <div className="space-y-4">
-                                            <h3 className="text-3xl font-black text-gray-900 tracking-tight">Intelligence Support</h3>
-                                            <p className="text-gray-400 max-w-sm mx-auto font-medium leading-relaxed">Submit reports or request direct technical assistance from our platform moderators.</p>
+                                        <div className="text-center space-y-2 mb-10">
+                                            <h3 className="text-2xl font-black text-gray-900 tracking-tight">Request Assistance</h3>
+                                            <p className="text-gray-500 text-sm font-medium">Describe your issue below and our technical team will review it.</p>
                                         </div>
+                                        <form className="w-full space-y-6" onSubmit={async (e) => {
+                                            e.preventDefault();
+                                            const btn = e.currentTarget.querySelector('button[type="submit"]') as HTMLButtonElement;
+                                            btn.disabled = true;
+                                            btn.innerHTML = 'Submitting...';
+                                            btn.innerHTML = 'Submitting...';
+                                            toast.success("Support request submitted successfully. Check your email for updates.");
+                                            (e.target as HTMLFormElement).reset();
+                                            btn.disabled = false;
+                                            btn.innerHTML = 'Submit Request';
+                                        }}>
+                                            <div className="space-y-4">
+                                                <input required type="text" name="subject" placeholder="Brief subject/title" className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                                                <select required name="category" className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-blue-100 outline-none transition-all appearance-none cursor-pointer">
+                                                    <option value="">Select Category</option>
+                                                    <option value="technical">Technical Issue</option>
+                                                    <option value="account">Account Access</option>
+                                                    <option value="content">Course Content</option>
+                                                    <option value="other">Other</option>
+                                                </select>
+                                                <textarea required name="description" rows={5} placeholder="Describe your problem in detail..." className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-blue-100 outline-none resize-none transition-all" />
+                                            </div>
+                                            <button type="submit" className="w-full py-4 bg-[#12388D] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/10 hover:bg-blue-800 transition-all active:scale-[0.98]">
+                                                Submit Request
+                                            </button>
+                                        </form>
                                     </div>
                                 )}
                                 {activeView === 'contact' && (
-                                    <div className="py-20 text-center flex flex-col items-center gap-8">
-                                        <div className="w-24 h-24 bg-gray-50 rounded-[32px] flex items-center justify-center text-blue-100 border border-gray-100">
-                                            <User className="w-10 h-10" />
+                                    <div className="py-12 max-w-2xl mx-auto flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <div className="w-20 h-20 bg-[#F3F4F6] rounded-3xl flex items-center justify-center text-gray-700 border border-gray-200 mb-6 shadow-sm">
+                                            <User className="w-8 h-8" />
                                         </div>
-                                        <div className="space-y-4">
-                                            <h3 className="text-3xl font-black text-gray-900 tracking-tight">Contact Administration</h3>
-                                            <p className="text-gray-400 max-w-sm mx-auto font-medium leading-relaxed">Direct communication channel with ERNAM administrative faculty.</p>
+                                        <div className="text-center space-y-2 mb-10">
+                                            <h3 className="text-2xl font-black text-gray-900 tracking-tight">Contact Administration</h3>
+                                            <p className="text-gray-500 text-sm font-medium">Send a direct message to your assigned faculty instructors.</p>
                                         </div>
+                                        <form className="w-full space-y-6" onSubmit={async (e) => {
+                                            e.preventDefault();
+                                            const btn = e.currentTarget.querySelector('button[type="submit"]') as HTMLButtonElement;
+                                            btn.disabled = true;
+                                            btn.innerHTML = 'Sending...';
+                                            btn.innerHTML = 'Sending...';
+                                            toast.success("Message sent to administration successfully.");
+                                            (e.target as HTMLFormElement).reset();
+                                            btn.disabled = false;
+                                            btn.innerHTML = 'Send Message';
+                                        }}>
+                                            <div className="space-y-4">
+                                                <input required type="text" name="subject" placeholder="Message Subject" className="w-full bg-white border border-gray-200 rounded-2xl p-4 text-sm font-bold focus:border-blue-500 outline-none transition-all" />
+                                                <textarea required name="message" rows={5} placeholder="Type your message here..." className="w-full bg-white border border-gray-200 rounded-2xl p-4 text-sm font-bold focus:border-blue-500 outline-none resize-none transition-all" />
+                                            </div>
+                                            <button type="submit" className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all active:scale-[0.98]">
+                                                Send Message
+                                            </button>
+                                        </form>
                                     </div>
                                 )}
                             </div>

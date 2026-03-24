@@ -139,8 +139,11 @@ export default function UserManagement() {
             const confirmed = window.confirm("Are you sure you want to permanently delete this user?");
             if (!confirmed) return;
             
+            const token = session?.access_token;
+
             const response = await fetch(`/api/admin/manage-user?id=${id}&adminId=${adminId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (response.ok) fetchProfiles();
@@ -150,9 +153,10 @@ export default function UserManagement() {
             }
         } else {
             const status = action === 'approve' ? 'approved' : 'rejected';
+            const token = session?.access_token;
             const response = await fetch('/api/admin/manage-user', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ id, status, adminId })
             });
 
@@ -354,9 +358,10 @@ function CreateUserModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onCl
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
             const res = await fetch('/api/admin/manage-user', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     email,
                     password,

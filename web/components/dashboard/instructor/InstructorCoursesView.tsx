@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { toast } from 'sonner';
 import { 
     Plus, 
     Search, 
@@ -157,9 +158,10 @@ export default function InstructorCoursesView({ instructorId }: { instructorId: 
             setStep(1);
             setFormData({ standard_id: '', session_id: '', name: '', description: '', duration: '' });
             fetchCourses();
+            toast.success(`Course "${formData.name}" created successfully!`);
         } catch (e) {
             console.error(e);
-            alert("Failed to create course");
+            toast.error("Failed to create course");
         } finally {
             setSubmitting(false);
         }

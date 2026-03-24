@@ -115,19 +115,19 @@ export default function DocumentFormModal({ isOpen, onClose, onSuccess, document
             if (!finalFileUrl) throw new Error("Please provide a file or URL");
 
             const { data: { session: authSession } } = await supabase.auth.getSession();
+            const token = authSession?.access_token;
             
             const payload = {
                 id: documentToEdit?.id,
                 session_id: formData.session_id || null, // Allow null for "No Assigned"
                 title: formData.title,
                 file_url: finalFileUrl,
-                document_type: formData.document_type,
-                uploaded_by: authSession?.user?.id
+                document_type: formData.document_type
             };
 
             const response = await fetch('/api/admin/manage-document', {
                 method: documentToEdit ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
 

@@ -56,8 +56,8 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }: Use
     // Form States
     const [fullName, setFullName] = useState(user.full_name || '');
     const [email, setEmail] = useState(user.email || '');
-    const [role, setRole] = useState(user.role || 'participant');
-    const [status, setStatus] = useState(user.status || 'approved');
+    const [role, setRole] = useState<UserProfile['role']>(user.role || 'participant');
+    const [status, setStatus] = useState<UserProfile['status']>(user.status || 'approved');
 
     useEffect(() => {
         if (isOpen) {
@@ -130,9 +130,11 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }: Use
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const adminId = session?.user?.id;
+            const token = session?.access_token;
             
             const res = await fetch(`/api/admin/manage-user?id=${user.id}${adminId ? `&adminId=${adminId}` : ''}`, {
                 method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             
             if (!res.ok) {
@@ -278,7 +280,7 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }: Use
                                     <label className="text-sm font-semibold text-gray-700">Account Role</label>
                                     <select
                                         value={role}
-                                        onChange={(e) => setRole(e.target.value)}
+                                        onChange={(e) => setRole(e.target.value as UserProfile['role'])}
                                         className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none shadow-sm appearance-none"
                                     >
                                         <option value="participant">Trainee</option>

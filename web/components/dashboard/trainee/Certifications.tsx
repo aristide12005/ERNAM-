@@ -11,7 +11,8 @@ import {
     Trophy,
     Search,
     FileText,
-    Star
+    Star,
+    Loader2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -19,13 +20,39 @@ export default function Certifications() {
     const { user } = useAuth();
     const [certs, setCerts] = useState<any[]>([]);
 
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
-        // Mocking certifications for now
-        setCerts([
-            { id: 1, title: 'Private Pilot License (Theory)', date: '2023-11-15', issuer: 'ERNAM Aviation Authority', level: 'Level 1', serial: 'ERNAM-2023-449', status: 'verified' },
-            { id: 2, title: 'Meteorology Advanced Cert', date: '2024-01-20', issuer: 'WMO Regional Office', level: 'Level 2', serial: 'WMO-SN-8820', status: 'verified' },
-        ]);
-    }, []);
+        const fetchCerts = async () => {
+            if (!user) return;
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('certificates')
+                .select(`
+                    id,
+                    certificate_number,
+                    issue_date,
+                    status,
+                    standard:training_standards(title)
+                `)
+                .eq('participant_id', user.id);
+            
+            if (data && !error) {
+                const mapped = data.map((c: any) => ({
+                    id: c.id,
+                    title: c.standard?.title || 'Unknown Course',
+                    date: c.issue_date || '-',
+                    issuer: 'ERNAM Aviation Authority',
+                    level: 'Level 1',
+                    serial: c.certificate_number,
+                    status: c.status
+                }));
+                setCerts(mapped);
+            }
+            setLoading(false);
+        };
+        fetchCerts();
+    }, [user]);
 
     return (
         <div className="space-y-8 pb-12">
@@ -83,7 +110,15 @@ export default function Certifications() {
                 <div className="space-y-4">
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Recent Accomplishments</h3>
                     <div className="space-y-3">
-                        {certs.map((c) => (
+                        {loading ? (
+                            <div className="flex justify-center py-6">
+                                <Loader2 className="animate-spin text-blue-500 h-8 w-8" />
+                            </div>
+                        ) : certs.length === 0 ? (
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center text-sm text-slate-500 font-medium">
+                                No certifications earned yet.
+                            </div>
+                        ) : certs.map((c) => (
                             <div key={c.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between group hover:border-blue-400 transition-all">
                                 <div className="flex items-center gap-4">
                                     <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 border border-amber-500/20">

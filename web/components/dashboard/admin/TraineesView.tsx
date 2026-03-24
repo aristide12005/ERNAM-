@@ -4,7 +4,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Search, Users, GraduationCap, Clock, Award } from 'lucide-react';
-import { Participant, getEnrichedParticipants } from '@/lib/mockData';
+
+type Participant = {
+    id: string;
+    full_name: string;
+    email: string;
+    status: string;
+    progress: number;
+};
 
 
 export default function TraineesView() {
@@ -25,8 +32,14 @@ export default function TraineesView() {
             .order('full_name', { ascending: true });
 
         if (!error && data) {
-            // Using existing enrichment for UI consistency, but with real user data
-            setParticipants(getEnrichedParticipants(data));
+            const mapped = data.map((u: any) => ({
+                id: u.id,
+                full_name: u.full_name,
+                email: u.email,
+                status: u.status || 'active',
+                progress: 0 // Progress calculation depends on enrollments
+            }));
+            setParticipants(mapped);
         }
         setLoading(false);
     };

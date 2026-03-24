@@ -2,6 +2,7 @@ import '@/lib/webrtc-polyfill';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import NotificationBell from '@/components/NotificationBell';
+import { Toaster } from 'sonner';
 
 import type { Metadata } from "next";
 import "./globals.css";
@@ -13,6 +14,9 @@ const geistMono = { variable: "font-mono" };
 export const metadata: Metadata = {
   title: "ERNAM Digital Twin",
   description: "Digital Twin Platform for ERNAM",
+  icons: {
+    icon: "/diamond_logo.png?v=2"
+  }
 };
 
 export default function RootLayout({
@@ -28,6 +32,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
           <NotificationBell />
+          <Toaster position="top-right" richColors />
         </ThemeProvider>
       </body>
     </html>

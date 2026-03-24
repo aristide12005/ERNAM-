@@ -1,154 +1,187 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Calendar, MapPin } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { format } from 'date-fns';
+import { 
+    Search, 
+    BookOpen, 
+    Clock, 
+    Users, 
+    MoreHorizontal, 
+    Loader2,
+    LayoutGrid
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import TraineeCourseDetailView from './TraineeCourseDetailView';
 
-type Session = {
+interface Course {
     id: string;
-    start_date: string;
-    end_date: string;
-    location: string;
-    status: string;
-    delivery_mode: string;
-    training_standard: {
-        code: string;
-        title: string;
-    };
-    participants_link_status: string;
-};
-
-interface MyLearningViewProps {
-    onLaunch?: (sessionId: string) => void;
+    title_en: string;
+    title_fr: string;
+    description_en?: string;
+    course_status: string;
+    duration?: string;
+    session_id?: string;
 }
 
-export default function MyLearningView({ onLaunch }: MyLearningViewProps) {
+export default function MyLearningView() {
     const { profile } = useAuth();
-    const [sessions, setSessions] = useState<Session[]>([]);
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+    const [activeTab, setActiveTab] = useState<'my' | 'all'>('my');
+    const [myCourses, setMyCourses] = useState<Course[]>([]);
+    const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchMyLearning = async () => {
-        if (!profile?.id) return;
+    useEffect(() => {
+        if (profile?.id) fetchCourses();
+    }, [profile?.id]);
+
+    const fetchCourses = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            // 1. Get my enrolled sessions
+            const { data: mySessions } = await supabase
                 .from('session_participants')
-                .select(`
-                    attendance_status,
-                    session:sessions (
-                        id,
-                        start_date,
-                        end_date,
-                        location,
-                        status,
-                        delivery_mode,
-                        training_standard:training_standards(code, title)
-                    )
-                `)
-                .eq('participant_id', profile.id);
+                .select('session_id')
+                .eq('participant_id', profile?.id);
+            
+            const mySessionIds = (mySessions || []).map(s => s.session_id);
 
-            if (data) {
-                const mapped = data
-                    .filter((d: any) => d.session) // Ensure session exists
-                    .map((d: any) => ({
-                        ...d.session,
-                        participants_link_status: d.attendance_status
-                    }));
-                setSessions(mapped);
-            }
-        } catch (err) {
-            console.error("Error fetching learning:", err);
+            // 2. Fetch all published courses
+            const { data: allCourses } = await supabase
+                .from('courses')
+                .select('*')
+                .eq('course_status', 'published'); // Trainees only see published courses
+
+            const _myCourses = allCourses?.filter(c => c.session_id && mySessionIds.includes(c.session_id)) || [];
+            const _availableCourses = allCourses?.filter(c => !c.session_id || !mySessionIds.includes(c.session_id)) || [];
+
+            setMyCourses(_myCourses);
+            setAvailableCourses(_availableCourses);
+        } catch (e) {
+            console.error("Error fetching courses:", e);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchMyLearning();
-    }, [profile?.id]);
-
     return (
-        <div className="p-6">
-            {loading ? (
-                <div className="space-y-4 animate-pulse">
-                    {[1, 2].map(i => <div key={i} className="h-32 bg-gray-200 rounded-xl" />)}
+        <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+            {/* Header Area */}
+            <div className="flex justify-between items-end">
+                <div>
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Learning Hub</h1>
+                    <p className="text-sm text-gray-500 mt-1 font-medium italic">Explore your curriculum and discover new courses</p>
                 </div>
-            ) : sessions.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
-                    <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900">No Active Training Sessions</h3>
-                    <p className="text-gray-500">You are not currently enrolled in any upcoming or ongoing training sessions.</p>
+            </div>
+
+            {/* Tabs & Search */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white dark:bg-[#1a1a2e] border border-gray-100 dark:border-white/5 p-2 rounded-3xl shadow-sm">
+                <div className="flex gap-1">
+                    <button 
+                        onClick={() => setActiveTab('my')}
+                        className={cn(
+                            "px-6 py-2.5 rounded-2xl text-sm font-bold transition-all",
+                            activeTab === 'my' ? "bg-black dark:bg-white text-white dark:text-black shadow-md" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        )}
+                    >
+                        My Courses
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('all')}
+                        className={cn(
+                            "px-6 py-2.5 rounded-2xl text-sm font-bold transition-all",
+                            activeTab === 'all' ? "bg-black dark:bg-white text-white dark:text-black shadow-md" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        )}
+                    >
+                        Available Courses
+                    </button>
+                </div>
+                <div className="relative w-full md:w-80 pr-2">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Search courses..." 
+                        className="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl py-2.5 pl-11 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none dark:text-white"
+                    />
+                </div>
+            </div>
+
+            {/* Course Grid */}
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {sessions.map((session) => (
-                        <div
-                            key={session.id}
-                            className="bg-white border border-gray-200 rounded-[32px] p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group min-h-[260px]"
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {(activeTab === 'my' ? myCourses : availableCourses).map((course) => (
+                        <div 
+                            key={course.id} 
+                            onClick={() => setSelectedCourse(course)}
+                            className="group bg-white dark:bg-[#1a1a2e] border border-gray-100 dark:border-white/5 rounded-[2rem] p-6 hover:shadow-xl hover:shadow-black/5 transition-all duration-300 relative overflow-hidden cursor-pointer active:scale-[0.98]"
                         >
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full uppercase tracking-widest border border-blue-100/50">
-                                            {session.training_standard?.code || 'N/A'}
-                                        </span>
-                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Enrollment Verified</span>
-                                    </div>
-                                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border
-                                        ${session.status === 'active' 
-                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100 animate-pulse' 
-                                            : 'bg-gray-50 text-gray-500 border-gray-100'}
-                                     `}>
-                                        {session.status}
-                                    </span>
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600">
+                                    <BookOpen className="w-6 h-6" />
                                 </div>
-                                
-                                <div className="space-y-3">
-                                    <h3 className="text-2xl font-black text-gray-900 leading-[1.2] group-hover:text-blue-700 transition-colors line-clamp-2 tracking-tight">
-                                        {session.training_standard?.title || 'Untitled Session'}
-                                    </h3>
-                                    <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase">
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50" />
-                                            {session.delivery_mode}
-                                        </div>
-                                        <span className="h-1 w-1 bg-gray-300 rounded-full" />
-                                        <div className="flex items-center gap-1.5 uppercase">
-                                            {session.participants_link_status}
-                                        </div>
-                                    </div>
+                                <span className={cn(
+                                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
+                                    activeTab === 'my' ? "bg-emerald-50 text-emerald-600" : "bg-purple-50 text-purple-600"
+                                )}>
+                                    {activeTab === 'my' ? 'Enrolled' : 'Available'}
+                                </span>
+                            </div>
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2 line-clamp-1">{course.title_en}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-6 font-medium leading-relaxed">
+                                {course.description_en || "No description provided for this training module."}
+                            </p>
+                            
+                            <div className="flex items-center gap-4 text-xs font-bold text-gray-400 mt-auto pt-6 border-t border-gray-50 dark:border-white/5">
+                                <div className="flex items-center gap-1.5">
+                                    <Clock className="w-4 h-4" />
+                                    <span>{course.duration || 'Flexible'}</span>
                                 </div>
                             </div>
 
-                            <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                                <div className="grid grid-cols-1 gap-2">
-                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">
-                                        <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-blue-50 transition-colors">
-                                            <Calendar className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-500" />
-                                        </div>
-                                        {session.start_date ? format(new Date(session.start_date), 'MMMM d') : '...'} — {session.end_date ? format(new Date(session.end_date), 'MMMM d, yyyy') : '...'}
-                                    </div>
-                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">
-                                        <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-emerald-50 transition-colors">
-                                            <MapPin className="h-3.5 w-3.5 text-gray-400 group-hover:text-emerald-500" />
-                                        </div>
-                                        {session.location}
-                                    </div>
-                                </div>
-
-                                <button 
-                                    onClick={() => onLaunch?.(session.id)}
-                                    className="w-full sm:w-auto px-8 py-3.5 bg-gray-900 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-black hover:-translate-y-0.5 transition-all shadow-lg shadow-black/5 active:scale-95"
-                                >
-                                    Launch Studio
+                            <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button className="p-2 hover:bg-gray-50 dark:hover:bg-white/10 rounded-full">
+                                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
                                 </button>
                             </div>
                         </div>
                     ))}
+                    {(activeTab === 'my' ? myCourses : availableCourses).length === 0 && (
+                        <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 dark:border-white/5 rounded-[3rem]">
+                            <LayoutGrid className="w-12 h-12 text-gray-200 dark:text-gray-600 mb-4" />
+                            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">
+                                {activeTab === 'my' ? 'No Enrolled Courses' : 'No Additional Courses Available'}
+                            </p>
+                        </div>
+                    )}
                 </div>
             )}
+
+            {/* Course Detail Overlay */}
+            <AnimatePresence>
+                {selectedCourse && (
+                    <motion.div 
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        className="fixed inset-0 z-[60] bg-gray-50 dark:bg-[#0f0f1a] overflow-y-auto"
+                    >
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                            <TraineeCourseDetailView 
+                                course={selectedCourse} 
+                                participantId={profile?.id || ''}
+                                onBack={() => setSelectedCourse(null)} 
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
