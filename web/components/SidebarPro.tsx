@@ -122,41 +122,8 @@ export default function SidebarPro({ isCollapsed = false, toggleCollapse }: Side
                 </button>
             )}
 
-            {/* HEADER: Combined ASECNA + ERNAM Branding */}
-            <div className={cn(
-                "py-6 flex items-center transition-all duration-300",
-                isCollapsed ? "justify-center px-0" : "px-4"
-            )}>
-                <div className={cn(
-                    "flex items-center gap-3 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200 rounded-full pr-4 pl-1.5 py-1.5 shadow-sm cursor-pointer group shrink-0",
-                    isCollapsed && "pr-1.5"
-                )}>
-                    {/* Overlapping logos */}
-                    <div className="flex items-center -space-x-2 shrink-0">
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-10 group-hover:-translate-x-1 transition-transform">
-                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-20 shadow-sm group-hover:translate-x-1 transition-transform">
-                            <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-full h-full object-contain rounded-full" />
-                        </div>
-                    </div>
-                    {/* Text — hidden when collapsed */}
-                    {!isCollapsed && (
-                        <div className="flex flex-col">
-                            <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA · ERNAM</span>
-                            <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
-                                Digital Twin <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Separator */}
-            {!isCollapsed && <div className="mx-6 h-px bg-slate-100 mb-4" />}
-
-            {/* NAV LINKS */}
-            <div className="flex-1 overflow-y-auto px-3 space-y-1 pb-4">
+            {/* NAV LINKS — start from the top */}
+            <div className="flex-1 overflow-y-auto px-3 pt-5 space-y-1 pb-4">
                 {!isCollapsed && (
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 pb-2">Navigation</p>
                 )}

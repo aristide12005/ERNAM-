@@ -74,17 +74,36 @@ export default function DashboardLayoutClient({
                     isCollapsed ? 'ml-[80px]' : 'ml-[260px]'
                 }`}
             >
-                {/* Premium Top Bar */}
-                <div className="h-[72px] px-8 flex items-center justify-between shrink-0 bg-surface-mid border-b border-slate-100/80">
+                {/* Fixed Topbar — always visible, sidebar-independent */}
+                <div className="h-[72px] px-6 flex items-center justify-between shrink-0 bg-white border-b border-slate-100 gap-4">
+                    {/* Brand Pill — matches Admin UI style */}
+                    <div className="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-200 rounded-full pr-4 pl-1.5 py-1.5 shadow-sm cursor-pointer group shrink-0">
+                        <div className="flex items-center -space-x-2 shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-10 group-hover:-translate-x-1 transition-transform">
+                                <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-full h-full object-contain rounded-full" />
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-0.5 border-2 border-[#12388D] relative z-20 shadow-sm group-hover:translate-x-1 transition-transform">
+                                <img src="/logos/ernam-logo.png" alt="ERNAM" className="w-full h-full object-contain rounded-full" />
+                            </div>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-gray-900 font-black text-sm leading-tight tracking-wide">ASECNA · ERNAM</span>
+                            <span className="text-blue-600 font-bold text-[10px] leading-tight flex items-center gap-1.5 uppercase tracking-widest opacity-90">
+                                Digital Twin <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                            </span>
+                        </div>
+                    </div>
+
                     {/* Search */}
-                    <div className="relative w-full max-w-sm">
+                    <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Search anything…"
-                            className="w-full pl-11 pr-5 py-2.5 bg-white border border-slate-100 rounded-2xl shadow-sm text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-transparent transition-all font-medium text-slate-700 placeholder:text-slate-400"
+                            className="w-full pl-11 pr-5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-transparent transition-all font-medium text-slate-700 placeholder:text-slate-400"
                         />
                     </div>
+
                     {/* Right side */}
                     <div className="flex items-center gap-4">
                         <button className="relative text-slate-400 hover:text-slate-700 transition-colors p-2 rounded-xl hover:bg-slate-100">
