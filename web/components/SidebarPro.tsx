@@ -40,9 +40,10 @@ type MenuSection = {
 interface SidebarProProps {
     isCollapsed?: boolean;
     toggleCollapse?: () => void;
+    topOffset?: number;
 }
 
-export default function SidebarPro({ isCollapsed = false, toggleCollapse }: SidebarProProps) {
+export default function SidebarPro({ isCollapsed = false, toggleCollapse, topOffset = 0 }: SidebarProProps) {
     const { user, profile, impersonator } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -104,13 +105,15 @@ export default function SidebarPro({ isCollapsed = false, toggleCollapse }: Side
 
     const isImpersonating = !!impersonator;
 
+    const offset = topOffset;
+
     return (
         <aside
             className={cn(
                 "fixed left-0 bg-white border-r border-slate-100 flex flex-col z-[40] transition-all duration-300 ease-in-out font-sans",
-                isCollapsed ? "w-[80px]" : "w-[260px]",
-                isImpersonating ? "top-[56px] h-[calc(100vh-56px)]" : "top-0 h-full"
+                isCollapsed ? "w-[80px]" : "w-[260px]"
             )}
+            style={{ top: offset, height: `calc(100vh - ${offset}px)` }}
         >
             {/* Collapse Toggle */}
             {toggleCollapse && (
