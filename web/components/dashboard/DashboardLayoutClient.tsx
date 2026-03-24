@@ -61,7 +61,7 @@ export default function DashboardLayoutClient({
 
     return (
         <div className={cn(
-            "min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300",
+            "min-h-screen bg-surface-mid transition-colors duration-300",
             isImpersonating && "pt-[56px]"
         )}>
             <ImpersonationBanner />
@@ -74,43 +74,46 @@ export default function DashboardLayoutClient({
                     isCollapsed ? 'ml-[80px]' : 'ml-[260px]'
                 }`}
             >
-                {/* Global Top Bar */}
-                <div className="h-[88px] px-8 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-5">
-                        <div className="flex items-center gap-2.5 bg-white dark:bg-[#1c1c1c] pl-1.5 pr-4 py-1.5 rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-transparent dark:border-white/5 shrink-0">
-                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-8 h-8 object-contain rounded-full" />
-                            <span className="text-sm font-black tracking-tight text-gray-800 dark:text-gray-100">ASECNA</span>
+                {/* Premium Top Bar */}
+                <div className="h-[80px] px-8 flex items-center justify-between shrink-0 bg-surface-mid border-b border-slate-100/80">
+                    <div className="flex items-center gap-4">
+                        {/* Brand pill */}
+                        <div className="flex items-center gap-2.5 bg-white pl-2 pr-4 py-2 rounded-2xl shadow-sm border border-slate-100 shrink-0">
+                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-7 h-7 object-contain rounded-xl" />
+                            <span className="text-sm font-black tracking-tight text-slate-800">ASECNA</span>
                         </div>
-                        <div className="relative w-full max-w-md">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        {/* Search */}
+                        <div className="relative w-full max-w-sm">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search something..."
-                                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-[#1c1c1c] border-none rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.02)] text-sm outline-none focus:ring-2 focus:ring-gray-200 transition-all font-medium text-gray-600 dark:text-gray-300"
+                                placeholder="Search anything…"
+                                className="w-full pl-11 pr-5 py-2.5 bg-white border border-slate-100 rounded-2xl shadow-sm text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-transparent transition-all font-medium text-slate-700 placeholder:text-slate-400"
                             />
                         </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                        <button className="relative text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    {/* Right side */}
+                    <div className="flex items-center gap-4">
+                        <button className="relative text-slate-400 hover:text-slate-700 transition-colors p-2 rounded-xl hover:bg-slate-100">
                             <Bell className="w-5 h-5" />
-                            <span className="absolute top-0 right-1 w-2 h-2 bg-red-400 rounded-full border border-[#f8f9fa] dark:border-black" />
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
                         </button>
-                        <div 
+                        <div
                             onClick={() => router.push('/dashboard?view=profile')}
-                            className="flex items-center gap-2.5 bg-white dark:bg-[#1c1c1c] pl-1.5 pr-4 py-1.5 rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-transparent dark:border-white/5 cursor-pointer hover:shadow-md transition-shadow"
+                            className="flex items-center gap-2.5 bg-white pl-2 pr-4 py-2 rounded-2xl shadow-sm border border-slate-100 cursor-pointer hover:shadow-md transition-all"
                         >
                             {profile?.avatar_url ? (
-                                <img src={profile.avatar_url} alt="" className="w-8 h-8 object-contain rounded-full" />
+                                <img src={profile.avatar_url} alt="" className="w-7 h-7 object-cover rounded-xl" />
                             ) : (
-                                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-black uppercase tracking-tighter">
+                                <div className="w-7 h-7 rounded-xl bg-blue-600 flex items-center justify-center text-white text-[10px] font-black uppercase">
                                     {profile?.full_name?.charAt(0) || 'U'}
                                 </div>
                             )}
                             <div className="flex flex-col">
-                                <span className="text-sm font-black tracking-tight text-gray-800 dark:text-gray-100">
+                                <span className="text-sm font-black tracking-tight text-slate-900 leading-tight">
                                     {profile?.full_name || 'My Profile'}
                                 </span>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
                                     {profile?.role || 'User'}
                                 </span>
                             </div>
@@ -118,7 +121,7 @@ export default function DashboardLayoutClient({
                     </div>
                 </div>
 
-                <div className="flex-1 p-8 pt-0">
+                <div className="flex-1 p-8 pt-6">
                     {children}
                 </div>
             </main>
