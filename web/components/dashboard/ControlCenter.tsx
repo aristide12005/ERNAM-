@@ -74,22 +74,8 @@ export default function ControlCenter({ isOpen, onClose }: ControlCenterProps) {
                                 </p>
                             </div>
 
-                            {/* 2. Quick Actions Grid */}
-                            <div className="grid grid-cols-2 gap-3">
-                                {/* Theme Toggle */}
-                                <button
-                                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                    className={`p-4 rounded-xl flex flex-col items-center gap-2 transition-all duration-200 border ${theme === 'dark'
-                                        ? 'bg-slate-800 border-slate-700 text-blue-400'
-                                        : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    {theme === 'dark' ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
-                                    <span className="text-xs font-semibold">
-                                        {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
-                                    </span>
-                                </button>
-
+                            {/* 2. Quick Actions Section */}
+                            <div className="space-y-3">
                                 {/* System Settings */}
                                 <button
                                     onClick={() => {
@@ -98,10 +84,10 @@ export default function ControlCenter({ isOpen, onClose }: ControlCenterProps) {
                                         const basePath = pathname?.split('?')[0] || '/dashboard';
                                         router.push(`${basePath}?view=settings`);
                                     }}
-                                    className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl flex flex-col items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                    className="w-full p-4 bg-white border border-slate-100 rounded-xl flex items-center gap-4 text-slate-600 hover:bg-slate-50 transition-all font-semibold"
                                 >
-                                    <Settings className="w-6 h-6" />
-                                    <span className="text-xs font-semibold">Settings</span>
+                                    <Settings className="w-6 h-6 text-blue-500" />
+                                    <span>System Settings</span>
                                 </button>
                             </div>
 

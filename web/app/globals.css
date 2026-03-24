@@ -49,45 +49,6 @@
 
     --radius: 0.5rem;
   }
-
-  .dark {
-    /* DARK MODE - Keeping it professional but capable */
-    --background: 222 47% 11%;
-    /* Dark Slate */
-    --foreground: 0 0% 98%;
-
-    --card: 222 47% 11%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 221 83% 53%;
-    /* Keep Authority Blue even in dark */
-    --primary-foreground: 0 0% 98%;
-
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 217 33% 17%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
-
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
-
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 221 83% 53%;
-  }
 }
 
 @theme {

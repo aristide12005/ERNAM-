@@ -9,7 +9,7 @@ export default function DashboardPage() {
     const { profile, loading, signOut, refreshProfile } = useAuth();
 
     if (loading) return (
-        <div className="h-screen w-full flex items-center justify-center bg-gray-900 text-white">
+        <div className="h-screen w-full flex items-center justify-center bg-white text-gray-900">
             <div className="animate-pulse flex flex-col items-center">
                 <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
                 Loading Interface...
@@ -23,7 +23,7 @@ export default function DashboardPage() {
     if (profile?.role === 'ernam_admin' || profile?.role === 'org_admin' || profile?.role === 'admin') return <ErnamAdminDashboard />;
 
     return (
-        <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-900 text-white p-4 text-center">
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 text-gray-900 p-4 text-center">
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl w-full max-w-md">
                 <h1 className="text-2xl font-bold mb-2 text-red-400">Access Denied</h1>
                 <p className="text-gray-400 text-sm">Your account exists, but your role profile is missing or unauthorized.</p>

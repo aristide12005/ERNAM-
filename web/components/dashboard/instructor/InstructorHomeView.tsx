@@ -67,9 +67,9 @@ export default function InstructorHomeView({ session, stats }: { session: any, s
     const courseTitle = session?.training_standard?.title || 'Training Overview';
 
     /* ====== Card Styling ====== */
-    const cardClass = "bg-white dark:bg-[#1a1a2e] border border-gray-100 dark:border-white/5 rounded-[1.5rem] p-7 shadow-[0_2px_16px_rgba(0,0,0,0.03)] relative animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both";
+    const cardClass = "bg-white border border-gray-100 rounded-[1.5rem] p-7 shadow-[0_2px_16px_rgba(0,0,0,0.03)] relative animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both";
     const headerClass = "flex items-center justify-between mb-6";
-    const titleClass = "text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight";
+    const titleClass = "text-lg font-bold text-gray-900 tracking-tight";
 
     return (
         <div className="space-y-6 max-w-[1400px] mx-auto w-full">
