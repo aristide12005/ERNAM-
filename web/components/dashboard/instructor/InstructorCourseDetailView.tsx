@@ -173,36 +173,38 @@ export default function InstructorCourseDetailView({ course, instructorId, onBac
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {notes.map(note => (
                                         <motion.div 
-                                key={note.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="group relative bg-white dark:bg-[#1a1a2e] border border-gray-100 dark:border-white/5 p-6 rounded-[2.5rem] hover:shadow-2xl hover:shadow-purple-500/5 transition-all text-center flex flex-col items-center"
-                            >
-                                <div className="absolute top-6 right-6 flex items-center gap-2">
-                                    <div className={cn(
-                                        "px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider",
-                                        note.status === 'published' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
-                                    )}>
-                                        {note.status}
-                                    </div>
-                                </div>
+                                            key={note.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="group relative bg-white border border-slate-100 p-6 rounded-[2.5rem] hover:shadow-2xl hover:shadow-blue-500/5 transition-all text-center flex flex-col items-center"
+                                        >
+                                            <div className="absolute top-6 right-6 flex items-center gap-2">
+                                                <div className={cn(
+                                                    "px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
+                                                    note.status === 'published' 
+                                                        ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                                                        : "bg-slate-50 text-slate-400 border-slate-100"
+                                                )}>
+                                                    {note.status}
+                                                </div>
+                                            </div>
 
-                                <div className="w-24 h-24 mb-6 transition-transform group-hover:scale-110 duration-500">
-                                    <img src="/icons/note_icon_3d.png" alt="Note Icon" className="w-full h-full object-contain" />
-                                </div>
+                                            <div className="w-24 h-24 mb-6 transition-transform group-hover:scale-110 duration-500 drop-shadow-xl">
+                                                <img src="/icons/note_icon_3d.png" alt="Note Icon" className="w-full h-full object-contain" />
+                                            </div>
 
-                                <div className="flex-1 space-y-2 mb-6">
-                                    <h3 className="text-lg font-black text-gray-900 dark:text-white line-clamp-2 leading-tight px-4">{note.title}</h3>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{course.title_en}</p>
-                                </div>
+                                            <div className="flex-1 space-y-2 mb-6">
+                                                <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight px-4 group-hover:text-blue-600 transition-colors">{note.title}</h3>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{course.title_en}</p>
+                                            </div>
 
-                                <button 
-                                    onClick={() => setEditingNote(note)}
-                                    className="w-full py-4 rounded-2xl bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all"
-                                >
-                                    Open Lesson
-                                </button>
-                            </motion.div>
+                                            <button 
+                                                onClick={() => setEditingNote(note)}
+                                                className="w-full py-4 rounded-2xl bg-[#12388D] text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#0E2C6F] transition-all shadow-lg shadow-blue-900/10 active:scale-95"
+                                            >
+                                                Open Lesson
+                                            </button>
+                                        </motion.div>
                                     ))}
                                     {notes.length === 0 && (
                                         <div className="col-span-full py-20 bg-white/50 dark:bg-white/5 border-2 border-dashed border-gray-100 dark:border-white/10 rounded-[3rem] flex flex-col items-center justify-center text-center">

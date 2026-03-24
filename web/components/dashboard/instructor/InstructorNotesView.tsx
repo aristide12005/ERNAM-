@@ -89,20 +89,23 @@ export default function InstructorNotesView() {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Lesson Notes</h1>
-                    <p className="text-gray-500 font-medium mt-1">Manage and publish curriculum across all your courses.</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Lesson Notes</h1>
+                    <p className="text-slate-500 font-bold mt-1.5 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                        Manage curriculum across all your courses
+                    </p>
                 </div>
 
-                <div className="relative w-full md:w-80">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <div className="relative w-full md:w-96">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input 
                         type="text" 
-                        placeholder="Search notes..."
+                        placeholder="Search by note title..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 pl-12 pr-4 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-purple-500/20 transition-all font-medium text-sm"
+                        className="w-full bg-white border border-slate-100 pl-12 pr-4 py-3.5 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/20 transition-all font-medium text-sm shadow-sm placeholder:text-slate-400"
                     />
                 </div>
             </div>
@@ -116,14 +119,16 @@ export default function InstructorNotesView() {
                     {filteredNotes.map((note) => (
                         <motion.div 
                             key={note.id}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="group relative bg-white dark:bg-[#1a1a2e] border border-gray-100 dark:border-white/5 p-8 rounded-[3rem] hover:shadow-2xl hover:shadow-purple-500/5 transition-all text-center flex flex-col items-center"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="group relative bg-white border border-slate-100 p-8 rounded-[2.5rem] hover:shadow-2xl hover:shadow-blue-500/5 transition-all text-center flex flex-col items-center"
                         >
                             <div className="absolute top-8 right-8 flex items-center gap-2">
                                 <div className={cn(
-                                    "px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider",
-                                    note.status === 'published' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                                    note.status === 'published' 
+                                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
+                                        : "bg-slate-50 text-slate-400 border border-slate-100"
                                 )}>
                                     {note.status}
                                 </div>
@@ -131,30 +136,42 @@ export default function InstructorNotesView() {
 
                             <div 
                                 onClick={() => setSelectedNote({ note, mode: 'preview' })}
-                                className="w-28 h-28 mb-8 transition-transform group-hover:scale-110 duration-500 cursor-pointer"
+                                className="w-32 h-32 mb-8 transition-transform group-hover:scale-110 duration-500 cursor-pointer drop-shadow-2xl"
                             >
                                 <img src="/icons/note_icon_3d.png" alt="Note Icon" className="w-full h-full object-contain" />
                             </div>
 
-                            <div className="flex-1 space-y-2 mb-8">
-                                <h3 className="text-xl font-black text-gray-900 dark:text-white line-clamp-2 leading-tight px-4">{note.title}</h3>
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{getCourseName(note.course_id)}</p>
+                            <div className="flex-1 space-y-2.5 mb-8">
+                                <h3 className="text-xl font-black text-slate-900 line-clamp-2 leading-tight px-4 group-hover:text-blue-600 transition-colors">
+                                    {note.title}
+                                </h3>
+                                <div className="flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100 inline-flex">
+                                    <BookOpen className="w-3 h-3" />
+                                    {getCourseName(note.course_id)}
+                                </div>
                             </div>
 
                             <button 
                                 onClick={() => setSelectedNote({ note, mode: 'edit' })}
-                                className="w-full py-4 rounded-2xl bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white text-xs font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all group-hover:shadow-lg group-hover:shadow-black/5"
+                                className={cn(
+                                    "w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all",
+                                    "bg-[#12388D] text-white hover:bg-[#0E2C6F] shadow-lg shadow-blue-900/10 active:scale-95",
+                                    "flex items-center justify-center gap-2"
+                                )}
                             >
-                                Open Editor
+                                <span>Open Editor</span>
+                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </button>
                         </motion.div>
                     ))}
 
                     {filteredNotes.length === 0 && (
-                        <div className="col-span-full py-40 border-2 border-dashed border-gray-100 dark:border-white/10 rounded-[3rem] flex flex-col items-center justify-center text-center">
-                            <BookOpen className="w-12 h-12 text-gray-200 mb-4" />
-                            <p className="text-gray-400 font-bold">No lesson notes found.</p>
-                            <p className="text-gray-300 text-sm mt-1">Start by creating notes from within your courses.</p>
+                        <div className="col-span-full py-40 border-2 border-dashed border-slate-100 rounded-[3rem] flex flex-col items-center justify-center text-center bg-white/50">
+                            <div className="w-20 h-20 mb-6 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100">
+                                <BookOpen className="w-8 h-8 text-slate-300" />
+                            </div>
+                            <p className="text-slate-900 font-black text-xl tracking-tight">No lesson notes found</p>
+                            <p className="text-slate-500 font-bold text-sm mt-2 max-w-xs mx-auto">Start by creating lesson content from within your specific course modules.</p>
                         </div>
                     )}
                 </div>
