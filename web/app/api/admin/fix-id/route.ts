@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -7,26 +7,9 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
     console.log('--- ADMIN ID FIX START ---');
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    console.log('Checking Env Vars:');
-    console.log('URL:', url ? 'Present' : 'MISSING');
-    console.log('KEY:', key ? 'Present' : 'MISSING');
-
-    if (!url || !key) {
-        return NextResponse.json({
-            error: 'Missing Environment Variables',
-            details: {
-                url: !!url,
-                key: !!key
-            }
-        }, { status: 500 });
-    }
-
     try {
         // Initialize Admin Client
-        const supabaseAdmin = createClient(url, key);
+        const supabaseAdmin = getSupabaseAdmin();
         const email = 'aristide@ernam.aero';
 
         console.log(`Listing users for: ${email}`);

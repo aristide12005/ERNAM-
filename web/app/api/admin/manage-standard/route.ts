@@ -1,24 +1,19 @@
-import { createClient } from '@supabase/supabase-js';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { hasPermission } from '@/lib/rbac-server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-});
 
 async function getAdminUser(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
     if (!authHeader) return null;
     const token = authHeader.replace('Bearer ', '');
+    const supabaseAdmin = getSupabaseAdmin();
     const { data: { user } } = await supabaseAdmin.auth.getUser(token);
     return user;
 }
 
 export async function POST(req: NextRequest) {
     try {
+        const supabaseAdmin = getSupabaseAdmin();
         const adminUser = await getAdminUser(req);
         if (!adminUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         const adminId = adminUser.id;
