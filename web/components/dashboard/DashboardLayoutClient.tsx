@@ -75,22 +75,15 @@ export default function DashboardLayoutClient({
                 }`}
             >
                 {/* Premium Top Bar */}
-                <div className="h-[80px] px-8 flex items-center justify-between shrink-0 bg-surface-mid border-b border-slate-100/80">
-                    <div className="flex items-center gap-4">
-                        {/* Brand pill */}
-                        <div className="flex items-center gap-2.5 bg-white pl-2 pr-4 py-2 rounded-2xl shadow-sm border border-slate-100 shrink-0">
-                            <img src="/logos/asecna-logo.png" alt="ASECNA" className="w-7 h-7 object-contain rounded-xl" />
-                            <span className="text-sm font-black tracking-tight text-slate-800">ASECNA</span>
-                        </div>
-                        {/* Search */}
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search anything…"
-                                className="w-full pl-11 pr-5 py-2.5 bg-white border border-slate-100 rounded-2xl shadow-sm text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-transparent transition-all font-medium text-slate-700 placeholder:text-slate-400"
-                            />
-                        </div>
+                <div className="h-[72px] px-8 flex items-center justify-between shrink-0 bg-surface-mid border-b border-slate-100/80">
+                    {/* Search */}
+                    <div className="relative w-full max-w-sm">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search anything…"
+                            className="w-full pl-11 pr-5 py-2.5 bg-white border border-slate-100 rounded-2xl shadow-sm text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-transparent transition-all font-medium text-slate-700 placeholder:text-slate-400"
+                        />
                     </div>
                     {/* Right side */}
                     <div className="flex items-center gap-4">
